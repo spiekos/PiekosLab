@@ -12,14 +12,10 @@ input_path = os.path.join(wd, 'kaysonyao/00_raw_data/placenta',
 
 # Load data
 if os.path.exists(input_path):
-    data = pd.read_csv(input_path)
+    data = pd.read_csv(input_path, sep=';')
     print("Data loaded successfully.")
-    print(data.head(5))
 
-# Mask QC failures with NA values
-if 'QC Warning' in data.columns:
-    data.loc[data['QC Warning'] == 1, data.columns[3:]] = np.nan
-    print("QC failures masked.")
-else:
-    print("No 'QC Warning' column found.")
-    print('Proteins failing Bonferroni correction:')
+    data.info()
+    print(data['QC_Warning'].unique())
+    print(data['Assay_Warning'].unique())
+    print(data['Sample_Type'].unique())
