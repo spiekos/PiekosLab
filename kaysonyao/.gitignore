@@ -207,3 +207,4 @@ __marimo__/
 .xlsx
 .csv
 .DS_Store
+data/
