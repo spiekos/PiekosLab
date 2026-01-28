@@ -24,6 +24,9 @@ import math
 import numpy as np
 import pandas as pd
 from scipy.stats import fisher_exact
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.decomposition import PCA
 
 CUTOFF_PERCENT_MISSING = 0.20
 
@@ -153,6 +156,7 @@ def missingness_filter_and_group_check(
     g = g[valid]
     Xg = X.loc[valid, drop]
 
+    # FIXME: Ensure binary groups - control vs complication?
     # Ensure binary groups
     uniq = pd.unique(g)
     if len(uniq) != 2:
@@ -196,30 +200,33 @@ def missingness_filter_and_group_check(
 
     return X_kept, report
 
-
 # -----------------------------
 #  Panel normalization (long)
 # -----------------------------
+
 def apply_panel_normalization_long(df_long: pd.DataFrame) -> pd.DataFrame:
     """
-    Panel normalization:
+    Panel normalization using Olink internal control samples encoded in SampleID:
+
       For each Assay:
-        panel_median = median NPX across CONTROL_SAMPLE within each Panel
+        panel_median = median NPX across CONTROL_SAMPLEs within each Panel
         global_median = median of panel_medians across all Panels
         adjustment(panel) = global_median - panel_median
         NPX_adj = NPX + adjustment(panel)
 
-    Requires columns: Sample_Type, Panel, Assay, NPX
+    Requires columns: SampleID, Panel, Assay, NPX
     """
-    required = {"Sample_Type", "Panel", "Assay", "NPX"}
-    missing = required - set(df_long.columns)
+    df = df_long.copy()
+
+    required = {"SampleID", "Panel", "Assay", "NPX"}
+    missing = required - set(df.columns)
     if missing:
         raise ValueError(f"Panel normalization requires columns: {sorted(required)}; missing: {sorted(missing)}")
 
-    df = df_long.copy()
+    # Identify Olink control samples from SampleID pattern
+    ctrl = df["SampleID"].astype(str).str.strip().str.upper().str.startswith("CONTROL_SAMPLE")
 
-    # Compute panel-specific medians using CONTROL_SAMPLE only
-    ctrl = df["Sample_Type"].astype(str).str.upper() == "CONTROL_SAMPLE"
+    # Compute panel-specific medians using control samples only
     panel_medians = (
         df.loc[ctrl]
         .groupby(["Panel", "Assay"])["NPX"]
@@ -227,6 +234,12 @@ def apply_panel_normalization_long(df_long: pd.DataFrame) -> pd.DataFrame:
         .rename("panel_median")
         .reset_index()
     )
+
+    if panel_medians.empty:
+        raise ValueError(
+            "No control samples found using SampleID prefix 'CONTROL_SAMPLE'. "
+            "Check the exact SampleID pattern in your file."
+        )
 
     # Global reference = median of panel medians across panels (per Assay)
     global_ref = (
@@ -236,16 +249,22 @@ def apply_panel_normalization_long(df_long: pd.DataFrame) -> pd.DataFrame:
         .reset_index()
     )
 
-    # Join to compute adjustment
+    # Adjustment = Global - Panel median
     adj = panel_medians.merge(global_ref, on="Assay", how="left")
     adj["adjustment"] = adj["global_median"] - adj["panel_median"]
 
-    # Merge adjustment back to full long table by Panel+Assay
+    # Apply adjustment to every sample based on its Panel+Assay
     df = df.merge(adj[["Panel", "Assay", "adjustment"]], on=["Panel", "Assay"], how="left")
+
+    # If some Panel+Assay combinations lacked controls, adjustment will be NaN.
+    # Leave those NPX unchanged (adjustment=0).
+    df["adjustment"] = df["adjustment"].fillna(0.0)
+
     df["NPX"] = df["NPX"] + df["adjustment"]
     df.drop(columns=["adjustment"], inplace=True)
 
     return df
+
 
 
 # -----------------------------
@@ -255,12 +274,6 @@ def plot_pca(X: pd.DataFrame, labels: pd.Series, out_png: str, title: str):
     """
     PCA scatter plot (PC1 vs PC2). Colors by labels.
     """
-    try:
-        from sklearn.decomposition import PCA
-        import matplotlib.pyplot as plt
-    except Exception as e:
-        print(f"[WARN] PCA plotting skipped (missing deps): {e}")
-        return
 
     # Drop samples with any NaN for PCA
     Xp = X.dropna(axis=0, how="any")
@@ -531,6 +544,30 @@ def combine_batches(df_list: list[pd.DataFrame]) -> pd.DataFrame:
     df_combined = pd.concat(df_list, axis=0, ignore_index=True)
     return df_combined
 
+'''
+def merge_with_metadata(df: pd.DataFrame, 
+                        metadata_path: str, 
+                        omic_sample_id_col: str = "SampleID",
+                        meta_sample_id_col: str = 'sample Id') -> pd.DataFrame:
+    """
+    Loads group labels from metadata.
+    """
+    meta = pd.read_excel(metadata_path, sheet_name='n=133 proteomics')
+
+    if omic_sample_id_col not in df.columns or \
+        meta_sample_id_col not in meta.columns:
+        raise ValueError('ID column not found')
+    
+    if 'group' not in meta.columns:
+        raise ValueError('Group column not found')
+
+    g = df.merge(meta[[meta_sample_id_col, 'group']], 
+                left_on=omic_sample_id_col, 
+                right_on=meta_sample_id_col,
+                how='left')
+    
+    return g
+'''
 
 def load_groups_from_metadata(
     metadata_path: str,
@@ -596,11 +633,14 @@ def process_all_files(
 
     # PCA before replicate batch correction (wide)
     X_panel = df_long_panelnorm.pivot_table(index="SampleID", columns="Assay", values="NPX", aggfunc='median')
+
     sample_to_batch = (
         df_long_panelnorm[["SampleID", "Batch"]]
         .drop_duplicates()
-        .set_index("SampleID")["Batch"]
-    )
+        .groupby("SampleID")["Batch"]
+        .first()
+    ) # only takes the first batch per sampleID for PCA
+
 
     if pca_dir:
         os.makedirs(pca_dir, exist_ok=True)
