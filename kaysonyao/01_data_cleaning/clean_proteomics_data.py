@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.decomposition import PCA
 
-CUTOFF_PERCENT_MISSING = 0.20
+CUTOFF_PERCENT_MISSING = 0.25 # Move threshold to 25%
 
 # -----------------------------
 # Standardize missing + QC mask + batch tagging (long)
@@ -422,7 +422,6 @@ def apply_correction_factors_ratio_linear(
     out[common_assays] = corrected_npx
     return out
 
-
 def apply_batch_correction_using_replicates(
     X: pd.DataFrame,
     sample_to_batch: pd.Series,
@@ -651,6 +650,12 @@ def process_all_files(
     # Choose reference batch = first file's inferred batch id
     ref_batch = infer_batch_id_from_filename(file_paths[0])
     X_batchcorr = apply_batch_correction_using_replicates(X_panel, sample_to_batch, reference_batch=ref_batch, mode='ratio_linear')
+
+    # Debug line - delete after use
+    diff = (X_batchcorr - X_panel).abs()
+    print("[DEBUG] max |post-pre|:", np.nanmax(diff.to_numpy()))
+    print("[DEBUG] mean |post-pre|:", np.nanmean(diff.to_numpy()))
+
 
     if pca_dir:
         plot_pca(X_batchcorr, sample_to_batch, os.path.join(pca_dir, "pca_post_batch_correction.png"),
