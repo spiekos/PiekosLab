@@ -1,6 +1,7 @@
 ### Data Cleaning and Quality Control for Pregnancy Deep Phenotyping Metabolomics Data
-### Piekos Lab, Kayla Xu
-### 01/26/2026
+##### All data cleaning and quality control steps are outlined in the data/README.md
+### Kayla Xu, Piekos Lab
+### 01/28/2026
 
 # set up environment
 import numpy as np
