@@ -155,8 +155,7 @@ def missingness_filter_and_group_check(
     valid = g.notna()
     g = g[valid]
     Xg = X.loc[valid, drop]
-
-    # FIXME: Ensure binary groups - control vs complication?
+    
     # Ensure binary groups
     uniq = pd.unique(g)
     if len(uniq) != 2:
