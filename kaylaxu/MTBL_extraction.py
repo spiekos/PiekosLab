@@ -11,12 +11,13 @@ import sys
 ### 050725_Sadovsky DP3 Placenta Polar Untargeted_ALL copy.xlsx
 ### 050725_Sadovsky DP3 Plasma Polar Untargeted_ALL copy.xlsx
 
-# extract area information
-def get_area(df):
+# extract batch info
+def get_batch(df):
     is_sample = df.columns.notna()
     temp = df.iloc[0:1,is_sample]
     temp = temp.set_index("Sample ID").transpose()
-    temp.columns = ["Area"]
+    temp.columns = ["batch"]
+    temp["batch"] = [s.split(": ")[1].split("_")[0] for s in temp["batch"]]
     return temp
 
 # extract compound metadata
@@ -25,11 +26,9 @@ def get_compounds(df):
     temp = df.iloc[:, not_sample]
     temp.columns = temp.iloc[0,:]
     temp = temp.drop(temp.index[0])
-    temp.iloc[0,0] = "01" # two moleclues not in the export order
+    temp.iloc[0,0] = "01" # two moleclues not in the export order, positive controls
     temp.iloc[1,0] = "02" # slightly different for each file
     return temp
-
-
 
 # extract expression data
 def get_expression(df, ids):
@@ -40,29 +39,26 @@ def get_expression(df, ids):
     return temp
 
 
+# call all csv generating function
+def generate_files(df, file_output, e):
+    get_batch(df).to_csv(file_output + "/" + e +"_batch.csv")
+    comp = get_compounds(df)
+    comp.to_csv(file_output + "/" + e + "_compounds.csv")
+    get_expression(df, comp.iloc[:,0]).to_csv(file_output + "/" + e + "_expression.csv")
+
+
 # helper function
 def extract_data(file_input, file_output):
-    #file = open(file_input, mode="r")
-    file = file_input
-    file_pos = pd.read_excel(file, sheet_name="POS Compounds",header=None).dropna(how='all')
-    file_neg = pd.read_excel(file, sheet_name="NEG Compounds",header=None).dropna(how='all')
+    file_pos = pd.read_excel(file_input, sheet_name="POS Compounds",header=None).dropna(how='all')
+    file_neg = pd.read_excel(file_input, sheet_name="NEG Compounds",header=None).dropna(how='all')
     file_pos.columns = file_pos.iloc[0,:]
     file_neg.columns = file_neg.iloc[0,:]
     file_pos = file_pos.drop(file_pos.index[0])
     file_neg = file_neg.drop(file_neg.index[0])
 
-    #extract positive compound files
-    get_area(file_pos).to_csv(file_output + "/pos_sampleArea.csv")
-    pos_comp = get_compounds(file_pos)
-    pos_comp.to_csv(file_output + "/pos_compounds.csv")
-    get_expression(file_pos, pos_comp.iloc[:,0]).to_csv(file_output + "/pos_expression.csv")
-
-    #extract negative compound files
-    get_area(file_neg).to_csv(file_output + "/neg_sampleArea.csv")
-    neg_comp = get_compounds(file_neg)
-    neg_comp.to_csv(file_output + "/neg_compounds.csv")
-    get_expression(file_neg, neg_comp.iloc[:,0]).to_csv(file_output + "/neg_expression.csv")
-
+    #generate files
+    generate_files(file_pos, file_output, "pos")
+    generate_files(file_neg, file_output, "neg")
 
 def main():
     file_input = sys.argv[1]
