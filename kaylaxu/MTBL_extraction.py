@@ -2,7 +2,7 @@
 ### Piekos Lab, Kayla Xu
 ### 01/26/2026
 
-# set up environemtn
+# set up environment
 import pandas as pd
 import numpy as np
 import sys
@@ -46,6 +46,7 @@ def generate_files(df, file_output, e):
     comp.to_csv(file_output + "/" + e + "_compounds.csv")
     get_expression(df, comp.index).to_csv(file_output + "/" + e + "_expression.csv")
 
+# clean header of csv
 def clean_df(df):
     df.columns = df.iloc[0,:]
     df = df.iloc[1:,:]
