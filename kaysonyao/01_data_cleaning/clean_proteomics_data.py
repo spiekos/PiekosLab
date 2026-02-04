@@ -1,72 +1,69 @@
 """
-Title: clean_proteomics_data.py (DP3 updated)
+Title: clean_proteomics_data.py
 Author: Samantha Piekos, Kayson Yao
-Date: 01/27/2026 (updated per PI notes)
+Date: 02/01/2026
 Description:
 DP3 proteomics preprocessing for Olink Explore long-format exports.
 
 Workflow:
-1) Standardize missing values for analyte measurements (blank/"NA"/0 -> NaN on NPX only)
-2) QC mask: if QC_Warning != PASS or Assay_Warning != PASS -> NPX = NaN
-3) Combine batches (each file = batch)
-4) Filter proteins with <20% missingness (on combined data, before imputation)
-   - For proteins failing cutoff, compute missingness proportion by Group and test imbalance (Fisher) + BH
-5) Panel normalization (using CONTROL_SAMPLE medians within each Panel)
-6) PCA before batch correction (color = batch)
-7) Batch correction using replicates across batches (if duplicates exist)
-8) PCA after batch correction
-9) 1/2-minimum imputation (last)
-10) Save cleaned matrix
+1) Load each Olink file in long format.
+2) Standardize missing NPX values:
+   - Convert blank/"NA"/"N/A"/0 in the NPX column to NaN.
+3) QC masking:
+   - If QC_Warning != PASS or Assay_Warning != PASS, set NPX to NaN.
+4) Tag batch identity from filename and concatenate all batches into one long table.
+5) Panel normalization (long format, uses Olink internal control samples):
+   - Identify internal controls by SampleID prefix "CONTROL_SAMPLE".
+   - For each (Panel, Assay), compute the median NPX among control samples.
+   - For each Assay, compute a global reference as the median of these panel medians across panels.
+   - Adjustment = global_median - panel_median; add adjustment to NPX for all samples in that Panel+Assay.
+6) Remove Olink internal control samples from downstream analysis matrices.
+7) Reshape to a wide matrix (rows = SampleID, columns = Assay, values = NPX; aggregate duplicates by median).
+8) Missingness filter on the combined wide matrix (pre-imputation):
+   - Keep assays with missing fraction < 25%.
+   - For assays failing the cutoff, compute group-wise missingness (Control vs Complication),
+     test imbalance using Fisher's exact test, and apply Benjamini-Hochberg correction.
+   - Save a dropped-assay missingness report CSV.
+9) PCA diagnostics (wide matrix):
+   - PCA before quantile normalization (color points by Batch).
+10) Quantile normalization (wide matrix) to adjust batch-related distributional differences:
+    - Quantile-normalize per-sample NPX distributions using a NaN-aware implementation.
+11) PCA diagnostics after quantile normalization (color points by Batch).
+12) Impute remaining missing values (last):
+    - Per assay, fill NaN with 0.5 x minimum observed value in that assay.
+13) Output scaling:
+    - Convert NPX (log2 scale) to linear positive scale via 2**NPX.
+14) Save final cleaned matrix (wide, SampleID x Assay) to CSV.
 """
 
 import os
-import math
 import numpy as np
 import pandas as pd
 from scipy.stats import fisher_exact
 import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.decomposition import PCA
 
-CUTOFF_PERCENT_MISSING = 0.25 # Move threshold to 25%
+CUTOFF_PERCENT_MISSING = 0.25
+
 
 # -----------------------------
-# Standardize missing + QC mask + batch tagging (long)
+# Standardize missing + QC mask + batch tagging
 # -----------------------------
 def standardize_missing_npx(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Convert blanks/'NA'/'N/A'/0 in NPX to NaN.
-    Applies ONLY to the NPX column.
-    """
     df = df.copy()
     if "NPX" not in df.columns:
         return df
 
-    # Convert to string for pattern replacement, then coerce to numeric
     s = df["NPX"]
-
-    # Handle string NA-like values
     if s.dtype == object:
-        s = s.replace(
-            to_replace=["", " ", "NA", "N/A", "na", "n/a", "NaN", "nan", None],
-            value=np.nan,
-        )
-
-    # Coerce numeric
+        s = s.replace(["", " ", "NA", "N/A", "na", "n/a", "NaN", "nan", None], np.nan)
     s = pd.to_numeric(s, errors="coerce")
-
-    # Treat 0 as missing
     s = s.mask(s == 0, np.nan)
-
     df["NPX"] = s
     return df
 
 
 def qc_mask(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Mask NPX values (set to NaN) when QC_Warning or Assay_Warning are not PASS.
-    Applies ONLY to NPX.
-    """
     df = df.copy()
     if "NPX" not in df.columns:
         return df
@@ -87,14 +84,26 @@ def infer_batch_id_from_filename(path: str) -> str:
     return os.path.splitext(base)[0]
 
 
+def process_single_file(file_input: str) -> pd.DataFrame:
+    df = pd.read_csv(file_input, sep=";")
+    df = standardize_missing_npx(df)
+    df = qc_mask(df)
+    df["Batch"] = infer_batch_id_from_filename(file_input)
+    return df
+
+
+def combine_batches(df_list: list[pd.DataFrame]) -> pd.DataFrame:
+    return pd.concat(df_list, axis=0, ignore_index=True)
+
+
+def is_olink_control_sample(df_long: pd.DataFrame) -> pd.Series:
+    return df_long["SampleID"].astype(str).str.strip().str.upper().str.startswith("CONTROL_SAMPLE")
+
+
 # -----------------------------
-# Missingness + group check (binary)
+# Missingness + group check
 # -----------------------------
 def benjamini_hochberg_rejections(pvals: pd.Series, alpha: float = 0.05) -> pd.Series:
-    """
-    BH procedure returning a boolean Series indicating rejected hypotheses.
-    pvals: Series indexed by feature name
-    """
     pvals = pvals.dropna().astype(float).clip(0, 1)
     if pvals.empty:
         return pd.Series(dtype=bool)
@@ -104,13 +113,10 @@ def benjamini_hochberg_rejections(pvals: pd.Series, alpha: float = 0.05) -> pd.S
     thresh = (np.arange(1, n + 1) / n) * alpha
     passed = p_sorted.values <= thresh
 
-    if not np.any(passed):
-        return pd.Series(False, index=pvals.index)
-
-    k_star = np.max(np.where(passed)[0])  # 0-based
-    reject_features = p_sorted.index[: k_star + 1]
     out = pd.Series(False, index=pvals.index)
-    out.loc[reject_features] = True
+    if np.any(passed):
+        k_star = np.max(np.where(passed)[0])
+        out.loc[p_sorted.index[: k_star + 1]] = True
     return out
 
 
@@ -120,43 +126,29 @@ def missingness_filter_and_group_check(
     cutoff: float = CUTOFF_PERCENT_MISSING,
     alpha_bh: float = 0.05,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    X: wide matrix (rows=SampleID, cols=Assay), values=NPX
-    groups: Series indexed by SampleID, values in {0,1} or {control, complication}
-            Used ONLY to compute missingness proportions and Fisher/BH on discarded assays.
-
-    Returns:
-      X_kept: filtered matrix with assays missing < cutoff
-      dropped_report: DataFrame with missingness stats and p/q for dropped assays
-    """
     miss_frac = X.isna().mean(axis=0)
     keep = miss_frac[miss_frac < cutoff].index
     drop = miss_frac[miss_frac >= cutoff].index
 
     X_kept = X.loc[:, keep].copy()
 
-    # Build report for dropped assays
-    report_rows = []
-    pvals = {}
-
     if len(drop) == 0:
         return X_kept, pd.DataFrame(columns=["Assay", "missing_frac", "p_value", "bh_reject"])
 
+    report_rows = []
+    pvals = {}
+
     if groups is None:
-        # No group labels: still report missingness fraction
         for assay in drop:
-            report_rows.append(
-                {"Assay": assay, "missing_frac": float(miss_frac[assay]), "p_value": np.nan, "bh_reject": False}
-            )
+            report_rows.append({"Assay": assay, "missing_frac": float(miss_frac[assay]),
+                                "p_value": np.nan, "bh_reject": False})
         return X_kept, pd.DataFrame(report_rows).sort_values("missing_frac", ascending=False)
 
-    # Align groups
     g = groups.reindex(X.index)
     valid = g.notna()
     g = g[valid]
     Xg = X.loc[valid, drop]
-    
-    # Ensure binary groups
+
     uniq = pd.unique(g)
     if len(uniq) != 2:
         raise ValueError(f"Expected exactly 2 groups for missingness check; got {uniq}")
@@ -165,67 +157,64 @@ def missingness_filter_and_group_check(
 
     for assay in drop:
         miss = Xg[assay].isna()
-        a = int(((g == g0) & miss).sum())        # group0 missing
-        b = int(((g == g0) & (~miss)).sum())     # group0 observed
-        c = int(((g == g1) & miss).sum())        # group1 missing
-        d = int(((g == g1) & (~miss)).sum())     # group1 observed
+        a = int(((g == g0) & miss).sum())
+        b = int(((g == g0) & (~miss)).sum())
+        c = int(((g == g1) & miss).sum())
+        d = int(((g == g1) & (~miss)).sum())
 
-        # Fisher exact on [[a,b],[c,d]]
-        # If a group has 0 samples, set p=1
         if (a + b == 0) or (c + d == 0):
             p = 1.0
         else:
             _, p = fisher_exact([[a, b], [c, d]], alternative="two-sided")
 
         pvals[assay] = p
-
-        report_rows.append(
-            {
-                "Assay": assay,
-                "missing_frac": float(miss_frac[assay]),
-                f"{g0}_missing": a,
-                f"{g0}_observed": b,
-                f"{g1}_missing": c,
-                f"{g1}_observed": d,
-                "p_value": p,
-            }
-        )
+        report_rows.append({
+            "Assay": assay,
+            "missing_frac": float(miss_frac[assay]),
+            f"{g0}_missing": a, f"{g0}_observed": b,
+            f"{g1}_missing": c, f"{g1}_observed": d,
+            "p_value": p
+        })
 
     report = pd.DataFrame(report_rows).set_index("Assay")
-    pser = pd.Series(pvals, name="p_value")
-    reject = benjamini_hochberg_rejections(pser, alpha=alpha_bh)
+    reject = benjamini_hochberg_rejections(pd.Series(pvals), alpha=alpha_bh)
     report["bh_reject"] = reject.reindex(report.index).fillna(False).astype(bool)
     report = report.sort_values(["bh_reject", "p_value"], ascending=[False, True]).reset_index()
 
     return X_kept, report
 
-# -----------------------------
-#  Panel normalization (long)
-# -----------------------------
 
+def load_groups_from_metadata(
+    metadata_path: str,
+    sample_id_col: str = "sample Id",
+    group_col: str = "group",
+    make_binary: bool = True,
+    control_label: str = "Control",
+) -> pd.Series:
+    meta = pd.read_excel(metadata_path, sheet_name="n=133 proteomics")
+    if sample_id_col not in meta.columns or group_col not in meta.columns:
+        raise ValueError(f"Metadata must contain columns '{sample_id_col}' and '{group_col}'. "
+                         f"Found: {meta.columns.tolist()}")
+
+    g = meta.set_index(sample_id_col)[group_col].astype(str)
+    if make_binary:
+        g = pd.Series(np.where(g == control_label, "Control", "Complication"),
+                      index=g.index, name="GroupBinary")
+    return g
+
+
+# -----------------------------
+# Panel normalization (long)
+# -----------------------------
 def apply_panel_normalization_long(df_long: pd.DataFrame) -> pd.DataFrame:
-    """
-    Panel normalization using Olink internal control samples encoded in SampleID:
-
-      For each Assay:
-        panel_median = median NPX across CONTROL_SAMPLEs within each Panel
-        global_median = median of panel_medians across all Panels
-        adjustment(panel) = global_median - panel_median
-        NPX_adj = NPX + adjustment(panel)
-
-    Requires columns: SampleID, Panel, Assay, NPX
-    """
     df = df_long.copy()
-
     required = {"SampleID", "Panel", "Assay", "NPX"}
     missing = required - set(df.columns)
     if missing:
         raise ValueError(f"Panel normalization requires columns: {sorted(required)}; missing: {sorted(missing)}")
 
-    # Identify Olink control samples from SampleID pattern
     ctrl = df["SampleID"].astype(str).str.strip().str.upper().str.startswith("CONTROL_SAMPLE")
 
-    # Compute panel-specific medians using control samples only
     panel_medians = (
         df.loc[ctrl]
         .groupby(["Panel", "Assay"])["NPX"]
@@ -233,14 +222,9 @@ def apply_panel_normalization_long(df_long: pd.DataFrame) -> pd.DataFrame:
         .rename("panel_median")
         .reset_index()
     )
-
     if panel_medians.empty:
-        raise ValueError(
-            "No control samples found using SampleID prefix 'CONTROL_SAMPLE'. "
-            "Check the exact SampleID pattern in your file."
-        )
+        raise ValueError("No Olink control samples found (SampleID startswith CONTROL_SAMPLE).")
 
-    # Global reference = median of panel medians across panels (per Assay)
     global_ref = (
         panel_medians.groupby("Assay")["panel_median"]
         .median()
@@ -248,47 +232,80 @@ def apply_panel_normalization_long(df_long: pd.DataFrame) -> pd.DataFrame:
         .reset_index()
     )
 
-    # Adjustment = Global - Panel median
     adj = panel_medians.merge(global_ref, on="Assay", how="left")
     adj["adjustment"] = adj["global_median"] - adj["panel_median"]
 
-    # Apply adjustment to every sample based on its Panel+Assay
     df = df.merge(adj[["Panel", "Assay", "adjustment"]], on=["Panel", "Assay"], how="left")
-
-    # If some Panel+Assay combinations lacked controls, adjustment will be NaN.
-    # Leave those NPX unchanged (adjustment=0).
     df["adjustment"] = df["adjustment"].fillna(0.0)
-
     df["NPX"] = df["NPX"] + df["adjustment"]
     df.drop(columns=["adjustment"], inplace=True)
 
     return df
 
 
+# -----------------------------
+# Quantile normalization (wide)
+# -----------------------------
+def quantile_normalize_wide(X: pd.DataFrame) -> pd.DataFrame:
+    A = X.to_numpy(dtype=float)
+    n, p = A.shape
+    out = np.full_like(A, np.nan)
+
+    sorted_vals, sorted_cols, counts = [], [], []
+    for i in range(n):
+        row = A[i, :]
+        mask = np.isfinite(row)
+        vals = row[mask]
+        cols = np.where(mask)[0]
+        if vals.size == 0:
+            sorted_vals.append(np.array([], dtype=float))
+            sorted_cols.append(np.array([], dtype=int))
+            counts.append(0)
+            continue
+        order = np.argsort(vals)
+        sorted_vals.append(vals[order])
+        sorted_cols.append(cols[order])
+        counts.append(vals.size)
+
+    max_k = max(counts) if counts else 0
+    if max_k == 0:
+        return X.copy()
+
+    rank_means = np.zeros(max_k, dtype=float)
+    for k in range(max_k):
+        v = [sorted_vals[i][k] for i in range(n) if counts[i] > k]
+        rank_means[k] = float(np.mean(v))
+
+    for i in range(n):
+        if counts[i] == 0:
+            continue
+        out[i, sorted_cols[i]] = rank_means[: counts[i]]
+
+    return pd.DataFrame(out, index=X.index, columns=X.columns)
+
 
 # -----------------------------
-#       PCA plots
+# PCA plotting
 # -----------------------------
 def plot_pca(X: pd.DataFrame, labels: pd.Series, out_png: str, title: str):
-    """
-    PCA scatter plot (PC1 vs PC2). Colors by labels.
-    """
+    if X.shape[0] < 3 or X.shape[1] < 2:
+        print("[WARN] PCA skipped (too few samples/features).")
+        return
 
-    # Drop samples with any NaN for PCA
-    Xp = X.dropna(axis=0, how="any")
+    Xp = X.copy()
+    Xp = Xp.apply(lambda col: col.fillna(col.median(skipna=True)), axis=0)
+    Xp = Xp.dropna(axis=1, how="all")
     if Xp.shape[0] < 3 or Xp.shape[1] < 2:
-        print("[WARN] PCA skipped (not enough complete cases).")
+        print("[WARN] PCA skipped (not enough data after dropping all-NaN columns).")
         return
 
     labs = labels.reindex(Xp.index).astype(str)
     pca = PCA(n_components=2)
     coords = pca.fit_transform(Xp.values)
-
     dfc = pd.DataFrame(coords, index=Xp.index, columns=["PC1", "PC2"])
-    uniq = labs.unique()
 
     plt.figure()
-    for u in uniq:
+    for u in labs.unique():
         m = labs == u
         plt.scatter(dfc.loc[m, "PC1"], dfc.loc[m, "PC2"], label=u, alpha=0.7)
     plt.title(title)
@@ -301,371 +318,84 @@ def plot_pca(X: pd.DataFrame, labels: pd.Series, out_png: str, title: str):
 
 
 # -----------------------------
-# Replicate-based batch correction (wide)
-# -----------------------------
-def find_replicates_across_batches(batch_to_samples: dict[str, set[str]]) -> dict[tuple[str, str], set[str]]:
-    """
-    Given batch_to_samples: {batch: set(SampleID)}, returns intersections for batch pairs.
-    """
-    batches = list(batch_to_samples.keys())
-    reps = {}
-    for i in range(len(batches)):
-        for j in range(i + 1, len(batches)):
-            b1, b2 = batches[i], batches[j]
-            reps[(b1, b2)] = batch_to_samples[b1].intersection(batch_to_samples[b2])
-    return reps
-
-
-def compute_correction_factors_difference(
-    X_ref: pd.DataFrame,
-    X_tgt: pd.DataFrame,
-    replicate_ids: list[str],
-    outlier_iqr_k: float = 3.0,
-) -> pd.Series:
-    """
-    Compute per-assay additive correction for NPX (log2 scale):
-      delta = median( X_ref - X_tgt ) across replicate pairs, excluding outliers.
-      corrected_tgt = X_tgt + delta
-    """
-    if len(replicate_ids) == 0:
-        return pd.Series(index=X_tgt.columns, data=0.0)
-
-    common_assays = X_ref.columns.intersection(X_tgt.columns)
-    ref = X_ref.loc[replicate_ids, common_assays]
-    tgt = X_tgt.loc[replicate_ids, common_assays]
-    diff = ref - tgt  # additive in NPX
-
-    deltas = {}
-    for assay in common_assays:
-        v = diff[assay].dropna()
-        if v.empty:
-            deltas[assay] = 0.0
-            continue
-        q1, q3 = v.quantile(0.25), v.quantile(0.75)
-        iqr = q3 - q1
-        lo = q1 - outlier_iqr_k * iqr
-        hi = q3 + outlier_iqr_k * iqr
-        v2 = v[(v >= lo) & (v <= hi)]
-        deltas[assay] = float(v2.median()) if not v2.empty else float(v.median())
-
-    return pd.Series(deltas)
-
-def compute_correction_factors_ratio_linear(
-    X_ref: pd.DataFrame,
-    X_tgt: pd.DataFrame,
-    replicate_ids: list[str],
-    outlier_iqr_k: float = 3.0,
-    eps: float = 1e-12,
-) -> pd.Series:
-    """
-    Ratio correction in LINEAR space:
-      For each assay:
-        ratio = (2**NPX_tgt) / (2**NPX_ref) across replicate pairs
-        exclude outliers
-        median_ratio = median(ratio)
-        correction_factor = 1 / median_ratio
-      Apply to target in linear space, then convert back to NPX.
-
-    Returns:
-      factors: Series indexed by assay giving multiplicative correction factor (linear space).
-    """
-    if len(replicate_ids) == 0:
-        return pd.Series(index=X_tgt.columns, data=1.0)
-
-    common_assays = X_ref.columns.intersection(X_tgt.columns)
-    ref = X_ref.loc[replicate_ids, common_assays]
-    tgt = X_tgt.loc[replicate_ids, common_assays]
-
-    # Convert NPX (log2) -> linear
-    ref_lin = np.power(2.0, ref)
-    tgt_lin = np.power(2.0, tgt)
-
-    # ratio = tgt/ref
-    ratio = tgt_lin / (ref_lin + eps)
-
-    factors = {}
-    for assay in common_assays:
-        v = ratio[assay].replace([np.inf, -np.inf], np.nan).dropna()
-        if v.empty:
-            factors[assay] = 1.0
-            continue
-
-        q1, q3 = v.quantile(0.25), v.quantile(0.75)
-        iqr = q3 - q1
-        lo = q1 - outlier_iqr_k * iqr
-        hi = q3 + outlier_iqr_k * iqr
-        v2 = v[(v >= lo) & (v <= hi)]
-        med = float(v2.median()) if not v2.empty else float(v.median())
-        factors[assay] = 1.0 / med if med > 0 else 1.0
-
-    return pd.Series(factors)
-
-
-def apply_correction_factors_ratio_linear(
-    X_tgt: pd.DataFrame,
-    factors: pd.Series,
-    eps: float = 1e-12,
-) -> pd.DataFrame:
-    """
-    Apply multiplicative correction in linear space to target batch, return NPX (log2).
-    """
-    common_assays = X_tgt.columns.intersection(factors.index)
-    # NPX -> linear
-    tgt_lin = np.power(2.0, X_tgt[common_assays])
-    # apply factors (broadcast by columns)
-    corrected_lin = tgt_lin.mul(factors[common_assays], axis=1)
-    # linear -> NPX
-    corrected_npx = np.log2(corrected_lin + eps)
-
-    out = X_tgt.copy()
-    out[common_assays] = corrected_npx
-    return out
-
-def apply_batch_correction_using_replicates(
-    X: pd.DataFrame,
-    sample_to_batch: pd.Series,
-    reference_batch: str,
-    mode: str = "difference",
-    outlier_iqr_k: float = 3.0,
-) -> pd.DataFrame:
-    """
-    Adjust non-reference batches as a function of reference_batch using duplicate samples.
-
-    Parameters
-    ----------
-    mode:
-      - "difference": additive correction on NPX (log2). delta = median(ref - tgt)
-      - "ratio_linear": multiplicative correction in linear space. factor = 1/median((tgt/ref)_linear)
-    """
-    if mode not in {"difference", "ratio_linear"}:
-        raise ValueError("mode must be one of {'difference', 'ratio_linear'}")
-
-    Xc = X.copy()
-
-    batch_to_samples = {
-        b: set(sample_to_batch[sample_to_batch == b].index)
-        for b in sample_to_batch.dropna().unique()
-    }
-
-    reps = find_replicates_across_batches(batch_to_samples)
-
-    total_reps = sum(len(v) for v in reps.values())
-    if total_reps == 0:
-        print("[INFO] No replicate SampleIDs found across batches; skipping replicate-based batch correction.")
-        return Xc
-
-    print(f"[INFO] Replicate counts by batch pair: " +
-          ", ".join([f"{a}∩{b}={len(s)}" for (a, b), s in reps.items()]))
-
-    for b in batch_to_samples.keys():
-        if b == reference_batch:
-            continue
-
-        key = (reference_batch, b) if (reference_batch, b) in reps else (b, reference_batch)
-        rep_ids = sorted(list(reps.get(key, set())))
-        if len(rep_ids) == 0:
-            print(f"[INFO] No replicates between {reference_batch} and {b}; skipping adjustment for {b}.")
-            continue
-
-        X_ref = Xc.loc[sample_to_batch == reference_batch]
-        X_tgt = Xc.loc[sample_to_batch == b]
-
-        rep_ids = [sid for sid in rep_ids if (sid in X_ref.index) and (sid in X_tgt.index)]
-        if len(rep_ids) == 0:
-            print(f"[INFO] Replicate IDs not present in both matrices for {b}; skipping.")
-            continue
-
-        if mode == "difference":
-            deltas = compute_correction_factors_difference(
-                X_ref, X_tgt, rep_ids, outlier_iqr_k=outlier_iqr_k
-            )
-            common_assays = deltas.index.intersection(X_tgt.columns)
-            Xc.loc[sample_to_batch == b, common_assays] = (
-                Xc.loc[sample_to_batch == b, common_assays].add(deltas[common_assays], axis=1)
-            )
-            print(f"[INFO] Applied DIFFERENCE correction to batch {b} vs {reference_batch} using {len(rep_ids)} replicates.")
-
-        else:  # mode == "ratio_linear"
-            factors = compute_correction_factors_ratio_linear(
-                X_ref, X_tgt, rep_ids, outlier_iqr_k=outlier_iqr_k
-            )
-            corrected = apply_correction_factors_ratio_linear(X_tgt, factors)
-            common_assays = corrected.columns.intersection(Xc.columns)
-            Xc.loc[sample_to_batch == b, common_assays] = corrected[common_assays].values
-            print(f"[INFO] Applied RATIO(LINEAR) correction to batch {b} vs {reference_batch} using {len(rep_ids)} replicates.")
-
-    return Xc
-
-
-
-# -----------------------------
-#  Imputation (wide)
+# Imputation
 # -----------------------------
 def half_min_impute_wide(X: pd.DataFrame) -> pd.DataFrame:
-    """
-    1/2-minimum imputation per assay column. Impute at the very end.
-    X: wide matrix (SampleID x Assay)
-    returns imputed DataFrame.
-    """
     Xi = X.copy()
     for col in Xi.columns:
         s = Xi[col]
         if s.notna().any():
-            half_min = 0.5 * s.min(skipna=True)
-            Xi[col] = s.fillna(half_min)
+            Xi[col] = s.fillna(0.5 * s.min(skipna=True))
     return Xi
 
 
 # -----------------------------
-#     Wrapper functions
+# Main wrapper
 # -----------------------------
-def process_single_file(file_input: str, create_file_output: bool = False, file_output: str | None = None) -> pd.DataFrame:
-    """
-    Reads ONE Olink batch file (long format), standardizes missing, QC masks, and tags batch.
-    Returns long-format cleaned (pre-filter, pre-panelnorm) dataframe with a Batch column.
-
-    Use for testing or intermediate steps.
-    """
-    df = pd.read_csv(file_input, sep=";")
-    df = standardize_missing_npx(df)
-    df = qc_mask(df)
-
-    df["Batch"] = infer_batch_id_from_filename(file_input)
-
-    if create_file_output and file_output is not None:
-        df.to_csv(file_output, sep=";", index=False)
-
-    return df
-
-
-def combine_batches(df_list: list[pd.DataFrame]) -> pd.DataFrame:
-    df_combined = pd.concat(df_list, axis=0, ignore_index=True)
-    return df_combined
-
-'''
-def merge_with_metadata(df: pd.DataFrame, 
-                        metadata_path: str, 
-                        omic_sample_id_col: str = "SampleID",
-                        meta_sample_id_col: str = 'sample Id') -> pd.DataFrame:
-    """
-    Loads group labels from metadata.
-    """
-    meta = pd.read_excel(metadata_path, sheet_name='n=133 proteomics')
-
-    if omic_sample_id_col not in df.columns or \
-        meta_sample_id_col not in meta.columns:
-        raise ValueError('ID column not found')
-    
-    if 'group' not in meta.columns:
-        raise ValueError('Group column not found')
-
-    g = df.merge(meta[[meta_sample_id_col, 'group']], 
-                left_on=omic_sample_id_col, 
-                right_on=meta_sample_id_col,
-                how='left')
-    
-    return g
-'''
-
-def load_groups_from_metadata(
-    metadata_path: str,
-    sample_id_col: str = "SampleID",
-    group_col: str = "Group",
-    make_binary: bool = False,
-    control_label: str = "Control",
-) -> pd.Series:
-    """
-    Loads group labels from metadata. Optionally collapses to binary:
-      Control vs Complication (everything else).
-    """
-    meta = pd.read_excel(metadata_path, sheet_name='n=133 proteomics')
-    if sample_id_col not in meta.columns or group_col not in meta.columns:
-        raise ValueError(
-            f"Metadata must contain columns '{sample_id_col}' and '{group_col}'. "
-            f"Found: {meta.columns.tolist()}"
-        )
-
-    g = meta.set_index(sample_id_col)[group_col].astype(str)
-
-    if make_binary:
-        g_bin = np.where(g == control_label, "Control", "Complication")
-        g = pd.Series(g_bin, index=g.index, name="GroupBinary")
-
-    return g
-
-
-
-def process_all_files(
-    file_paths: list[str],
-    output_csv: str,
-    metadata_path: str,
-    pca_dir: str | None = None,
-):
-    """
-    DP3 full pipeline for one tissue x timepoint x modality set of Olink batch files.
-    """
-    # Load and QC-mask each batch (long format)
+def process_all_files(file_paths: list[str], output_csv: str, metadata_path: str, pca_dir: str | None = None):
+    # QC masking + combine batches
     batches_long = [process_single_file(fp) for fp in file_paths]
     df_long = combine_batches(batches_long)
 
-    # Pivot to wide for missingness filter (still pre-panelnorm)
-    X = df_long.pivot_table(index="SampleID", columns="Assay", values="NPX", 
-                            aggfunc='median')
+    # Apply panel normalization using Olink controls (keeps controls in long df)
+    # but downstream wide matrices should exclude controls.
+    df_long = apply_panel_normalization_long(df_long)
 
-    # Group labels for missingness diagnostic (only for dropped assays)
-    groups = load_groups_from_metadata(metadata_path, sample_id_col="sample Id", group_col="group", make_binary=True)
+    # Exclude Olink internal controls for analysis matrices
+    ctrl_mask = is_olink_control_sample(df_long)
+    df_long_bio = df_long.loc[~ctrl_mask].copy()
 
-    # Missingness filter + group-wise check on dropped assays
-    X_kept, dropped_report = missingness_filter_and_group_check(X, groups, cutoff=CUTOFF_PERCENT_MISSING, alpha_bh=0.05)
+    # Wide matrix for missingness filter
+    X = df_long_bio.pivot_table(
+        index="SampleID",
+        columns="Assay",
+        values="NPX",
+        aggfunc="median"
+        )
 
-    # Save dropped report alongside output
+    groups = load_groups_from_metadata(metadata_path, make_binary=True)
+
+    X_kept, dropped_report = missingness_filter_and_group_check(X,
+    groups, cutoff=CUTOFF_PERCENT_MISSING, alpha_bh=0.05)
+
     if dropped_report is not None and not dropped_report.empty:
         rep_path = os.path.splitext(output_csv)[0] + "_dropped_missingness_report.csv"
         dropped_report.to_csv(rep_path, index=False)
 
-    keep_assays = set(X_kept.columns)
-
-    # Panel normalization (long format) on kept assays only
-    df_long_kept = df_long[df_long["Assay"].isin(keep_assays)].copy()
-    df_long_panelnorm = apply_panel_normalization_long(df_long_kept)
-
-    # PCA before replicate batch correction (wide)
-    X_panel = df_long_panelnorm.pivot_table(index="SampleID", columns="Assay", values="NPX", aggfunc='median')
-
+    # Batch labels for PCA
     sample_to_batch = (
-        df_long_panelnorm[["SampleID", "Batch"]]
+        df_long_bio[["SampleID", "Batch"]]
         .drop_duplicates()
         .groupby("SampleID")["Batch"]
         .first()
-    ) # only takes the first batch per sampleID for PCA
+    )
 
-
+    #
     if pca_dir:
         os.makedirs(pca_dir, exist_ok=True)
-        plot_pca(X_panel, sample_to_batch, os.path.join(pca_dir, "pca_pre_batch_correction.png"),
-                 "PCA (panel-normalized, pre-batch correction)")
+        plot_pca(
+            X_kept,
+            sample_to_batch,
+            os.path.join(pca_dir, "pca_pre_quantile_norm.png"),
+            "PCA (panel-normalized, pre-quantile normalization)"
+                )
 
-    # Replicate-based batch correction (if duplicates exist)
-    # Choose reference batch = first file's inferred batch id
-    ref_batch = infer_batch_id_from_filename(file_paths[0])
-    X_batchcorr = apply_batch_correction_using_replicates(X_panel, sample_to_batch, reference_batch=ref_batch, mode='ratio_linear')
-
-    # Debug line - delete after use
-    diff = (X_batchcorr - X_panel).abs()
-    print("[DEBUG] max |post-pre|:", np.nanmax(diff.to_numpy()))
-    print("[DEBUG] mean |post-pre|:", np.nanmean(diff.to_numpy()))
-
+    # Quantile normalization
+    X_qn = quantile_normalize_wide(X_kept)
 
     if pca_dir:
-        plot_pca(X_batchcorr, sample_to_batch, os.path.join(pca_dir, "pca_post_batch_correction.png"),
-                 "PCA (post replicate-based batch correction)")
+        plot_pca(
+            X_qn,
+            sample_to_batch,
+            os.path.join(pca_dir, "pca_post_quantile_norm.png"),
+            "PCA (post quantile normalization)"
+                )
 
-    # 1/2-min imputation LAST
-    X_final = half_min_impute_wide(X_batchcorr)
+    # Impute LAST
+    X_final = half_min_impute_wide(X_qn)
+    x_final_linear = np.power(2.0, X_final)
+    x_final_linear.to_csv(output_csv, index=True)
 
-    # Save final
-    # Save as wide matrix (SampleID index)
-    X_final.to_csv(output_csv, index=True)
 
 if __name__ == "__main__":
     # Test all files
@@ -686,7 +416,7 @@ if __name__ == "__main__":
     # Deterministic order (so reference batch is stable)
     file_paths = sorted(file_paths)
 
-    out_csv = os.path.join(output_dir, "proteomics_cleaned_panelnorm_batchcorr_imputed.csv")
+    out_csv = os.path.join(output_dir, "proteomics_cleaned_panelnorm_quantilenorm_imputed.csv")
     pca_dir = os.path.join(output_dir, "pca")
 
     process_all_files(file_paths, out_csv, metadata_path, pca_dir=pca_dir)
