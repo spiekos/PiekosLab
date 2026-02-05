@@ -50,8 +50,8 @@ def generate_files(df, file_output, e):
 def clean_df(df):
     df.columns = df.iloc[0,:]
     df = df.iloc[1:,:]
-    df.iloc[1,0] = "01" # two moleclues not in the export order
-    df.iloc[2,0] = "02" # slightly different for each file
+    df.iloc[1,0] = "c1" # two moleclues not in the export order
+    df.iloc[2,0] = "c2" # slightly different for each file
     df.index = df.iloc[:,0]
     df = df.iloc[:, 1:]
     return df
