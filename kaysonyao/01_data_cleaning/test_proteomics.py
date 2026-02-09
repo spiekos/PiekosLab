@@ -40,7 +40,7 @@ def test(result_path, verbose=False):
     n_samples = X.shape[0]
     ks_stats = []
     
-    # Test first 10 pairs (or fewer if less samples)
+    # Test first 10 pairs
     n_tests = min(10, n_samples - 1)
     for i in range(n_tests):
         stat, _ = stats.ks_2samp(X.iloc[i].values, X.iloc[i+1].values)
@@ -86,3 +86,4 @@ if __name__ == "__main__":
     wkdir = os.getcwd()
     result_path = os.path.join(wkdir, "data", "cleaned", "proteomics", "proteomics_cleaned_panelnorm_quantilenorm_imputed.csv")
     test(result_path, verbose=True)
+    # Next Step: # Implement additional tests for each function in clean_proteomics_data.py as needed
