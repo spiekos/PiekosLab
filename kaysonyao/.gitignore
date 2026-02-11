@@ -209,3 +209,8 @@ __marimo__/
 .DS_Store
 data/
 processed_data/
+
+# R Workspace
+.Rhistory
+.RData
+.Rproj.user/

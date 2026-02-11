@@ -35,7 +35,7 @@ Workflow:
 13) Save final cleaned matrix (wide, SampleID x [metadata + Assays]) to CSV.
 
 """
-# Move missingness checking after batch normalization (8 -> 9 -> break by timepoint)
+# Move missingness checking after batch normalization (9 -> 8 -> break by timepoint)
 
 import os
 import sys
