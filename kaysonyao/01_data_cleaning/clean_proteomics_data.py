@@ -40,11 +40,8 @@ import os
 import numpy as np
 import pandas as pd
 from scipy.stats import fisher_exact, false_discovery_control
+from statsmodels.stats.multitest import multipletests
 
-try:
-    from statsmodels.stats.multitest import multipletests
-except Exception:
-    multipletests = None
 
 
 CUTOFF_PERCENT_MISSING = 0.25
@@ -96,8 +93,6 @@ def load_metadata_with_batch(
         raise ValueError(f"meta_type must be 'proteomics' or 'placenta', got '{meta_type}'")
     
     meta = pd.read_excel(metadata_path, sheet_name=sheet_name)
-    
-    print(f"   Sheet '{sheet_name}' columns: {meta.columns.tolist()}")
     
     # Build list of required columns based on meta_type
     required_cols = [sample_id_col, batch_col, "group", "subgroup", "gest age del"]
@@ -426,8 +421,7 @@ def process_all_files(
     file_paths: list[str],
     output_csv: str,
     metadata_path: str,
-    meta_type: str = "proteomics",
-    pca_dir: str | None = None
+    meta_type: str = "proteomics"
 ):
     """
     Complete proteomics data processing pipeline.
@@ -437,256 +431,116 @@ def process_all_files(
         output_csv: Path to save final cleaned matrix
         metadata_path: Path to metadata Excel file
         meta_type: 'proteomics' or 'placenta' - which sheet to use
-        pca_dir: Deprecated; diagnostics moved to proteomics_diagnostics.py
     """
-    print("=" * 80)
-    print("PROTEOMICS DATA CLEANING PIPELINE - LONGITUDINAL DESIGN")
-    print("=" * 80)
-    print("\nNOTE: Letter suffixes (A, B, C, E, etc.) represent different timepoints/samples")
-    print("      from the same subject and will be treated as separate samples.\n")
-    
-    # Step 1: Load metadata
-    print("[1/15] Loading metadata...")
+    run_label = "plasma" if meta_type == "proteomics" else "placenta"
+    print(f"[clean] {run_label}: start")
+
+    # 1) Load metadata
     metadata = load_metadata_with_batch(metadata_path, meta_type=meta_type)
-    print(f"   Loaded metadata for {len(metadata)} samples")
-    metadata_cols = metadata.columns.tolist()
-    print(f"   Metadata columns: {metadata_cols}")
-    
-    # Detailed batch analysis
-    batch_counts = metadata['Batch'].value_counts().sort_index()
-    print(f"   Unique batches (Omics Sets): {sorted(metadata['Batch'].unique())}")
-    print(f"   Batch distribution in metadata:")
-    for batch, count in batch_counts.items():
-        print(f"      Batch {batch}: {count} samples")
-    print(f"   Sample examples: {list(metadata.index[:5])}")
-    
-    # Step 2: Load and process all Olink files
-    print("\n[2/15] Loading and processing Olink files...")
+
+    # 2) Load/process all Olink files
     batches_long = []
     for fp in file_paths:
-        print(f"   Processing: {os.path.basename(fp)}")
         df_single = process_single_file(fp)
         df_single["SourceFile"] = os.path.basename(fp)
         batches_long.append(df_single)
     df_long = combine_batches(batches_long)
-    print(f"   Combined data: {len(df_long)} rows, {df_long['SampleID'].nunique()} unique samples")
-    
-    # Show sample ID examples from data
-    olink_samples = df_long[~is_olink_control_sample(df_long)]['SampleID'].unique()[:10]
-    print(f"   Sample examples from data: {list(olink_samples)}")
-    
-    # Step 3: Apply panel normalization using Olink controls
-    print("\n[3/15] Applying panel normalization...")
+
+    # 3) Panel normalization
     df_long = apply_panel_normalization_long(df_long)
-    print("   Panel normalization complete")
-    
-    # Step 4: Exclude Olink internal controls
-    print("\n[4/13] Removing Olink internal control samples...")
+
+    # 4) Remove Olink controls
     ctrl_mask = is_olink_control_sample(df_long)
     n_controls = ctrl_mask.sum()
     df_long_bio = df_long.loc[~ctrl_mask].copy()
-    print(f"   Removed {n_controls} control sample rows")
-    print(f"   Remaining: {len(df_long_bio)} rows, {df_long_bio['SampleID'].nunique()} unique samples")
 
-    # Step 5: Create wide matrix
-    print("\n[5/13] Creating wide matrix (SampleID x Assay)...")
+    # 5) Build wide matrix
     X = df_long_bio.pivot_table(
         index="SampleID",
         columns="Assay",
         values="NPX",
         aggfunc="median"
     )
-    print(f"   Wide matrix: {X.shape[0]} samples × {X.shape[1]} assays")
-    
-    # Check metadata matching
+
+    # Metadata matching diagnostics (warnings only)
     matched = X.index.isin(metadata.index)
     n_matched = matched.sum()
-    print(f"   Samples in data matching metadata: {n_matched} / {len(X)}")
-    
     if n_matched < len(X):
         unmatched = X.index[~matched]
-        print(f"   WARNING: {len(unmatched)} samples in data not found in metadata:")
-        print(f"            {list(unmatched[:5])}...")
-        
-        # Show detailed ID format comparison
-        print(f"\n   Sample ID format comparison:")
-        print(f"      Data sample IDs (first 5): {list(X.index[:5])}")
-        print(f"      Metadata sample IDs (first 5): {list(metadata.index[:5])}")
-        
-        # Check for whitespace issues
-        data_sample = str(X.index[0])
-        meta_sample = str(metadata.index[0])
-        print(f"\n   Detailed character inspection:")
-        print(f"      Data[0]: '{data_sample}' (repr: {repr(data_sample)}, len: {len(data_sample)})")
-        print(f"      Meta[0]: '{meta_sample}' (repr: {repr(meta_sample)}, len: {len(meta_sample)})")
-        
-        # Check if removing all spaces helps
+        print(f"[clean:{run_label}] warning: {len(unmatched)} samples missing metadata. examples={list(unmatched[:5])}")
+
+        # Check if removing spaces improves matching (compact diagnostic hint)
         data_no_space = X.index.str.replace(' ', '', regex=False)
         meta_no_space = metadata.index.str.replace(' ', '', regex=False)
         matched_no_space = data_no_space.isin(meta_no_space)
         if matched_no_space.sum() > matched.sum():
-            print(f"\n   🔍 DIAGNOSIS: Removing all spaces gives {matched_no_space.sum()} matches vs {matched.sum()} with spaces")
-            print(f"      This suggests inconsistent spacing between data and metadata!")
-            print(f"      Recommendation: Normalize by removing all internal spaces")
-    
-    # Show batch distribution for matched samples
-    if n_matched > 0:
-        matched_samples = X.index[matched]
-        matched_batches = metadata.loc[matched_samples, 'Batch']
-        batch_counts_matched = matched_batches.value_counts().sort_index()
-        print(f"\n   Batch distribution in MATCHED samples:")
-        for batch, count in batch_counts_matched.items():
-            print(f"      Batch {batch}: {count} samples")
-    
-    print(f"\n   Final metadata matching: {n_matched} / {len(X)} samples matched")
+            print(f"[clean:{run_label}] hint: stripping internal spaces would improve matching ({matched_no_space.sum()} vs {matched.sum()}).")
+
     if n_matched == 0:
-        print("\n   ⚠️  ERROR: No samples matched between data and metadata!")
-        print("   The pipeline will continue, but results may not be reliable.")
-        print("   Please verify the sample ID mapping between Olink files and metadata Excel.")
-    elif n_matched < len(X):
-        print(f"\n   ⚠️  WARNING: {len(X) - n_matched} samples have no metadata and will be filtered out.")
-    
-    # Step 6: Create binary group labels for missingness check
-    print("\n[6/13] Creating binary group labels...")
-    # Get group labels from metadata
+        print(f"[clean:{run_label}] warning: no metadata matches found; downstream results may be unreliable.")
+
+    # 6) Group labels for missingness check
     groups = metadata["Group"].reindex(X.index)
-    
-    # Filter out samples with NaN/blank group labels (no metadata match)
     has_metadata = groups.notna()
     n_no_metadata = (~has_metadata).sum()
-    
     if n_no_metadata > 0:
-        print(f"   ⚠️  Filtering out {n_no_metadata} samples with no metadata (NaN group values)")
-        print(f"   These samples will be excluded from analysis until you clarify with your professor.")
-        # Remove samples without metadata from the matrix
+        print(f"[clean:{run_label}] warning: filtering {n_no_metadata} samples without metadata group.")
         X = X.loc[has_metadata].copy()
         groups = groups.loc[has_metadata]
-        print(f"   Remaining samples after filtering: {len(X)}")
-    
-    # Make binary: Control vs everything else
-    # Only applies to samples that have valid metadata
+
+    # Binary labels: Control vs everything else
     groups_binary = pd.Series(
         np.where(groups.astype(str).str.strip().str.upper() == "CONTROL", "Control", "Complication"),
         index=groups.index,
         name="GroupBinary"
     )
-    print(f"   Group distribution: {groups_binary.value_counts().to_dict()}")
-    
-    # Also update metadata to only include samples that remain in X
+
+    # Align metadata to remaining samples
     metadata = metadata.reindex(X.index)
-    
-    # Step 7: Missingness filter
-    print("\n[7/13] Applying missingness filter...")
+
+    # 7) Missingness filter + report
     X_kept, dropped_report = missingness_filter_and_group_check(
         X, groups_binary, cutoff=CUTOFF_PERCENT_MISSING, alpha_bh=0.05
     )
-    print(f"   Kept {X_kept.shape[1]} assays, dropped {len(dropped_report)} assays")
-    
     if not dropped_report.empty:
         rep_path = os.path.splitext(output_csv)[0] + "_dropped_missingness_report.csv"
         dropped_report.to_csv(rep_path, index=False)
-        print(f"   Saved missingness report to: {rep_path}")
-    
-    # Step 8: Quantile normalization
-    print("\n[8/13] Applying quantile normalization...")
+
+    # 8) Quantile normalization
     X_qn = quantile_normalize_wide(X_kept)
-    print("   Quantile normalization complete")
-    
-    if pca_dir:
-        print("\n   NOTE: pca_dir is ignored in core cleaning.")
-        print("         Run proteomics_diagnostics.py to generate PCA/diagnostic outputs.")
-    
-    # Step 9: Imputation
-    print("\n[9/13] Imputing missing values (0.5 × minimum per assay)...")
+
+    # 9) Imputation
     X_final = half_min_impute_wide(X_qn)
-    print("   Imputation complete")
-    
-    # Step 10: Convert to linear scale
-    print("\n[10/13] Converting NPX (log2) to linear scale (2^NPX)...")
+
+    # 10) Convert to linear scale
     X_final_linear = np.power(2.0, X_final)
-    print("   Conversion complete")
-    
-    # Step 11: Merge metadata and conditionally add SubjectID column
-    print("\n[11/13] Merging metadata...")
-    # Reindex metadata to match final matrix samples
+
+    # 11) Merge metadata
     metadata_aligned = metadata.reindex(X_final_linear.index)
-    
-    # For proteomics (longitudinal data), add SubjectID column
-    # For placenta (non-longitudinal), no SubjectID needed
+
     if meta_type == "proteomics":
-        print("   Creating SubjectID column for longitudinal data...")
-        # Create SubjectID column (removes trailing letters)
-        # Pattern: DP3-0005 A -> DP3-0005, DP3-0008A -> DP3-0008
         subject_ids = X_final_linear.index.to_series().str.replace(r'\s*[A-Z]+$', '', regex=True)
-        
-        # Insert SubjectID as the FIRST column (not as index - would have duplicates)
         metadata_aligned.insert(0, 'SubjectID', subject_ids.values)
-        
-        # Combine metadata with protein data (SampleID remains as index)
         final_output = pd.concat([metadata_aligned, X_final_linear], axis=1)
-        
-        # Count unique subjects and samples
-        n_subjects = metadata_aligned['SubjectID'].nunique()
-        n_samples = len(metadata_aligned)
-        avg_samples_per_subject = n_samples / n_subjects if n_subjects > 0 else 0
-        
-        print(f"   Final matrix: {final_output.shape[0]} samples × {final_output.shape[1]} columns")
-        print(f"   Unique subjects: {n_subjects}")
-        print(f"   Average samples per subject: {avg_samples_per_subject:.1f}")
-        print(f"   Index: SampleID (full ID with timepoint letter)")
-        print(f"   Column 1: SubjectID (base ID for grouping)")
-    
-    else:  # placenta - no SubjectID needed
-        print("   Placenta data (non-longitudinal) - no SubjectID column needed...")
-        # Combine metadata with protein data
-        final_output = pd.concat([metadata_aligned, X_final_linear], axis=1)
-        
-        print(f"   Final matrix: {final_output.shape[0]} samples × {final_output.shape[1]} columns")
-        print(f"   Index: SampleID")
-    
-    print(f"   Metadata columns: {list(metadata_aligned.columns)}")
-    print(f"   Protein assays: {X_final_linear.shape[1]}")
-    
-    # Step 12: Save output
-    print("\n[12/13] Saving final cleaned matrix...")
-    final_output.to_csv(output_csv, index=True)
-    print(f"   Saved to: {output_csv}")
-    
-    print("\n" + "=" * 80)
-    print("PIPELINE COMPLETE!")
-    print("=" * 80)
-    print(f"\nFinal output summary:")
-    print(f"  - Output file: {output_csv}")
-    
-    if meta_type == "proteomics":
-        print(f"  - Samples (timepoints): {final_output.shape[0]}")
-        print(f"  - Unique subjects: {n_subjects}")
-        print(f"  - Total columns: {final_output.shape[1]}")
-        print(f"  - Metadata columns: {len(metadata_aligned.columns)} {list(metadata_aligned.columns)}")
-        print(f"  - Protein assays: {X_final_linear.shape[1]}")
-        
-        print(f"\n  Column structure (Proteomics - Longitudinal):")
-        print(f"    Index: SampleID (e.g., 'DP3-0005 A' - unique timepoint identifier)")
-        print(f"    Column 1: SubjectID (e.g., 'DP3-0005' - for grouping)")
-        print(f"    Columns 2-{len(metadata_aligned.columns)}: Metadata (Batch, Group, etc.)")
-        print(f"    Columns {len(metadata_aligned.columns)+1}-{final_output.shape[1]}: {X_final_linear.shape[1]} protein assays")
     else:
-        print(f"  - Samples: {final_output.shape[0]}")
-        print(f"  - Total columns: {final_output.shape[1]}")
-        print(f"  - Metadata columns: {len(metadata_aligned.columns)} {list(metadata_aligned.columns)}")
-        print(f"  - Protein assays: {X_final_linear.shape[1]}")
-        
-        print(f"\n  Column structure (Placenta - Non-Longitudinal):")
-        print(f"    Index: SampleID (e.g., 'DP3-0005')")
-        print(f"    Columns 1-{len(metadata_aligned.columns)}: Metadata (Batch, Group, etc.)")
-        print(f"    Columns {len(metadata_aligned.columns)+1}-{final_output.shape[1]}: {X_final_linear.shape[1]} protein assays")
-    
-    print("  - Diagnostics: run /01_data_cleaning/proteomics_diagnostics.py (optional)")
-    
-    # Show metadata coverage
+        final_output = pd.concat([metadata_aligned, X_final_linear], axis=1)
+
+    # 12) Save output
+    final_output.to_csv(output_csv, index=True)
+
+    n_dropped = len(dropped_report)
+    msg = (
+        f"[clean] {run_label}: done | samples={final_output.shape[0]} "
+        f"| assays={X_final_linear.shape[1]} | dropped_assays={n_dropped} "
+        f"| metadata_matched={n_matched}/{len(matched)} | output={output_csv}"
+    )
+    print(msg)
+    if n_dropped > 0:
+        print(f"[clean:{run_label}] missingness report: {os.path.splitext(output_csv)[0]}_dropped_missingness_report.csv")
+
     n_missing_meta = metadata_aligned.isna().all(axis=1).sum()
     if n_missing_meta > 0:
-        print(f"\n  WARNING: {n_missing_meta} samples have no metadata (missing from Excel)")
+        print(f"[clean:{run_label}] warning: {n_missing_meta} samples have no metadata.")
 
 
 if __name__ == "__main__":
@@ -720,42 +574,16 @@ if __name__ == "__main__":
     plasma_files = sorted(plasma_files)
     placenta_files = sorted(placenta_files)
 
-    print("=" * 80)
-    print("FILE CLASSIFICATION")
-    print("=" * 80)
-    print(f"\nPlasma files (will use 'n=133 proteomics' sheet):")
-    for f in plasma_files:
-        print(f"  - {os.path.basename(f)}")
-    
-    print(f"\nPlacenta/Tissue files (will use 'n=133 placenta' sheet):")
-    for f in placenta_files:
-        print(f"  - {os.path.basename(f)}")
-    print("\n" + "=" * 80 + "\n")
+    print(f"[clean] files | plasma={len(plasma_files)} | placenta={len(placenta_files)}")
 
     # Process plasma files
     if plasma_files:
-        print("\n" + "=" * 80)
-        print("PROCESSING PLASMA FILES")
-        print("=" * 80 + "\n")
         out_csv_plasma = os.path.join(output_dir, "proteomics_plasma_cleaned_with_metadata.csv")
-        process_all_files(plasma_files, out_csv_plasma, metadata_path, 
-                         meta_type="proteomics")
+        process_all_files(plasma_files, out_csv_plasma, metadata_path, meta_type="proteomics")
 
     # Process placenta files
     if placenta_files:
-        print("\n" + "=" * 80)
-        print("PROCESSING PLACENTA/TISSUE FILES")
-        print("=" * 80 + "\n")
         out_csv_placenta = os.path.join(output_dir, "proteomics_placenta_cleaned_with_metadata.csv")
-        process_all_files(placenta_files, out_csv_placenta, metadata_path, 
-                         meta_type="placenta")
+        process_all_files(placenta_files, out_csv_placenta, metadata_path, meta_type="placenta")
 
-    # Summary
-    print("\n" + "=" * 80)
-    print("ALL PROCESSING COMPLETE")
-    print("=" * 80)
-    if plasma_files:
-        print(f"\n✓ Plasma output: {os.path.join(output_dir, 'proteomics_plasma_cleaned_with_metadata.csv')}")
-    if placenta_files:
-        print(f"✓ Placenta output: {os.path.join(output_dir, 'proteomics_placenta_cleaned_with_metadata.csv')}")
-    print()
+    print("[clean] all processing complete")
