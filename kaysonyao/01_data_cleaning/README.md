@@ -16,7 +16,7 @@ This README documents how to run:
 ## Required Inputs
 
 - Olink CSV files folder path (for example: `$ROOT_DIR/data/proteomics`)
-- Metadata Excel file path (for example: `$ROOT_DIR/data/dp3 master table v2.xlsx`)
+- Metadata Excel file path (for example: `$ROOT_DIR/data/<metadata_file>.xlsx`)
 
 ## Quick Run
 
@@ -41,7 +41,7 @@ ROOT_DIR=/path/to/repo
 python "$ROOT_DIR/01_data_cleaning/clean_proteomics_data.py" \
   --mode auto \
   --data-dir "$ROOT_DIR/data/proteomics" \
-  --metadata-path "$ROOT_DIR/data/dp3 master table v2.xlsx" \
+  --metadata-path "$ROOT_DIR/data/<metadata_file>.xlsx" \
   --output-dir "$ROOT_DIR/data/cleaned/proteomics"
 ```
 
@@ -54,9 +54,9 @@ ROOT_DIR=/path/to/repo
 python "$ROOT_DIR/01_data_cleaning/clean_proteomics_data.py" \
   --mode single \
   --meta-type proteomics \
-  --metadata-path "$ROOT_DIR/data/dp3 master table v2.xlsx" \
+  --metadata-path "$ROOT_DIR/data/<metadata_file>.xlsx" \
   --output-csv "$ROOT_DIR/data/cleaned/proteomics/proteomics_plasma_cleaned_with_metadata.csv" \
-  --files "$ROOT_DIR/data/proteomics/Q-04558_Barak_EDTAPlasma_NPX_2022-12-28.csv" "$ROOT_DIR/data/proteomics/Q-07626_Barak_EDTAPlasma_NPX_2023-06-12.csv"
+  --files "$ROOT_DIR/data/proteomics/<plasma_file_1>.csv" "$ROOT_DIR/data/proteomics/<plasma_file_2>.csv"
 ```
 
 Placenta example:
@@ -66,9 +66,9 @@ ROOT_DIR=/path/to/repo
 python "$ROOT_DIR/01_data_cleaning/clean_proteomics_data.py" \
   --mode single \
   --meta-type placenta \
-  --metadata-path "$ROOT_DIR/data/dp3 master table v2.xlsx" \
+  --metadata-path "$ROOT_DIR/data/<metadata_file>.xlsx" \
   --output-csv "$ROOT_DIR/data/cleaned/proteomics/proteomics_placenta_cleaned_with_metadata.csv" \
-  --files "$ROOT_DIR/data/proteomics/Q-04558_Barak_PlacentalTissue_NPX_2022-12-28.csv" "$ROOT_DIR/data/proteomics/Q-07626_Barak_TissueLysate_NPX_2023-06-12.csv"
+  --files "$ROOT_DIR/data/proteomics/<placenta_file_1>.csv" "$ROOT_DIR/data/proteomics/<placenta_file_2>.csv"
 ```
 
 ## Outputs

@@ -214,3 +214,6 @@ processed_data/
 .Rhistory
 .RData
 .Rproj.user/
+
+# Scratch files
+scratch.py
