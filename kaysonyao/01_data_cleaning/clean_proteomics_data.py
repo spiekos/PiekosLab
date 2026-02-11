@@ -39,7 +39,12 @@ Workflow:
 import os
 import numpy as np
 import pandas as pd
-from scipy.stats import fisher_exact
+from scipy.stats import fisher_exact, false_discovery_control
+
+try:
+    from statsmodels.stats.multitest import multipletests
+except Exception:
+    multipletests = None
 
 
 CUTOFF_PERCENT_MISSING = 0.25
@@ -265,21 +270,17 @@ def apply_panel_normalization_long(df_long: pd.DataFrame) -> pd.DataFrame:
 # Missingness + group check
 # -----------------------------
 def benjamini_hochberg_rejections(pvals: pd.Series, alpha: float = 0.05) -> pd.Series:
-    """Apply Benjamini-Hochberg FDR correction"""
+    """Apply Benjamini-Hochberg FDR correction using package implementations."""
     pvals = pvals.dropna().astype(float).clip(0, 1)
     if pvals.empty:
         return pd.Series(dtype=bool)
 
-    p_sorted = pvals.sort_values()
-    n = len(p_sorted)
-    thresh = (np.arange(1, n + 1) / n) * alpha
-    passed = p_sorted.values <= thresh
+    if multipletests is not None:
+        rejected, _, _, _ = multipletests(pvals.values, alpha=alpha, method="fdr_bh")
+        return pd.Series(rejected, index=pvals.index, dtype=bool)
 
-    out = pd.Series(False, index=pvals.index)
-    if np.any(passed):
-        k_star = np.max(np.where(passed)[0])
-        out.loc[p_sorted.index[: k_star + 1]] = True
-    return out
+    pvals_adj = false_discovery_control(pvals.values, method="bh")
+    return pd.Series(pvals_adj <= alpha, index=pvals.index, dtype=bool)
 
 
 def missingness_filter_and_group_check(
