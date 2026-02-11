@@ -15,15 +15,16 @@ This README documents how to run:
 
 ## Required Inputs
 
-- Olink CSV files folder path
-- Metadata Excel file path
+- Olink CSV files folder path (for example: `$ROOT_DIR/data/proteomics`)
+- Metadata Excel file path (for example: `$ROOT_DIR/data/dp3 master table v2.xlsx`)
 
 ## Quick Run
 
 Run from terminal:
 
 ```bash
-python /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/01_data_cleaning/clean_proteomics_data.py
+ROOT_DIR=/path/to/repo
+python "$ROOT_DIR/01_data_cleaning/clean_proteomics_data.py"
 ```
 
 What this does:
@@ -36,11 +37,12 @@ What this does:
 ### 1) Auto Mode
 
 ```bash
-python /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/01_data_cleaning/clean_proteomics_data.py \
+ROOT_DIR=/path/to/repo
+python "$ROOT_DIR/01_data_cleaning/clean_proteomics_data.py" \
   --mode auto \
-  --data-dir /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/proteomics \
-  --metadata-path "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/dp3 master table v2.xlsx" \
-  --output-dir /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/proteomics
+  --data-dir "$ROOT_DIR/data/proteomics" \
+  --metadata-path "$ROOT_DIR/data/dp3 master table v2.xlsx" \
+  --output-dir "$ROOT_DIR/data/cleaned/proteomics"
 ```
 
 ### 2) Single Mode (Run One Dataset Type)
@@ -48,31 +50,33 @@ python /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/01_data_cleaning/cle
 Plasma example:
 
 ```bash
-python /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/01_data_cleaning/clean_proteomics_data.py \
+ROOT_DIR=/path/to/repo
+python "$ROOT_DIR/01_data_cleaning/clean_proteomics_data.py" \
   --mode single \
   --meta-type proteomics \
-  --metadata-path "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/dp3 master table v2.xlsx" \
-  --output-csv /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/proteomics/proteomics_plasma_cleaned_with_metadata.csv \
-  --files /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/proteomics/Q-04558_Barak_EDTAPlasma_NPX_2022-12-28.csv /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/proteomics/Q-07626_Barak_EDTAPlasma_NPX_2023-06-12.csv
+  --metadata-path "$ROOT_DIR/data/dp3 master table v2.xlsx" \
+  --output-csv "$ROOT_DIR/data/cleaned/proteomics/proteomics_plasma_cleaned_with_metadata.csv" \
+  --files "$ROOT_DIR/data/proteomics/Q-04558_Barak_EDTAPlasma_NPX_2022-12-28.csv" "$ROOT_DIR/data/proteomics/Q-07626_Barak_EDTAPlasma_NPX_2023-06-12.csv"
 ```
 
 Placenta example:
 
 ```bash
-python /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/01_data_cleaning/clean_proteomics_data.py \
+ROOT_DIR=/path/to/repo
+python "$ROOT_DIR/01_data_cleaning/clean_proteomics_data.py" \
   --mode single \
   --meta-type placenta \
-  --metadata-path "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/dp3 master table v2.xlsx" \
-  --output-csv /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/proteomics/proteomics_placenta_cleaned_with_metadata.csv \
-  --files /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/proteomics/Q-04558_Barak_PlacentalTissue_NPX_2022-12-28.csv /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/proteomics/Q-07626_Barak_TissueLysate_NPX_2023-06-12.csv
+  --metadata-path "$ROOT_DIR/data/dp3 master table v2.xlsx" \
+  --output-csv "$ROOT_DIR/data/cleaned/proteomics/proteomics_placenta_cleaned_with_metadata.csv" \
+  --files "$ROOT_DIR/data/proteomics/Q-04558_Barak_PlacentalTissue_NPX_2022-12-28.csv" "$ROOT_DIR/data/proteomics/Q-07626_Barak_TissueLysate_NPX_2023-06-12.csv"
 ```
 
 ## Outputs
 
 Main cleaned outputs:
 
-- `/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/proteomics/proteomics_plasma_cleaned_with_metadata.csv`
-- `/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/proteomics/proteomics_placenta_cleaned_with_metadata.csv`
+- `$ROOT_DIR/data/cleaned/proteomics/proteomics_plasma_cleaned_with_metadata.csv`
+- `$ROOT_DIR/data/cleaned/proteomics/proteomics_placenta_cleaned_with_metadata.csv`
 
 Missingness reports (created when assays are dropped):
 
@@ -81,5 +85,6 @@ Missingness reports (created when assays are dropped):
 ## Help
 
 ```bash
-python /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/01_data_cleaning/clean_proteomics_data.py --help
+ROOT_DIR=/path/to/repo
+python "$ROOT_DIR/01_data_cleaning/clean_proteomics_data.py" --help
 ```
