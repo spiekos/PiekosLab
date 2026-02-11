@@ -1,12 +1,8 @@
 # Proteomics Cleaning Script
 
-This README documents how to run only:
+This README documents how to run:
 
 - `clean_proteomics_data.py`
-
-## Script Path
-
-- `/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/01_data_cleaning/clean_proteomics_data.py`
 
 ## What It Does
 
@@ -19,10 +15,8 @@ This README documents how to run only:
 
 ## Required Inputs
 
-- Olink CSV files in:
-  - `/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/proteomics`
-- Metadata Excel file:
-  - `/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/dp3 master table v2.xlsx`
+- Olink CSV files folder path
+- Metadata Excel file path
 
 ## Quick Run
 
