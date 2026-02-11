@@ -35,12 +35,19 @@ Workflow:
 13) Save final cleaned matrix (wide, SampleID x [metadata + Assays]) to CSV.
 
 """
+# Move missingness checking after batch normalization (8 -> 9 -> break by timepoint)
 
 import os
+import sys
+import argparse
 import numpy as np
 import pandas as pd
 from scipy.stats import fisher_exact, false_discovery_control
-from statsmodels.stats.multitest import multipletests
+
+try:
+    from statsmodels.stats.multitest import multipletests  # Optional dependency
+except Exception:
+    multipletests = None
 
 
 
@@ -544,23 +551,13 @@ def process_all_files(
 
 
 if __name__ == "__main__":
-    # Example usage
-    wkdir = os.getcwd()
-    data_dir = os.path.join(wkdir, "data", "proteomics")
-    output_dir = os.path.join(wkdir, "data", "cleaned", "proteomics")
-    os.makedirs(output_dir, exist_ok=True)
-
-    # Metadata file path
-    metadata_path = os.path.join(wkdir, 'data', "dp3 master table v2.xlsx")
-
-    # Collect all CSV files and separate by type
-    plasma_files = []
-    placenta_files = []
-    
-    for fn in os.listdir(data_dir):
-        if fn.endswith(".csv"):
+    def _collect_files_by_type(data_dir: str) -> tuple[list[str], list[str]]:
+        plasma_files = []
+        placenta_files = []
+        for fn in os.listdir(data_dir):
+            if not fn.endswith(".csv"):
+                continue
             full_path = os.path.join(data_dir, fn)
-            # Determine file type based on filename
             fn_lower = fn.lower()
             if "plasma" in fn_lower:
                 plasma_files.append(full_path)
@@ -568,22 +565,116 @@ if __name__ == "__main__":
                 placenta_files.append(full_path)
             else:
                 print(f"WARNING: Cannot determine type for file: {fn}")
-                print(f"         Please add it to plasma_files or placenta_files manually")
+        return sorted(plasma_files), sorted(placenta_files)
 
-    # Sort for deterministic processing
-    plasma_files = sorted(plasma_files)
-    placenta_files = sorted(placenta_files)
+    def _run_default_mode() -> None:
+        """Backward-compatible run mode (current behavior)."""
+        wkdir = os.getcwd()
+        data_dir = os.path.join(wkdir, "data", "proteomics")
+        output_dir = os.path.join(wkdir, "data", "cleaned", "proteomics")
+        os.makedirs(output_dir, exist_ok=True)
+        metadata_path = os.path.join(wkdir, "data", "dp3 master table v2.xlsx")
 
-    print(f"[clean] files | plasma={len(plasma_files)} | placenta={len(placenta_files)}")
+        plasma_files, placenta_files = _collect_files_by_type(data_dir)
+        print(f"[clean] files | plasma={len(plasma_files)} | placenta={len(placenta_files)}")
 
-    # Process plasma files
-    if plasma_files:
-        out_csv_plasma = os.path.join(output_dir, "proteomics_plasma_cleaned_with_metadata.csv")
-        process_all_files(plasma_files, out_csv_plasma, metadata_path, meta_type="proteomics")
+        if plasma_files:
+            out_csv_plasma = os.path.join(output_dir, "proteomics_plasma_cleaned_with_metadata.csv")
+            process_all_files(plasma_files, out_csv_plasma, metadata_path, meta_type="proteomics")
 
-    # Process placenta files
-    if placenta_files:
-        out_csv_placenta = os.path.join(output_dir, "proteomics_placenta_cleaned_with_metadata.csv")
-        process_all_files(placenta_files, out_csv_placenta, metadata_path, meta_type="placenta")
+        if placenta_files:
+            out_csv_placenta = os.path.join(output_dir, "proteomics_placenta_cleaned_with_metadata.csv")
+            process_all_files(placenta_files, out_csv_placenta, metadata_path, meta_type="placenta")
 
-    print("[clean] all processing complete")
+        print("[clean] all processing complete")
+
+    def _build_parser() -> argparse.ArgumentParser:
+        parser = argparse.ArgumentParser(
+            description="Clean Olink proteomics data (core pipeline; diagnostics run separately)."
+        )
+        parser.add_argument(
+            "--mode",
+            choices=["auto", "single"],
+            default="auto",
+            help="auto: discover plasma/placenta CSVs in --data-dir (default). "
+                 "single: run one dataset with explicit --files/--meta-type/--output-csv.",
+        )
+        parser.add_argument(
+            "--data-dir",
+            default=None,
+            help="Directory containing raw Olink CSV files (used in auto mode).",
+        )
+        parser.add_argument(
+            "--metadata-path",
+            default=None,
+            help="Path to metadata Excel file.",
+        )
+        parser.add_argument(
+            "--output-dir",
+            default=None,
+            help="Directory for cleaned output CSVs (used in auto mode).",
+        )
+        parser.add_argument(
+            "--files",
+            nargs="+",
+            default=None,
+            help="Input CSV files (required in single mode).",
+        )
+        parser.add_argument(
+            "--meta-type",
+            choices=["proteomics", "placenta"],
+            default=None,
+            help="Metadata sheet type (required in single mode).",
+        )
+        parser.add_argument(
+            "--output-csv",
+            default=None,
+            help="Output CSV path (required in single mode).",
+        )
+        return parser
+
+    def main() -> None:
+        # Keep current behavior if no CLI args are provided.
+        if len(sys.argv) == 1:
+            _run_default_mode()
+            return
+
+        parser = _build_parser()
+        args = parser.parse_args()
+
+        wkdir = os.getcwd()
+        metadata_path = args.metadata_path or os.path.join(wkdir, "data", "dp3 master table v2.xlsx")
+
+        if args.mode == "auto":
+            data_dir = args.data_dir or os.path.join(wkdir, "data", "proteomics")
+            output_dir = args.output_dir or os.path.join(wkdir, "data", "cleaned", "proteomics")
+            os.makedirs(output_dir, exist_ok=True)
+
+            plasma_files, placenta_files = _collect_files_by_type(data_dir)
+            print(f"[clean] files | plasma={len(plasma_files)} | placenta={len(placenta_files)}")
+
+            if plasma_files:
+                out_csv_plasma = os.path.join(output_dir, "proteomics_plasma_cleaned_with_metadata.csv")
+                process_all_files(plasma_files, out_csv_plasma, metadata_path, meta_type="proteomics")
+
+            if placenta_files:
+                out_csv_placenta = os.path.join(output_dir, "proteomics_placenta_cleaned_with_metadata.csv")
+                process_all_files(placenta_files, out_csv_placenta, metadata_path, meta_type="placenta")
+
+            print("[clean] all processing complete")
+            return
+
+        # mode == "single"
+        missing = []
+        if not args.files:
+            missing.append("--files")
+        if args.meta_type is None:
+            missing.append("--meta-type")
+        if args.output_csv is None:
+            missing.append("--output-csv")
+        if missing:
+            parser.error(f"single mode requires: {', '.join(missing)}")
+
+        process_all_files(args.files, args.output_csv, metadata_path, meta_type=args.meta_type)
+
+    main()
