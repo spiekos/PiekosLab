@@ -52,6 +52,7 @@ except Exception:
 
 
 CUTOFF_PERCENT_MISSING = 0.25
+CONTROL_SAMPLE_PREFIXES = ("CONTROL", "NEG", "PLATE")
 
 
 # -----------------------------
@@ -220,8 +221,15 @@ def combine_batches(df_list: list[pd.DataFrame]) -> pd.DataFrame:
 
 
 def is_olink_control_sample(df_long: pd.DataFrame) -> pd.Series:
-    """Identify Olink internal control samples"""
-    return df_long["SampleID"].astype(str).str.strip().str.upper().str.startswith("CONTROL")
+    """Identify Olink technical control samples from SampleID prefixes."""
+    sid = df_long["SampleID"].astype(str).str.strip().str.upper()
+    return sid.str.startswith(CONTROL_SAMPLE_PREFIXES)
+
+
+def is_olink_control_assay(df_long: pd.DataFrame) -> pd.Series:
+    """Identify technical control assays (e.g., incubation/amplification controls)."""
+    assay = df_long["Assay"].astype(str).str.strip().str.lower()
+    return assay.str.contains(r"\bcontrol\b", regex=True)
 
 
 # -----------------------------
@@ -238,7 +246,7 @@ def apply_panel_normalization_long(df_long: pd.DataFrame) -> pd.DataFrame:
     if missing:
         raise ValueError(f"Panel normalization requires columns: {sorted(required)}; missing: {sorted(missing)}")
 
-    ctrl = df["SampleID"].astype(str).str.strip().str.upper().str.startswith("CONTROL")
+    ctrl = is_olink_control_sample(df)
 
     panel_medians = (
         df.loc[ctrl]
@@ -248,7 +256,10 @@ def apply_panel_normalization_long(df_long: pd.DataFrame) -> pd.DataFrame:
         .reset_index()
     )
     if panel_medians.empty:
-        raise ValueError("No Olink control samples found (SampleID startswith CONTROL).")
+        raise ValueError(
+            "No Olink control samples found "
+            f"(SampleID startswith one of {CONTROL_SAMPLE_PREFIXES})."
+        )
 
     global_ref = (
         panel_medians.groupby("Assay")["panel_median"]
@@ -440,7 +451,7 @@ def process_all_files(
         meta_type: 'proteomics' or 'placenta' - which sheet to use
     """
     run_label = "plasma" if meta_type == "proteomics" else "placenta"
-    print(f"[clean] {run_label}: start")
+    print(f"{run_label}: start")
 
     # 1) Load metadata
     metadata = load_metadata_with_batch(metadata_path, meta_type=meta_type)
@@ -461,6 +472,17 @@ def process_all_files(
     n_controls = ctrl_mask.sum()
     df_long_bio = df_long.loc[~ctrl_mask].copy()
 
+    # Remove assay-level technical controls from downstream feature matrix.
+    assay_ctrl_mask = is_olink_control_assay(df_long_bio)
+    n_assay_ctrl_rows = int(assay_ctrl_mask.sum())
+    if n_assay_ctrl_rows > 0:
+        n_assay_ctrl_names = int(df_long_bio.loc[assay_ctrl_mask, "Assay"].nunique())
+        df_long_bio = df_long_bio.loc[~assay_ctrl_mask].copy()
+        print(
+            f"[{run_label}] removed {n_assay_ctrl_rows} rows from {n_assay_ctrl_names} control assays "
+            "(assay name contains 'control')."
+        )
+
     # 5) Build wide matrix
     X = df_long_bio.pivot_table(
         index="SampleID",
@@ -474,24 +496,24 @@ def process_all_files(
     n_matched = matched.sum()
     if n_matched < len(X):
         unmatched = X.index[~matched]
-        print(f"[clean:{run_label}] warning: {len(unmatched)} samples missing metadata. examples={list(unmatched[:5])}")
+        print(f"warning: {len(unmatched)} samples missing metadata. examples={list(unmatched[:5])}")
 
         # Check if removing spaces improves matching (compact diagnostic hint)
         data_no_space = X.index.str.replace(' ', '', regex=False)
         meta_no_space = metadata.index.str.replace(' ', '', regex=False)
         matched_no_space = data_no_space.isin(meta_no_space)
         if matched_no_space.sum() > matched.sum():
-            print(f"[clean:{run_label}] hint: stripping internal spaces would improve matching ({matched_no_space.sum()} vs {matched.sum()}).")
+            print(f"hint: stripping internal spaces would improve matching ({matched_no_space.sum()} vs {matched.sum()}).")
 
     if n_matched == 0:
-        print(f"[clean:{run_label}] warning: no metadata matches found; downstream results may be unreliable.")
+        print(f"warning: no metadata matches found; downstream results may be unreliable.")
 
     # 6) Group labels for missingness check
     groups = metadata["Group"].reindex(X.index)
     has_metadata = groups.notna()
     n_no_metadata = (~has_metadata).sum()
     if n_no_metadata > 0:
-        print(f"[clean:{run_label}] warning: filtering {n_no_metadata} samples without metadata group.")
+        print(f"warning: filtering {n_no_metadata} samples without metadata group.")
         X = X.loc[has_metadata].copy()
         groups = groups.loc[has_metadata]
 
@@ -537,17 +559,17 @@ def process_all_files(
 
     n_dropped = len(dropped_report)
     msg = (
-        f"[clean] {run_label}: done | samples={final_output.shape[0]} "
+        f"{run_label}: done | samples={final_output.shape[0]} "
         f"| assays={X_final_linear.shape[1]} | dropped_assays={n_dropped} "
         f"| metadata_matched={n_matched}/{len(matched)} | output={output_csv}"
     )
     print(msg)
     if n_dropped > 0:
-        print(f"[clean:{run_label}] missingness report: {os.path.splitext(output_csv)[0]}_dropped_missingness_report.csv")
+        print(f"missingness report: {os.path.splitext(output_csv)[0]}_dropped_missingness_report.csv")
 
     n_missing_meta = metadata_aligned.isna().all(axis=1).sum()
     if n_missing_meta > 0:
-        print(f"[clean:{run_label}] warning: {n_missing_meta} samples have no metadata.")
+        print(f"warning: {n_missing_meta} samples have no metadata.")
 
 
 if __name__ == "__main__":
@@ -576,7 +598,7 @@ if __name__ == "__main__":
         metadata_path = os.path.join(wkdir, "data", "dp3 master table v2.xlsx")
 
         plasma_files, placenta_files = _collect_files_by_type(data_dir)
-        print(f"[clean] files | plasma={len(plasma_files)} | placenta={len(placenta_files)}")
+        print(f" files | plasma={len(plasma_files)} | placenta={len(placenta_files)}")
 
         if plasma_files:
             out_csv_plasma = os.path.join(output_dir, "proteomics_plasma_cleaned_with_metadata.csv")
@@ -586,7 +608,7 @@ if __name__ == "__main__":
             out_csv_placenta = os.path.join(output_dir, "proteomics_placenta_cleaned_with_metadata.csv")
             process_all_files(placenta_files, out_csv_placenta, metadata_path, meta_type="placenta")
 
-        print("[clean] all processing complete")
+        print("all processing complete")
 
     def _build_parser() -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(
@@ -651,7 +673,7 @@ if __name__ == "__main__":
             os.makedirs(output_dir, exist_ok=True)
 
             plasma_files, placenta_files = _collect_files_by_type(data_dir)
-            print(f"[clean] files | plasma={len(plasma_files)} | placenta={len(placenta_files)}")
+            print(f"files | plasma={len(plasma_files)} | placenta={len(placenta_files)}")
 
             if plasma_files:
                 out_csv_plasma = os.path.join(output_dir, "proteomics_plasma_cleaned_with_metadata.csv")
@@ -661,7 +683,7 @@ if __name__ == "__main__":
                 out_csv_placenta = os.path.join(output_dir, "proteomics_placenta_cleaned_with_metadata.csv")
                 process_all_files(placenta_files, out_csv_placenta, metadata_path, meta_type="placenta")
 
-            print("[clean] all processing complete")
+            print("all processing complete")
             return
 
         # mode == "single"
