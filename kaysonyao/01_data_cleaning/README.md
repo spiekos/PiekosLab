@@ -3,6 +3,7 @@
 This README documents how to run:
 
 - `clean_proteomics_data.py`
+- `format_proteomics.py`
 
 ## What It Does
 
