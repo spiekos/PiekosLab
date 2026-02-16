@@ -6,8 +6,8 @@ This module intentionally separates slower QC/diagnostic routines from
 
 Diagnostics included:
 1) Duplicate SampleID×Assay report (before median collapse in wide pivot)
-2) PCA pre-quantile normalization
-3) PCA post-quantile normalization
+2) PCA pre-ComBat normalization
+3) PCA post-ComBat normalization
 4) Shared-axis pre/post PCA comparison
 """
 
@@ -24,8 +24,9 @@ from clean_proteomics_data import (
     combine_batches,
     apply_panel_normalization_long,
     is_olink_control_sample,
+    is_olink_control_assay,
     missingness_filter_and_group_check,
-    quantile_normalize_wide,
+    combat_normalize_wide,
 )
 
 
@@ -150,8 +151,8 @@ def plot_pca_pre_post_comparison(X_pre: pd.DataFrame, X_post: pd.DataFrame, labe
     ylim = (y_all.min() - ypad, y_all.max() + ypad)
 
     fig, axes = plt.subplots(1, 2, figsize=(18, 7), sharex=True, sharey=True)
-    _plot_pca_on_axis(axes[0], df_pre, labs, "PCA (panel-normalized, pre-quantile normalization)", var_pre)
-    _plot_pca_on_axis(axes[1], df_post, labs, "PCA (post quantile normalization)", var_post)
+    _plot_pca_on_axis(axes[0], df_pre, labs, "PCA (panel-normalized, pre-ComBat)", var_pre)
+    _plot_pca_on_axis(axes[1], df_post, labs, "PCA (post ComBat)", var_post)
     axes[0].set_xlim(xlim)
     axes[0].set_ylim(ylim)
     axes[1].set_xlim(xlim)
@@ -192,6 +193,7 @@ def run_diagnostics(
     print("\n[3/5] Panel normalization + control removal...")
     df_long = apply_panel_normalization_long(df_long)
     df_long_bio = df_long.loc[~is_olink_control_sample(df_long)].copy()
+    df_long_bio = df_long_bio.loc[~is_olink_control_assay(df_long_bio)].copy()
 
     dup_report = duplicate_sample_assay_report(df_long_bio)
     dup_path = os.path.splitext(output_csv)[0] + "_duplicate_sample_assay_report.csv"
@@ -211,21 +213,30 @@ def run_diagnostics(
         name="GroupBinary",
     )
 
-    X_kept, _ = missingness_filter_and_group_check(X, groups_binary, cutoff=CUTOFF_PERCENT_MISSING, alpha_bh=0.05)
-    X_qn = quantile_normalize_wide(X_kept)
-    sample_to_batch = metadata["Batch"].reindex(X_kept.index)
+    sample_to_batch = metadata["Batch"].reindex(X.index)
+    has_batch = sample_to_batch.notna()
+    if not has_batch.all():
+        X = X.loc[has_batch].copy()
+        groups_binary = groups_binary.loc[has_batch].copy()
+        sample_to_batch = sample_to_batch.loc[has_batch]
+
+    X_combat = combat_normalize_wide(X, sample_to_batch)
+    X_kept, _ = missingness_filter_and_group_check(
+        X_combat, groups_binary, cutoff=CUTOFF_PERCENT_MISSING, alpha_bh=0.05
+    )
+    sample_to_batch = sample_to_batch.reindex(X_kept.index)
 
     print("\n[5/5] Saving PCA diagnostics...")
     if pca_dir is None:
         pca_dir = os.path.join(os.path.dirname(output_csv), f"pca_{meta_type}")
     os.makedirs(pca_dir, exist_ok=True)
 
-    pre_png = os.path.join(pca_dir, "pca_pre_quantile_norm.png")
-    post_png = os.path.join(pca_dir, "pca_post_quantile_norm.png")
+    pre_png = os.path.join(pca_dir, "pca_pre_combat.png")
+    post_png = os.path.join(pca_dir, "pca_post_combat.png")
     cmp_png = os.path.join(pca_dir, "pca_pre_post_shared_axes.png")
-    plot_pca(X_kept, sample_to_batch, pre_png, "PCA (panel-normalized, pre-quantile normalization)")
-    plot_pca(X_qn, sample_to_batch, post_png, "PCA (post quantile normalization)")
-    plot_pca_pre_post_comparison(X_kept, X_qn, sample_to_batch, cmp_png)
+    plot_pca(X, sample_to_batch, pre_png, "PCA (panel-normalized, pre-ComBat)")
+    plot_pca(X_kept, sample_to_batch, post_png, "PCA (post ComBat + post-missingness filter)")
+    plot_pca_pre_post_comparison(X, X_kept, sample_to_batch, cmp_png)
     print(f"   Saved: {pre_png}")
     print(f"   Saved: {post_png}")
     print(f"   Saved: {cmp_png}")

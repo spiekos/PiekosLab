@@ -9,8 +9,9 @@ This README documents how to run:
 - Loads Olink proteomics CSV files.
 - Applies QC masking and panel normalization.
 - Removes Olink control samples.
-- Filters assays by missingness and writes a dropped-assay report.
-- Quantile-normalizes, imputes, converts to linear scale, and merges metadata.
+- Applies ComBat batch normalization using batch labels from metadata.
+- Filters assays by missingness after ComBat and writes a dropped-assay report.
+- Imputes, converts to linear scale, and merges metadata.
 - Saves cleaned output CSV.
 
 ## Required Inputs
@@ -87,4 +88,35 @@ Missingness reports (created when assays are dropped):
 ```bash
 ROOT_DIR=/path/to/repo
 python "$ROOT_DIR/01_data_cleaning/clean_proteomics_data.py" --help
+```
+
+## Format Plasma Output By Longitudinal Suffix
+
+Use `format_proteomics.py` to split the final plasma output into one file per suffix label.
+
+What it does:
+
+- Removes internal whitespace in `SampleID` and `SubjectID`
+- Extracts suffix label by comparing `SampleID` vs `SubjectID`
+- Drops `Batch`
+- Writes one CSV per suffix label
+- In each output file:
+  - drops `SubjectID`
+  - removes suffix from `SampleID`
+
+Run:
+
+```bash
+ROOT_DIR=/path/to/repo
+python "$ROOT_DIR/01_data_cleaning/format_proteomics.py" \
+  --input-csv "$ROOT_DIR/data/cleaned/proteomics/proteomics_plasma_cleaned_with_metadata.csv" \
+  --output-dir "$ROOT_DIR/data/cleaned/proteomics/sliced_by_suffix" \
+  --base-name proteomics_plasma
+```
+
+Format script help:
+
+```bash
+ROOT_DIR=/path/to/repo
+python "$ROOT_DIR/01_data_cleaning/format_proteomics.py" --help
 ```

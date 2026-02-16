@@ -1,6 +1,6 @@
 """
-Title: clean_proteomics_data_corrected_v2.py
-Author: Samantha Piekos, Kayson Yao
+Title: clean_proteomics_data.py
+Author: Kayson Yao
 Date: 02/08/2026
 Description:
 DP3 proteomics preprocessing for Olink Explore long-format exports.
@@ -20,13 +20,14 @@ Workflow:
    - Adjustment = global_median - panel_median; add adjustment to NPX for all samples in that Panel+Assay.
 6) Remove Olink internal control samples from downstream analysis matrices.
 7) Reshape to a wide matrix (rows = SampleID, columns = Assay, values = NPX; aggregate duplicates by median).
-8) Missingness filter on the combined wide matrix (pre-imputation):
+8) ComBat normalization (wide matrix):
+   - Apply ComBat batch correction using metadata Batch labels.
+   - Preserve original missingness pattern after correction.
+9) Missingness filter on the ComBat-normalized wide matrix (pre-imputation):
    - Keep assays with missing fraction < 25%.
    - For assays failing the cutoff, compute group-wise missingness (Control vs Complication),
      test imbalance using Fisher's exact test, and apply Benjamini-Hochberg correction.
    - Save a dropped-assay missingness report CSV.
-9) Quantile normalization (wide matrix) to adjust batch-related distributional differences:
-    - Quantile-normalize per-sample NPX distributions using a NaN-aware implementation.
 10) Impute remaining missing values (last):
     - Per assay, fill NaN with 0.5 x minimum observed value in that assay.
 11) Output scaling:
@@ -35,7 +36,7 @@ Workflow:
 13) Save final cleaned matrix (wide, SampleID x [metadata + Assays]) to CSV.
 
 """
-# Move missingness checking after batch normalization (9 -> 8 -> break by timepoint)
+
 
 import os
 import sys
@@ -43,11 +44,8 @@ import argparse
 import numpy as np
 import pandas as pd
 from scipy.stats import fisher_exact, false_discovery_control
-
-try:
-    from statsmodels.stats.multitest import multipletests  # Optional dependency
-except Exception:
-    multipletests = None
+from pycombat import Combat
+from statsmodels.stats.multitest import multipletests
 
 
 
@@ -71,10 +69,6 @@ def load_metadata_with_batch(
     - Subgroup  
     - Gestational age at delivery (gest age del)
     - Sample gestational age (sample gest Age) - for proteomics only
-    
-    IMPORTANT: The sample_id_col contains the FULL sample identifier including
-    letter suffixes (e.g., DP3-0005A, DP3-0005B) which represent different
-    timepoints/samples from the same subject.
     
     Returns a DataFrame with SampleID (with letters) as index and metadata columns.
     
@@ -375,7 +369,7 @@ def missingness_filter_and_group_check(
 
 
 # -----------------------------
-# Quantile normalization (wide)
+#  Normalization (wide)
 # -----------------------------
 def quantile_normalize_wide(X: pd.DataFrame) -> pd.DataFrame:
     """
@@ -417,6 +411,36 @@ def quantile_normalize_wide(X: pd.DataFrame) -> pd.DataFrame:
         out[i, sorted_cols[i]] = rank_means[: counts[i]]
 
     return pd.DataFrame(out, index=X.index, columns=X.columns)
+
+
+def combat_normalize_wide(X: pd.DataFrame, batch_labels: pd.Series) -> pd.DataFrame:
+    """
+    Apply ComBat batch normalization using Python pycombat.
+    Preserves original missingness pattern after correction.
+    """
+    b = batch_labels.reindex(X.index)
+    if b.isna().any():
+        raise ValueError("ComBat requires non-missing batch labels for all samples.")
+
+    if b.nunique() < 2:
+        return X.copy()
+
+    # Keep original missingness for post-ComBat restoration.
+    missing_mask = X.isna()
+
+    # temporary per-assay median filling.
+    X_filled = X.copy()
+    med = X_filled.median(axis=0, skipna=True)
+    X_filled = X_filled.fillna(med).fillna(0.0)
+
+    model = Combat()
+    # pycombat can error with pandas slicing internals; pass ndarray explicitly.
+    corrected = model.fit_transform(X_filled.to_numpy(dtype=float), b.values)
+    Xc = pd.DataFrame(corrected, index=X.index, columns=X.columns)
+
+    # Restore missingness
+    Xc = Xc.mask(missing_mask)
+    return Xc
 
 
 # -----------------------------
@@ -527,19 +551,29 @@ def process_all_files(
     # Align metadata to remaining samples
     metadata = metadata.reindex(X.index)
 
-    # 7) Missingness filter + report
+    # 7) ComBat normalization (before missingness filter)
+    batch_labels = metadata["Batch"].reindex(X.index)
+    has_batch = batch_labels.notna()
+    if not has_batch.all():
+        n_no_batch = int((~has_batch).sum())
+        print(f"warning: filtering {n_no_batch} samples without batch labels.")
+        X = X.loc[has_batch].copy()
+        groups_binary = groups_binary.loc[has_batch].copy()
+        metadata = metadata.reindex(X.index)
+        batch_labels = batch_labels.loc[has_batch]
+
+    X_norm = combat_normalize_wide(X, batch_labels)
+
+    # 8) Missingness filter + report (moved after ComBat)
     X_kept, dropped_report = missingness_filter_and_group_check(
-        X, groups_binary, cutoff=CUTOFF_PERCENT_MISSING, alpha_bh=0.05
+        X_norm, groups_binary, cutoff=CUTOFF_PERCENT_MISSING, alpha_bh=0.05
     )
     if not dropped_report.empty:
         rep_path = os.path.splitext(output_csv)[0] + "_dropped_missingness_report.csv"
         dropped_report.to_csv(rep_path, index=False)
 
-    # 8) Quantile normalization
-    X_qn = quantile_normalize_wide(X_kept)
-
     # 9) Imputation
-    X_final = half_min_impute_wide(X_qn)
+    X_final = half_min_impute_wide(X_kept)
 
     # 10) Convert to linear scale
     X_final_linear = np.power(2.0, X_final)
