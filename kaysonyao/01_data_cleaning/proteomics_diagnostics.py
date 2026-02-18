@@ -286,6 +286,96 @@ def plot_combat_assessment(
     logger.info("   Saved: %s", out_path)
 
 
+def plot_precombat_batch_assay_distributions(
+    X_pre: pd.DataFrame,
+    batch_labels: pd.Series,
+    out_dir: str,
+    top_n_assays: int = 24,
+) -> None:
+    """
+    Plot pre-normalization assay distributions across batches.
+
+    Outputs:
+      1) precombat_top_assay_batch_densities.png
+         Small multiples: each assay panel shows per-batch KDE curves.
+      2) precombat_top_assay_batch_mean_heatmap.png
+         Heatmap of per-assay batch means (row-wise z-score), highlighting
+         assays with strongest between-batch shifts.
+    """
+    shared = X_pre.index.intersection(batch_labels.index)
+    if len(shared) < 3:
+        logger.warning("Pre-ComBat assay distribution plot skipped (too few samples).")
+        return
+
+    batches = batch_labels.reindex(shared).astype(str)
+    unique_batches = sorted(batches.dropna().unique())
+    if len(unique_batches) < 2:
+        logger.warning("Pre-ComBat assay distribution plot skipped (fewer than 2 batches).")
+        return
+
+    X = X_pre.loc[shared].copy()
+    os.makedirs(out_dir, exist_ok=True)
+
+    batch_means = pd.DataFrame(
+        {b: X.loc[batches == b].mean(axis=0, skipna=True) for b in unique_batches}
+    )
+    batch_mean_range = (batch_means.max(axis=1) - batch_means.min(axis=1)).dropna()
+    if batch_mean_range.empty:
+        logger.warning("Pre-ComBat assay distribution plot skipped (no valid assay statistics).")
+        return
+
+    n_assays = min(top_n_assays, len(batch_mean_range))
+    top_assays = batch_mean_range.nlargest(n_assays).index.tolist()
+
+    ncols = 4
+    nrows = int(np.ceil(n_assays / ncols))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(4.6 * ncols, 2.8 * nrows), squeeze=False)
+    axes_flat = axes.flatten()
+
+    for i, assay in enumerate(top_assays):
+        ax = axes_flat[i]
+        for b in unique_batches:
+            vals = X.loc[batches == b, assay].dropna()
+            if vals.shape[0] < 3:
+                continue
+            sns.kdeplot(vals, ax=ax, label=f"Batch {b}", linewidth=1.5, fill=False)
+        ax.set_title(str(assay), fontsize=9)
+        ax.set_xlabel("NPX (log2)")
+        ax.set_ylabel("Density")
+        ax.grid(alpha=0.25)
+
+    for j in range(n_assays, len(axes_flat)):
+        axes_flat[j].axis("off")
+
+    handles, labels = axes_flat[0].get_legend_handles_labels()
+    if handles:
+        fig.legend(handles, labels, loc="upper right", fontsize=8)
+    fig.suptitle(
+        "Pre-ComBat Assay Distributions by Batch (Top Assays by Between-batch Mean Range)",
+        fontsize=12,
+    )
+    fig.tight_layout(rect=[0, 0, 0.96, 0.96])
+    out_path = os.path.join(out_dir, "precombat_top_assay_batch_densities.png")
+    fig.savefig(out_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+    logger.info("   Saved: %s", out_path)
+
+    hm = batch_means.loc[top_assays]
+    hm_scaled = hm.sub(hm.mean(axis=1), axis=0).div(hm.std(axis=1).replace(0, np.nan), axis=0)
+    hm_scaled = hm_scaled.fillna(0.0)
+
+    fig, ax = plt.subplots(figsize=(7, max(5, 0.25 * len(top_assays))))
+    sns.heatmap(hm_scaled, cmap="coolwarm", center=0, ax=ax)
+    ax.set_title("Pre-ComBat Batch Mean Shift per Assay (row z-score)")
+    ax.set_xlabel("Batch")
+    ax.set_ylabel("Assay")
+    plt.tight_layout()
+    out_path = os.path.join(out_dir, "precombat_top_assay_batch_mean_heatmap.png")
+    fig.savefig(out_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+    logger.info("   Saved: %s", out_path)
+
+
 def run_diagnostics(
     file_paths: list[str],
     output_csv: str,
@@ -293,6 +383,7 @@ def run_diagnostics(
     meta_type: str = "proteomics",
     pca_dir: str | None = None,
     combat_dir: str | None = None,
+    precombat_dir: str | None = None,
     reports_dir: str | None = None,
 ):
     """Run diagnostics separately from core cleaning."""
@@ -300,10 +391,10 @@ def run_diagnostics(
     logger.info("PROTEOMICS DIAGNOSTICS")
     logger.info("=" * 60)
 
-    logger.info("[1/6] Loading metadata...")
+    logger.info("[1/7] Loading metadata...")
     metadata = load_metadata_with_batch(metadata_path, meta_type=meta_type)
 
-    logger.info("[2/6] Loading and preprocessing Olink files...")
+    logger.info("[2/7] Loading and preprocessing Olink files...")
     batches_long = []
     for fp in file_paths:
         logger.info("   Processing: %s", os.path.basename(fp))
@@ -312,7 +403,7 @@ def run_diagnostics(
         batches_long.append(df_single)
     df_long = combine_batches(batches_long)
 
-    logger.info("[3/6] Panel normalization + control removal...")
+    logger.info("[3/7] Panel normalization + control removal...")
     df_long = apply_panel_normalization_long(df_long)
     df_long_bio = df_long.loc[~is_olink_control_sample(df_long)].copy()
     df_long_bio = df_long_bio.loc[~is_olink_control_assay(df_long_bio)].copy()
@@ -323,7 +414,7 @@ def run_diagnostics(
     logger.info("   Duplicate combos: %d", len(dup_report))
     logger.info("   Saved: %s", dup_path)
 
-    logger.info("[4/6] Building assay matrix for ComBat + PCA diagnostics...")
+    logger.info("[4/7] Building assay matrix for ComBat + PCA diagnostics...")
     X = df_long_bio.pivot_table(index="SampleID", columns="Assay", values="NPX", aggfunc="median")
     groups = metadata["Group"].reindex(X.index)
     has_metadata = groups.notna()
@@ -348,12 +439,17 @@ def run_diagnostics(
     )
     sample_to_batch = sample_to_batch.reindex(X_kept.index)
 
-    logger.info("[5/6] Saving ComBat assessment...")
+    logger.info("[5/7] Saving pre-ComBat assay distribution diagnostics...")
+    if precombat_dir is None:
+        precombat_dir = os.path.dirname(output_csv)
+    plot_precombat_batch_assay_distributions(X, sample_to_batch, precombat_dir)
+
+    logger.info("[6/7] Saving ComBat assessment...")
     if combat_dir is None:
         combat_dir = os.path.join(os.path.dirname(output_csv), f"combat_{meta_type}")
     plot_combat_assessment(X, X_combat, sample_to_batch, combat_dir)
 
-    logger.info("[6/6] Saving PCA diagnostics...")
+    logger.info("[7/7] Saving PCA diagnostics...")
     if pca_dir is None:
         pca_dir = os.path.join(os.path.dirname(output_csv), f"pca_{meta_type}")
     # Each PCA variant gets its own subfolder.
@@ -544,7 +640,7 @@ def plot_normalization_quality(
     logger.info("   Saved: %s", out_path)
 
     # ------------------------------------------------------------------
-    # 4. Batch comparison (optional)
+    # 4. Batch comparison
     # ------------------------------------------------------------------
     if "Batch" in df.columns:
         logger.info("[4/4] Batch effect assessment")
@@ -624,19 +720,7 @@ if __name__ == "__main__":
     output_dir = os.path.join(wkdir, "data", "cleaned", "proteomics", "normalized_full_results")
     metadata_path = os.path.join(wkdir, "data", "dp3 master table v2.xlsx")
 
-    # All diagnostic outputs live under a single diagnostics/ subfolder,
-    # with one subdirectory per sample type (plasma / placenta), and each
-    # plot type in its own subfolder within that.
-    #
-    # Final layout:
-    #   diagnostics/
-    #     plasma/
-    #       pca/pre_combat/   post_combat/   comparison/
-    #       sample_distributions/   sample_boxplots/
-    #       density_overlay/   quantile_heatmap/   batch_comparison/
-    #     placenta/
-    #       (same structure)
-    diag_base = os.path.join(output_dir, "diagnostics")
+    diag_base = os.path.join(wkdir, "data", "cleaned", "proteomics", "diagnostics")
 
     plasma_files, placenta_files = collect_olink_files(data_dir)
 
@@ -648,6 +732,7 @@ if __name__ == "__main__":
             meta_type="proteomics",
             pca_dir=os.path.join(plasma_diag, "pca"),
             combat_dir=os.path.join(plasma_diag, "combat_assessment"),
+            precombat_dir=plasma_diag,
         )
         if os.path.exists(out_csv_plasma):
             plot_normalization_quality(
@@ -664,6 +749,7 @@ if __name__ == "__main__":
             meta_type="placenta",
             pca_dir=os.path.join(placenta_diag, "pca"),
             combat_dir=os.path.join(placenta_diag, "combat_assessment"),
+            precombat_dir=placenta_diag,
         )
         if os.path.exists(out_csv_placenta):
             plot_normalization_quality(
