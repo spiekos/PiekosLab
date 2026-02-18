@@ -1,7 +1,10 @@
+import logging
 import os
 import re
 import argparse
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 def remove_internal_whitespace(s: pd.Series) -> pd.Series:
@@ -21,8 +24,15 @@ def extract_suffix(sample_id: str, subject_id: str) -> str:
         return sample_id[len(subject_id):]
 
     # Fallback: trailing letters, if prefix is not cleanly aligned.
+    # Log a warning so ID formatting issues are visible in the run log.
     m = re.search(r"([A-Za-z]+)$", sample_id)
     if m:
+        logger.warning(
+            "SampleID %r does not start with SubjectID %r; "
+            "falling back to trailing-letter extraction (got %r). "
+            "Check for ID formatting mismatches.",
+            sample_id, subject_id, m.group(1),
+        )
         return m.group(1)
     return ""
 
@@ -35,8 +45,9 @@ def format_proteomics_data(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
     1) Remove all internal whitespace in SampleID and SubjectID.
     2) Derive longitudinal suffix from SampleID vs SubjectID.
     3) Drop Batch column.
-    4) Split rows by suffix.
-    5) For each split dataframe:
+    4) Warn and exclude rows with no recognizable longitudinal suffix.
+    5) Split rows by suffix.
+    6) For each split dataframe:
        - Drop SubjectID
        - Remove suffix from SampleID (leave base subject ID)
 
@@ -56,7 +67,14 @@ def format_proteomics_data(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
         extract_suffix(sid, subid) for sid, subid in zip(out["SampleID"], out["SubjectID"])
     ]
 
-    # Keep only rows with a valid suffix label.
+    # Warn about rows dropped due to missing suffix (issue #10).
+    no_suffix = out[out["LongitudinalLabel"] == ""]
+    if not no_suffix.empty:
+        logger.warning(
+            "%d sample(s) have no longitudinal suffix and will be excluded: %s",
+            len(no_suffix),
+            no_suffix["SampleID"].tolist(),
+        )
     out = out[out["LongitudinalLabel"] != ""].copy()
 
     if "Batch" in out.columns:
@@ -87,8 +105,16 @@ def save_sliced_outputs(sliced: dict[str, pd.DataFrame], output_dir: str, base_n
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Format plasma proteomics output into per-suffix files.")
-    p.add_argument("--input-csv", required=True, help="Path to final plasma output CSV.")
-    p.add_argument("--output-dir", required=True, help="Directory for per-suffix output files.")
+    p.add_argument(
+        "--input-csv",
+        default=None,
+        help="Path to final plasma output CSV. Defaults to normalized_full_results output.",
+    )
+    p.add_argument(
+        "--output-dir",
+        default=None,
+        help="Directory for per-suffix output files. Defaults under normalized_full_results.",
+    )
     p.add_argument(
         "--base-name",
         default="proteomics_plasma_formatted",
@@ -98,14 +124,36 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%H:%M:%S",
+    )
     args = build_parser().parse_args()
-    df = pd.read_csv(args.input_csv)
+    wkdir = os.getcwd()
+    input_csv = args.input_csv or os.path.join(
+        wkdir,
+        "data",
+        "cleaned",
+        "proteomics",
+        "normalized_full_results",
+        "proteomics_plasma_cleaned_with_metadata.csv",
+    )
+    output_dir = args.output_dir or os.path.join(
+        wkdir,
+        "data",
+        "cleaned",
+        "proteomics",
+        "normalized_sliced_by_suffix",
+    )
+    os.makedirs(output_dir, exist_ok=True)
+    df = pd.read_csv(input_csv)
     sliced = format_proteomics_data(df)
-    paths = save_sliced_outputs(sliced, args.output_dir, args.base_name)
+    paths = save_sliced_outputs(sliced, output_dir, args.base_name)
 
-    print(f"formatted suffix groups: {len(sliced)}")
+    logger.info("Formatted suffix groups: %d", len(sliced))
     for p in paths:
-        print(p)
+        logger.info(p)
 
 
 if __name__ == "__main__":
