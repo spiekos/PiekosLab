@@ -31,12 +31,13 @@ def get_compounds(df):
     return temp
 
 # extract expression data
-def get_expression(df, ids):
+def get_expression(df, comp):
     is_sample = df.columns.notna()
     temp = df.iloc[:, is_sample].drop(columns="Sample ID").drop(df.index[0])
-    temp.index = ids
+    #temp.index = comp["Name"].fillna(comp.index.to_series())
+    temp.index = comp.index
     temp = temp.transpose()
-    temp.index = temp.index.rename("Sample_ID")
+    temp.index = temp.index.rename("compound")
     return temp
 
 # call all csv generating function
@@ -44,7 +45,7 @@ def generate_files(df, file_output, e):
     get_batch(df).to_csv(file_output + "/" + e +"_batch.csv")
     comp = get_compounds(df)
     comp.to_csv(file_output + "/" + e + "_compounds.csv")
-    get_expression(df, comp.index).to_csv(file_output + "/" + e + "_expression.csv")
+    get_expression(df, comp).to_csv(file_output + "/" + e + "_expression.csv")
 
 # clean header of csv
 def clean_df(df):
