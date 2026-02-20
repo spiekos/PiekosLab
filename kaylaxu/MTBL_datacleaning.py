@@ -85,64 +85,56 @@ def mad_failed(c):
     med = nd.median(c)
     return (c < med - 5*mad) | (c > med + 5*mad) 
 
-
-#### Merge these two functions
 # filter out samples with >5 median absolute deviation in internal controls (c1 and c2)
-def controls_MAD(exp_data):
+# filter out samples with > 50% missing
+def MAD_or_missing(exp_data, mode, e):
     for temp in exp_data.keys(): 
-        if "Samples" in temp: # only filter in sample expression
-            mask = mad_failed(exp_data[temp]["c1"]) | mad_failed(exp_data[temp]["c2"]) # mask of samples that failed the internal control for either c1 or c2
-            for s in exp_data[temp].index[mask]:
-                logging.warning("QC: Sample " + s + " in " + temp + " failed Median Absolute Deviation threshold test.")
-                exp_data[temp] = exp_data[temp].drop(index=s)
+        if "Samples" in temp and e in temp: # only filter in sample expression with the specified charge
+            if mode == "MAD":
+                mask = mad_failed(exp_data[temp]["c1"]) | mad_failed(exp_data[temp]["c2"]) # mask of samples that failed the internal control for either c1 or c2
+                for s in exp_data[temp].index[mask]:
+                    logging.warning("QC: Sample " + s + " in " + temp + " failed Median Absolute Deviation threshold test.")
+                    exp_data[temp] = exp_data[temp].drop(index=s)
+            elif mode == "sample_missing":
+                fail = exp_data[temp].isna().sum(axis=1)/len(exp_data[temp].index) > SAMPLE_MISSING
+                for s in exp_data[temp].index[fail]:
+                    logging.warning("QC: Sample " + s + " in " + temp + " failed >50% missingness test.")
+                    exp_data[temp] = exp_data[temp].drop(index=s)
+            else:
+                logging.error("Invalid mode specified for MAD or sample missing test.")
 
-# remove samples with >50% missingness
-def sample_missingness(exp_data): 
-    for temp in exp_data.keys(): 
-        if "Samples" in temp: # only test in sample expression
-            fail = exp_data[temp].isna().sum(axis=1)/len(exp_data[temp].index) > SAMPLE_MISSING
-            for s in exp_data[temp].index[fail]:
-                logging.warning("QC: Sample " + s + " in " + temp + " failed >50% missingness test.")
-                exp_data[temp] = exp_data[temp].drop(index=s)
-################################
-
-#### Clean up this merged function + by group check
-# mode rsd = calculate RSD (sd/mean * 100) in QC pools and remove metabolites with RSD > 30%
+#### add by group check
+# rsd = calculate RSD (sd/mean * 100) in QC pools and remove metabolites with RSD > 30%
 # mode >20% missing = remove metabolites with >20% missing
 # check missing is not disproportionate between groups
-def rsd_missing(exp_data, mode):
+
+def rsd_or_missing(exp_data, mode, e):
     if mode == "RSD":
-        x = "Pooled"
-    elif mode == ">20% missing":
-        x = "Sample"
-    else: 
-        logging.warning("Invalid mode in rsd_missing()...")
-        return
-    d = list(compress(list(exp_data.keys()), [mode in k for k in exp_data.keys()])) # get keys of all pooled data frames
-    df = pd.DataFrame() # initialize empty dataframe for RSD calculations
-    for k in d: # calculate RSD
-        if mode == "RSD":
-            r = (exp_data[k].std()/exp_data[k].mean())*100 
-            df[k] = r
-        else:
-            r = exp_data[k].isna().sum()
-            df[k] = r
-    if mode == "RSD":
-        remove = df.index[(df > RSD).sum(axis=1) > 0] # get mtbl that failed the RSD test in at least one of the pools
+        RSD1 = (exp_data["Pooled_32425_" + e].std()/exp_data["Pooled_32425_" + e].mean())*100 
+        RSD2 = (exp_data["Pooled_62323_" + e].std()/exp_data["Pooled_62323_" + e].mean())*100 
+        failed = RSD1.index[list(RSD1 > 30) or list(RSD2 > 30)]
+    elif mode == "mtbl_missing":
+        batch1 = exp_data["Samples_32425"].isna().sum()
+        batch2 = exp_data["Samples_62323"].isna().sum()
+        failed = batch1.index[(batch1 > MTBL_MISSING*len(batch1)) | (batch2 > MTBL_MISSING*len(batch2))]
     else:
-        remove = df.index[df.sum(axis=1) / len(df) > MTBL_MISSING]
-    for m in remove: # for every failed mtbl, log failure and drop from all data frames
-        logging.warning("QC: Compound " + str(m) + " failed the " + mode + " check " + 10*'\t' + "RSD values: " + list(df.loc[m]))
-        for k in exp_data.keys:
-            exp_data[k] = exp_data[k].drop(columns=m)
-##################################
+        logging.error("Invalid mode for rsd_or_missing(): choose RSD or mtbl_missing")
+    for m in failed:
+        if mode == "RSD":
+            logging.warning("QC: Compound " + str(m) + " failed the RSD < 30 check\n" + 10*'\t' + "Pooled_32425_" + e + " RSD = " + str(RSD1[m]) + "\n" + 10*'\t' + "Pooled_62323_" + e + " RSD = " + str(RSD2[m]))
+        else:
+            logging.warning("QC: Compound " + str(m) + " failed the <20% missing check.")
+        exp_data["Pooled_32425_" + e] = exp_data["Pooled_32425_" + e].drop(columns=m)
+        exp_data["Pooled_62323_" + e] = exp_data["Pooled_62323_" + e].drop(columns=m)
+        exp_data["Samples_32425_" + e] = exp_data["Samples_32425_" + e].drop(columns=m)
+        exp_data["Samples_62323_" + e] = exp_data["Samples_62323_" + e].drop(columns=m)
 
 # generate pca from expression data
-def generate_pca(exp_data, title):
+def generate_pca(exp_data, title, e, dir_input):
     df = pd.DataFrame()
     for k in exp_data.keys():
-        if "Sample" in k:
-            df = pd.concat(df, exp_data[k])
+        if "Sample" in k and e in k:
+            df = pd.concat([df, exp_data[k]])
     batch = df["batch"]
     df = df.drop(["batch"], axis=1)
     scaler = StandardScaler()
@@ -166,43 +158,48 @@ def generate_pca(exp_data, title):
     plt.xlabel(f'Principal Component 1 ({pca.explained_variance_ratio_[0]*100:.2f}% Variance)', fontsize=12)
     plt.ylabel(f'Principal Component 2 ({pca.explained_variance_ratio_[1]*100:.2f}% Variance)', fontsize=12)
     plt.grid(True)
-    plt.show()
+    plt.savefig(dir_input + "/" + title + "_PCA_" + e + ".png")
 
 
-# use biolgoical replicates to conduct batch normalization
-def normalization(exp_data):
-    
-
-
-
-    batch1 = exp_data["Samples_32425"].drop(['batch'], axis=1)
-batch2 = exp_data["Samples_62323"].drop(['batch'], axis=1)
-replicates = list(set(batch1.index) & set(batch2.index))
-logging.info("Initializing batch normalization with " + str(len(replicates)) + " biological replicates.")
-rep1 = batch1.loc[replicates,:]
-rep2 = batch2.loc[replicates,:]
-ratios = rep2 / rep1
-mad = sp.median_abs_deviation(ratios)
-med = ratios.median()
-upper = med + 5*mad
-lower = med - 5*mad
-med_ratios = {}
+# use biolgoical replicates to conduct batch normalization 
+###### NOT SCALABLE assumes 2 batches specifically Samples_32425 and Samples_62323
+def normalization(exp_data, e):
+    batch1 = exp_data["Samples_32425_" + e].drop(['batch'], axis=1)
+    batch2 = exp_data["Samples_62323_" + e].drop(['batch'], axis=1)
+    replicates = list(set(batch1.index) & set(batch2.index))
+    logging.info("Initializing batch normalization with " + str(len(replicates)) + " biological replicates.")
+    rep1 = batch1.loc[replicates,:]
+    rep2 = batch2.loc[replicates,:]
+    ratios = rep2 / rep1
+    mad = sp.median_abs_deviation(ratios)
+    med = ratios.median()
+    upper = med + 5*mad
+    lower = med - 5*mad
+    med_ratios = {}
 # calculate median ratio, excluding outilers from this calculation (should outliers be removed completely?)
-for m in ratios.columns:
-    temp = ratios.loc[list(ratios[m] < upper[m]) and list(ratios[m] > lower[m]), m]
-    med_ratios[m] = temp.median()
-correction_factors = {k: 1/v for k, v in med_ratios.items()}
-len(correction_factors)
-for m in batch2.columns:
-    exp_data["Samples_62323"][m] = batch2[m]*correction_factors[m]
+    for m in ratios.columns:
+        temp = ratios.loc[list(ratios[m] < upper[m]) and list(ratios[m] > lower[m]), m]
+        med_ratios[m] = temp.median()
+    correction_factors = {k: 1/v for k, v in med_ratios.items()}
+    len(correction_factors)
+    for m in batch2.columns:
+        exp_data["Samples_62323_" + e][m] = batch2[m]*correction_factors[m]
 
 # average replicate expression values
-def merge_rep():
-    pass
+def merge_rep(exp_data, e):
+    replicates = list(set(exp_data["Samples_32425_" + e].index) & set(exp_data["Samples_62323_" + e].index))
+    rep1 = exp_data["Samples_32425_" + e].loc[replicates,:]
+    rep2 = exp_data["Samples_62323_" + e].loc[replicates,:]
+    rep_avg = (rep1 + rep2)/2
+    exp_data["Samples_32425_" + e].loc[rep_avg.index,:] = rep_avg
+    exp_data["Samples_62323_" + e].loc[rep_avg.index,:] = rep_avg
 
 # do log2 transformation on expression data
-def log2_transform():
-    pass
+def log2_transform(exp_data,e):
+    exp_data["Pooled_32425_" + e]= np.log2(exp_data["Pooled_32425_" + e])
+    exp_data["Pooled_62323_" + e] = np.log2(exp_data["Pooled_62323_" + e])
+    exp_data["Samples_32425_" + e]= np.log2(exp_data["Samples_32425_" + e])
+    exp_data["Samples_62323_" + e] = np.log2(exp_data["Samples_62323_" + e])
 
 # combine pos and neg expression in same file
     # if r >=0.9, average
@@ -218,47 +215,36 @@ def min_imputation(a=0.5):
 def formatting():
     pass
     
+# do all cleaning steps split by charge
+def cleanHelper(exp_data, e, dir_input):
+    MAD_or_missing(exp_data, "MAD", e) # MAD test 
+    MAD_or_missing(exp_data, "sample_missing", e) # sample >50% missingness test
+    rsd_or_missing(exp_data, "RSD", e) # RSD test (consider metabolite as missing)
+    rsd_or_missing(exp_data, "mtbl_missing", e) # metabolite >20% missingness test
+        #Have not added by group check yet, mtbl doesn't have any missing mtbl expression anyway
+    generate_pca(exp_data, "Unnormalized_MTBL_Expression", e, dir_input) # generate unnormalized PCA
+    normalization(exp_data, e) # batch normalization using replicates
+    generate_pca(exp_data, "Batch_Normalized_MTBL_Expression", e, dir_input) # generate normalized PCA
+    merge_rep(exp_data, e) # average replicates expression 
+    log2_transform(exp_data, e) # log2 transform all data
 
-# helper function for data cleaning
-def clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp):
-# 1. handle missing
-    pos_exp, neg_exp = handle_missing(pos_exp, neg_exp)
-# 2. split batches and pools
-    exp_data = {}
-    split_exp(pos_exp, pos_batch, "pos", exp_data) # naming format = [Pooled, Samples]_[batch]_[charge]
-    split_exp(neg_exp, neg_batch, "neg", exp_data)
-# 3. MAD test 
-    controls_MAD(exp_data)
-# 4. sample >50% missingness test
-    sample_missingness(exp_data, "sample")
-# 5. RSD test (consider metabolite as missing), check there's not one group thats dispproportionally missing 
-    rsd_missing(exp_data, "RSD")
-# 6. metabolite >20% missingness test, check there's not one group thats dispproportionally missing 
-    # split by group, then check this
-    rsd_missing(exp_data, ">20% missing")
-# 7. generate PCA
-    generate_pca(exp_data, "Unnormalized MTBL Expression")
-# 8. normalize
-    normalization()
-    # 9. generate PCA
-    generate_pca(exp_data, "Batch Normalized MTBL Expression")
-# 10. merge replicates
-    merge_rep()
-# 11, 12.log2 transformation 
-    log2_transform()
-# 13. combine pos and neg
-    combine_pos_neg()
-# 14. 1/2 minium imputation of missing
-    min_imputation()
-# do all formatting steps
-    # add group columns
-    # replace n1, n2, n3... with metabolite names
-    # split files by timepoint
-    formatting()
+# function for data cleaning
+def clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp, dir_input):
+    pos_exp, neg_exp = handle_missing(pos_exp, neg_exp) #  handle missing
+    exp_data = {} # dictionary to stroe split data by batches and pools
+    split_exp(pos_exp, pos_batch, "POS", exp_data) # naming format = [Pooled, Samples]_[batch]_[charge]
+    split_exp(neg_exp, neg_batch, "NEG", exp_data)
 
+    # do cleaning steps split by charge
+    cleanHelper(exp_data, "POS", dir_input)
+    cleanHelper(exp_data, "NEG", dir_input)
 
+    formatting() # add group columns, replace n1, n2, n3... with metabolite names, split files by timepoint
+    combine_pos_neg() # combine compounds in both pos and neg
+    min_imputation() # 1/2 minium imputation of missing
+    
 
-# Given folder with both postive and negative metabolomic expression, batch info, and compound metadata
+# Give folder with both postive and negative metabolomic expression, batch info, and compound metadata
 def main():
     dir_input = sys.argv[1] # e.g. /Users/kaylaxu/Desktop/data/clean_data/MTBL_placenta
 
@@ -279,7 +265,7 @@ def main():
     neg_comp = pd.read_csv(dir_input + "/neg_compounds.csv", index_col=0)
 
     # call cleaning functions
-    clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp)
+    clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp, dir_input)
 
     #close log file
     logging.shutdown()

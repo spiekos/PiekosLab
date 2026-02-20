@@ -17,7 +17,10 @@ def get_batch(df):
     temp = df.iloc[0:1,is_sample]
     temp = temp.set_index("Sample ID").transpose()
     temp.columns = ["batch"]
-    temp["batch"] = [s.split(": ")[1].split("_")[0] for s in temp["batch"]]
+    try:
+        temp["batch"] = [s.split(": ")[1].split("_")[0] for s in temp["batch"]]
+    except:
+        temp["batch"] = [s.split("_")[0] for s in temp["batch"]]
     temp.index = temp.index.rename("Sample_ID")
     return temp
 
@@ -51,8 +54,10 @@ def generate_files(df, file_output, e):
 def clean_df(df):
     df.columns = df.iloc[0,:]
     df = df.iloc[1:,:]
-    df.iloc[1,0] = "c1" # two moleclues not in the export order
-    df.iloc[2,0] = "c2" # slightly different for each file
+    i = 1
+    while pd.isna(df.iloc[i,0]):
+        df.iloc[i,0] = "c" + str(i) # placeholder names for experimental controls
+        i += 1
     df.index = df.iloc[:,0]
     df = df.iloc[:, 1:]
     return df
@@ -61,9 +66,17 @@ def clean_df(df):
 def extract_data(file_input, file_output):
     #file = open(file_input, mode="r")
     file = file_input
-    file_pos = pd.read_excel(file, sheet_name="POS Compounds",header=None).dropna(how='all')
-    file_neg = pd.read_excel(file, sheet_name="NEG Compounds",header=None).dropna(how='all')
-  
+    try:
+        file_pos = pd.read_excel(file, sheet_name="POS Compounds",header=None).dropna(how='all')
+        file_neg = pd.read_excel(file, sheet_name="NEG Compounds",header=None).dropna(how='all')
+    except:
+        if "Plasma" in file:
+            file_pos = pd.read_excel(file, sheet_name="Plasma POS Lipids",header=None).dropna(how='all').iloc[1:,:]
+            file_neg = pd.read_excel(file, sheet_name="Plasma NEG Lipids",header=None).dropna(how='all').iloc[1:,:]
+        else:
+            file_pos = pd.read_excel(file, sheet_name="POS Lipids",header=None).dropna(how='all').iloc[1:,:]
+            file_neg = pd.read_excel(file, sheet_name="NEG Lipids",header=None).dropna(how='all').iloc[1:,:]
+
     # remove empty rows and set index/columns
     file_pos = clean_df(file_pos)
     file_neg = clean_df(file_neg)
