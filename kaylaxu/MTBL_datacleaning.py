@@ -19,6 +19,8 @@ import sys
 ##############################################################
 # DATA CLEANING OVERVIEW 
 # 1. Convert improper values to standard missing value.
+# 1-1. Calculate quality score for handling multiple parent metabolites (duplicates)
+    # QS = peak rating qc (Max) + RSD QC Areas [%] + MS2 + Column Area (Max.) + mzCloud Best Match confidence
 # 2. Separate QC and biological samples.
 # 3. Calculate median absolute deviation (MAD) for the standard compound runs (01 and 02), then filter out biological samples with a standard compound expression more than 5*MAD away from median (i.e. threshold = median +- (5 x MAD)). Track any samples that fail this test in a log file.
 # 4. Filter out biological samples with >50% missingness. Track any samples that fail this test in a log file.
@@ -63,6 +65,37 @@ def handle_missing(exp1, exp2):
     exp1 = exp1.map(convert_missing)
     exp2 = exp2.map(convert_missing)
     return exp1, exp2
+
+# calculate quality scores (peak quality + rsd + ms2 + signal intensity + annotation confidence)
+def qs(comp):
+    # get peak rating qc
+    peak = pd.Series([10 if x >= 7.0 else 7 if x >= 5 else 4 if x >= 3 else 1 for x in comp['Peak Rating (Max.)']])
+    # get rsd qc areas
+    rsd = pd.Series([10 if x < 10 else 8 if x < 15 else 6 if x < 20 else 4 if x < 25 else 2 if x < 30 else 0 for x in comp["RSD QC Areas [%]"]])
+    # get ms2
+    ms2 = pd.Series([10 if x == "DDA for preferred ion" else 6 if x == "DDA for other ion" else 4 if x == "DDA available" else 0 for x in comp["MS2"]])
+    # get signal intensity (area max)
+    scaler = MinMaxScaler(feature_range=(0, 10))
+    signal = pd.Series((scaler.fit_transform(comp[["Area (Max.)"]])).flatten())
+    # annotation confidence (mzCloud Best Match Confidence)
+    temp = (comp.loc[:, ['Annot. Source: Predicted Compositions', 'Annot. Source: mzCloud Search', 'Annot. Source: mzVault Search', 'Annot. Source: Metabolika Search', 'Annot. Source: ChemSpider Search','Annot. Source: MassList Search']])
+    full = (temp == "Full match").sum(axis=1)
+    notTop = (temp == "Not the top hit").sum(axis=1)
+    partial = (temp == "Partial match").sum(axis =1)
+    mzCloud = comp["mzCloud Best Match Confidence"]
+    ac = pd.Series([10 if mzCloud.iloc[i] >= 90 else 9 if mzCloud.iloc[i] >=80 else 8 if mzCloud.iloc[i] >= 70 else 0 if mzCloud.iloc[i] < 70 else 10 if full.iloc[i] == 6 else 9 if full.iloc[i] == 5 else 8 if full.iloc[i] == 4 else 7 if full.iloc[i] == 3 else 6 if full.iloc[i] == 2 else 5 if full.iloc[i] == 1 else 4 if notTop.iloc[i] >= 1 else 3 if partial.iloc[i] >= 3 else 2 if partial.iloc[i] == 2 else 1 if partial.iloc[i] == 1 else 0 for i in range(len(mzCloud))])
+    return list(peak + rsd + ms2 + signal + ac)
+
+# remove duplicate metabolites based on the quality scores
+def remove_duplicates(exp, comp):
+    comp["Name"] = comp["Name"].fillna(comp.index.to_series())
+    comp = comp.sort_values("quality_score", ascending=False).drop_duplicates(subset=["Name"]).sort_index()
+    # NEED TO LOG THESE
+    mask = [x in comp.index for x in exp.columns]
+    exp = exp.loc[:, mask]
+    comp = comp.loc[exp.columns,:]
+    exp.columns = comp["Name"]
+    return exp
 
 # split expression data by batch and by samples/pooled, saving in exp_data dictionary
 def split_exp(exp, batch, e, exp_data):
@@ -201,14 +234,14 @@ def log2_transform(exp_data,e):
     exp_data["Samples_32425_" + e]= np.log2(exp_data["Samples_32425_" + e])
     exp_data["Samples_62323_" + e] = np.log2(exp_data["Samples_62323_" + e])
 
+# perform 1/2 minimum imputation
+def min_imputation(a=0.5):
+    pass
+
 # combine pos and neg expression in same file
     # if r >=0.9, average
     # else, keep both (_POS and _NEG)
 def combine_pos_neg():
-    pass
-
-# perform 1/2 minimum imputation
-def min_imputation(a=0.5):
     pass
 
 # final formatting of expression files
@@ -230,7 +263,9 @@ def cleanHelper(exp_data, e, dir_input):
 
 # function for data cleaning
 def clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp, dir_input):
-    pos_exp, neg_exp = handle_missing(pos_exp, neg_exp) #  handle missing
+    #  handle missing
+    pos_exp, neg_exp = handle_missing(pos_exp, neg_exp) 
+
     exp_data = {} # dictionary to stroe split data by batches and pools
     split_exp(pos_exp, pos_batch, "POS", exp_data) # naming format = [Pooled, Samples]_[batch]_[charge]
     split_exp(neg_exp, neg_batch, "NEG", exp_data)
@@ -239,9 +274,21 @@ def clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp, dir_input)
     cleanHelper(exp_data, "POS", dir_input)
     cleanHelper(exp_data, "NEG", dir_input)
 
-    formatting() # add group columns, replace n1, n2, n3... with metabolite names, split files by timepoint
+    # remove duplicate metabolite entries based on computed quality scores
+    neg_comp["quality_score"] = qs(neg_comp)
+    pos_comp["quality_score"] = qs(pos_comp)
+    for x in exp_data.keys():
+        if "POS" in x:
+            exp_data[x] = remove_duplicates(exp_data[x], pos_comp)
+        else:
+            exp_data[x] = remove_duplicates(exp_data[x], neg_comp)
+
+    #min_imputation() # 1/2 minium imputation of missing, not currently necessary since none are missing in MTBL
     combine_pos_neg() # combine compounds in both pos and neg
-    min_imputation() # 1/2 minium imputation of missing
+
+    formatting() # add group columns, split files by timepoint
+    
+    
     
 
 # Give folder with both postive and negative metabolomic expression, batch info, and compound metadata
