@@ -5,12 +5,12 @@ This module intentionally separates slower QC/diagnostic routines from
 `clean_proteomics_data.py` so core cleaning can run faster.
 
 Diagnostics included:
-1) Duplicate SampleID×Assay report (before median collapse in wide pivot)
-2) PCA pre-ComBat normalization
-3) PCA post-ComBat normalization
-4) Shared-axis pre/post PCA comparison
+1) Duplicate SampleID x Assay report (saved to diagnostics/reports/)
+2) Pre-ComBat assay distribution plots (density + batch heatmap)
+3) ComBat batch correction assessment (batch medians + per-assay batch CV)
+4) PCA pre-ComBat, post-ComBat, and shared-axis comparison
 5) Normalization quality plots (sample distributions, boxplots, density overlay,
-   quantile heatmap, and optional batch comparison)
+   and batch comparison)
 """
 
 import logging
@@ -48,9 +48,9 @@ _RNG_SEED = 42
 
 
 def _extract_protein_matrix(df: pd.DataFrame) -> pd.DataFrame:
-    """Drop known metadata columns and return log2-transformed protein data."""
+    """Drop known metadata columns and return the protein matrix (already log2 / NPX scale)."""
     meta_cols = [c for c in _METADATA_COLS if c in df.columns]
-    return np.log2(df.drop(columns=meta_cols))
+    return df.drop(columns=meta_cols)
 
 
 def duplicate_sample_assay_report(df_long_bio: pd.DataFrame) -> pd.DataFrame:
@@ -290,6 +290,7 @@ def plot_precombat_batch_assay_distributions(
     X_pre: pd.DataFrame,
     batch_labels: pd.Series,
     out_dir: str,
+    selected_assays: list[str] | None = None,
     top_n_assays: int = 24,
 ) -> None:
     """
@@ -314,6 +315,12 @@ def plot_precombat_batch_assay_distributions(
         return
 
     X = X_pre.loc[shared].copy()
+    if selected_assays is not None:
+        selected = [a for a in selected_assays if a in X.columns]
+        if len(selected) == 0:
+            logger.warning("Pre-ComBat assay distribution plot skipped (no selected assays found).")
+            return
+        X = X.loc[:, selected].copy()
     os.makedirs(out_dir, exist_ok=True)
 
     batch_means = pd.DataFrame(
@@ -360,11 +367,11 @@ def plot_precombat_batch_assay_distributions(
     plt.close(fig)
     logger.info("   Saved: %s", out_path)
 
-    hm = batch_means.loc[top_assays]
+    hm = batch_means.loc[batch_mean_range.index]
     hm_scaled = hm.sub(hm.mean(axis=1), axis=0).div(hm.std(axis=1).replace(0, np.nan), axis=0)
     hm_scaled = hm_scaled.fillna(0.0)
 
-    fig, ax = plt.subplots(figsize=(7, max(5, 0.25 * len(top_assays))))
+    fig, ax = plt.subplots(figsize=(7, max(5, 0.18 * len(hm_scaled))))
     sns.heatmap(hm_scaled, cmap="coolwarm", center=0, ax=ax)
     ax.set_title("Pre-ComBat Batch Mean Shift per Assay (row z-score)")
     ax.set_xlabel("Batch")
@@ -409,7 +416,12 @@ def run_diagnostics(
     df_long_bio = df_long_bio.loc[~is_olink_control_assay(df_long_bio)].copy()
 
     dup_report = duplicate_sample_assay_report(df_long_bio)
-    dup_path = os.path.splitext(output_csv)[0] + "_duplicate_sample_assay_report.csv"
+    if reports_dir is not None:
+        os.makedirs(reports_dir, exist_ok=True)
+        _dup_fname = os.path.splitext(os.path.basename(output_csv))[0] + "_duplicate_sample_assay_report.csv"
+        dup_path = os.path.join(reports_dir, _dup_fname)
+    else:
+        dup_path = os.path.splitext(output_csv)[0] + "_duplicate_sample_assay_report.csv"
     dup_report.to_csv(dup_path, index=False)
     logger.info("   Duplicate combos: %d", len(dup_report))
     logger.info("   Saved: %s", dup_path)
@@ -434,15 +446,26 @@ def run_diagnostics(
         sample_to_batch = sample_to_batch.loc[has_batch]
 
     X_combat = combat_normalize_wide(X, sample_to_batch)
-    X_kept, _ = missingness_filter_and_group_check(
+    X_kept, miss_report = missingness_filter_and_group_check(
         X_combat, groups_binary, cutoff=CUTOFF_PERCENT_MISSING, alpha_bh=0.05
     )
     sample_to_batch = sample_to_batch.reindex(X_kept.index)
+    rejected_assays = (
+        miss_report.loc[miss_report["bh_reject"] == True, "Assay"].astype(str).tolist()
+        if ("bh_reject" in miss_report.columns and "Assay" in miss_report.columns)
+        else []
+    )
+    logger.info("   BH-rejected assays used for pre-ComBat distribution plots: %d", len(rejected_assays))
 
     logger.info("[5/7] Saving pre-ComBat assay distribution diagnostics...")
     if precombat_dir is None:
         precombat_dir = os.path.dirname(output_csv)
-    plot_precombat_batch_assay_distributions(X, sample_to_batch, precombat_dir)
+    plot_precombat_batch_assay_distributions(
+        X,
+        sample_to_batch,
+        precombat_dir,
+        selected_assays=rejected_assays,
+    )
 
     logger.info("[6/7] Saving ComBat assessment...")
     if combat_dir is None:
@@ -733,6 +756,7 @@ if __name__ == "__main__":
             pca_dir=os.path.join(plasma_diag, "pca"),
             combat_dir=os.path.join(plasma_diag, "combat_assessment"),
             precombat_dir=plasma_diag,
+            reports_dir=os.path.join(plasma_diag, "reports"),
         )
         if os.path.exists(out_csv_plasma):
             plot_normalization_quality(
@@ -750,6 +774,7 @@ if __name__ == "__main__":
             pca_dir=os.path.join(placenta_diag, "pca"),
             combat_dir=os.path.join(placenta_diag, "combat_assessment"),
             precombat_dir=placenta_diag,
+            reports_dir=os.path.join(placenta_diag, "reports"),
         )
         if os.path.exists(out_csv_placenta):
             plot_normalization_quality(

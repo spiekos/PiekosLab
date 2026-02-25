@@ -375,7 +375,7 @@ def test_cleaned_output(result_path: str, verbose: bool = False) -> None:
     df = pd.read_csv(result_path, index_col=0)
 
     meta_cols = [c for c in _METADATA_COLS if c in df.columns]
-    X = np.log2(df.drop(columns=meta_cols))
+    X = df.drop(columns=meta_cols)  # already log2 (NPX scale)
 
     if verbose:
         print(f"\nFile : {os.path.basename(result_path)}")

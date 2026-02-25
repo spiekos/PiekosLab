@@ -17,8 +17,12 @@ from statsmodels.stats.multitest import multipletests
 
 logger = logging.getLogger(__name__)
 
-CUTOFF_PERCENT_MISSING = 0.25
+CUTOFF_PERCENT_MISSING = 0.20
 CONTROL_SAMPLE_PREFIXES = ("CONTROL", "NEG", "PLATE")
+
+# Canonical group label corrections — applied to the Group column at metadata load time
+# so every downstream output CSV carries consistent labels.
+_GROUP_LABEL_MAP = {"sptb": "sPTB"}
 
 
 # -----------------------------
@@ -136,6 +140,17 @@ def load_metadata_with_batch(
 
     meta_subset = meta_subset.set_index("SampleID")
     meta_subset = meta_subset[~meta_subset.index.duplicated(keep="first")]
+
+    # Standardise Group label capitalisation.
+    if "Group" in meta_subset.columns:
+        for old, canonical in _GROUP_LABEL_MAP.items():
+            n = (meta_subset["Group"] == old).sum()
+            if n > 0:
+                meta_subset["Group"] = meta_subset["Group"].replace({old: canonical})
+                logger.info(
+                    "Group label fix: '%s' → '%s' (%d sample(s)) in %s metadata",
+                    old, canonical, n, meta_type,
+                )
 
     return meta_subset
 

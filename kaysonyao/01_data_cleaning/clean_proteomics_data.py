@@ -24,16 +24,15 @@ Workflow:
    - Apply ComBat batch correction using metadata Batch labels.
    - Preserve original missingness pattern after correction.
 9) Missingness filter on the ComBat-normalized wide matrix (pre-imputation):
-   - Keep assays with missing fraction < 25%.
+   - Keep assays with missing fraction < 20%.
    - For assays failing the cutoff, compute group-wise missingness (Control vs Complication),
      test imbalance using Fisher's exact test, and apply Benjamini-Hochberg correction.
    - Save a dropped-assay missingness report CSV.
 10) Impute remaining missing values (last):
     - Per assay, fill NaN with (minimum observed NPX - 1), i.e. half the linear minimum.
-11) Output scaling:
-    - Convert NPX (log2 scale) to linear positive scale via 2**NPX.
-12) Merge metadata (Batch, Group, Subgroup, GestAgeDelivery) into final matrix
-13) Save final cleaned matrix (wide, SampleID x [metadata + Assays]) to CSV.
+11) Merge metadata (Batch, Group, Subgroup, GestAgeDelivery) into final matrix.
+12) Save final cleaned matrix (wide, SampleID x [metadata + Assays]) to CSV.
+    Values are in log2 scale (NPX) throughout — no linear back-transformation is applied.
 
 """
 
@@ -185,28 +184,25 @@ def process_all_files(
     # 9) Imputation
     X_final = half_min_impute_wide(X_kept)
 
-    # 10) Convert to linear scale
-    X_final_linear = np.power(2.0, X_final)
-
-    # 11) Merge metadata
-    metadata_aligned = metadata.reindex(X_final_linear.index)
+    # 10) Merge metadata  (values remain in log2 / NPX scale throughout)
+    metadata_aligned = metadata.reindex(X_final.index)
 
     if meta_type == "proteomics":
-        subject_ids = X_final_linear.index.to_series().str.replace(
+        subject_ids = X_final.index.to_series().str.replace(
             r"\s*[A-Z]+$", "", regex=True
         )
         metadata_aligned.insert(0, "SubjectID", subject_ids.values)
 
-    final_output = pd.concat([metadata_aligned, X_final_linear], axis=1)
+    final_output = pd.concat([metadata_aligned, X_final], axis=1)
 
-    # 12) Save output
+    # 11) Save output
     final_output.to_csv(output_csv, index=True)
 
     n_dropped = len(dropped_report)
     logger.info(
         "%s: done | samples=%d | assays=%d | dropped_assays=%d "
         "| metadata_matched=%d/%d | output=%s",
-        run_label, final_output.shape[0], X_final_linear.shape[1],
+        run_label, final_output.shape[0], X_final.shape[1],
         n_dropped, n_matched, len(matched), output_csv,
     )
     if n_dropped > 0:
