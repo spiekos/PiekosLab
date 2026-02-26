@@ -76,7 +76,10 @@ def qs(comp):
     # get peak rating qc
     peak = pd.Series([10 if x >= 7.0 else 7 if x >= 5 else 4 if x >= 3 else 1 for x in comp['Peak Rating (Max.)']])
     # get rsd qc areas
-    rsd = pd.Series([10 if x < 10 else 8 if x < 15 else 6 if x < 20 else 4 if x < 25 else 2 if x < 30 else 0 for x in comp["RSD QC Areas [%]"]])
+    try:
+        rsd = pd.Series([10 if x < 10 else 8 if x < 15 else 6 if x < 20 else 4 if x < 25 else 2 if x < 30 else 0 for x in comp["RSD QC Areas [%]"]])
+    except:
+        rsd = 0
     # get ms2
     ms2 = pd.Series([10 if x == "DDA for preferred ion" else 6 if x == "DDA for other ion" else 4 if x == "DDA available" else 0 for x in comp["MS2"]])
     # get signal intensity (area max)
@@ -159,24 +162,31 @@ def MAD_or_missing(exp_data, mode, e):
 # mode >20% missing = remove metabolites with >20% missing
 def rsd_or_missing(exp_data, mode, e, unique_batches):
     if mode == "RSD":
-        RSD1 = (exp_data["Pooled_" + unique_batches[0] + "_" + e].std()/exp_data["Pooled_" + unique_batches[0] + "_" + e].mean())*100 
-        RSD2 = (exp_data["Pooled_" + unique_batches[1] + "_" + e].std()/exp_data["Pooled_" + unique_batches[1] + "_" + e].mean())*100 
-        failed = RSD1.index[list(RSD1 > 30) or list(RSD2 > 30)]
+        rsd = pd.DataFrame()
+        for b in unique_batches:
+            rsd[b] = (exp_data["Pooled_" + b + "_" + e].std()/exp_data["Pooled_" + b + "_" + e].mean())*100 
+        failed = rsd.index[(rsd > RSD).sum(axis=1) > 0]
     elif mode == "mtbl_missing":
-        batch1 = exp_data["Samples_" + unique_batches[0] + "_" + e].isna().sum()
-        batch2 = exp_data["Samples_" + unique_batches[1] + "_" + e].isna().sum()
-        failed = batch1.index[(batch1 > MTBL_MISSING*len(batch1)) | (batch2 > MTBL_MISSING*len(batch2))]
+        missing = pd.DataFrame()
+        for b in unique_batches:
+            missing[b] = exp_data["Samples_" + b + "_" + e].isna().sum()
+        failed = missing.index[(missing > MTBL_MISSING*len(missing.index)).sum(axis=0)]
     else:
         logging.error("Invalid mode for rsd_or_missing(): choose RSD or mtbl_missing")
     for m in failed:
         if mode == "RSD":
-            logging.info("QC: Compound " + str(m) + " failed the RSD < 30 check\n" + 10*'\t' + "Pooled_" + unique_batches[0] + "_" + e + " RSD = " + str(RSD1[m]) + "\n" + 10*'\t' + "Pooled_" + unique_batches[1] + "_" + e + " RSD = " + str(RSD2[m]))
+            logging.info("QC: Compound " + str(m) + " failed the RSD < 30 check\n" + str(rsd.loc[m,:]))
         else:
             logging.info("QC: Compound " + str(m) + " failed the <20% missing check.")
-        exp_data["Pooled_" + unique_batches[0] + "_" + e] = exp_data["Pooled_" + unique_batches[0] + "_" + e].drop(columns=m)
-        exp_data["Pooled_" + unique_batches[1] + "_" + e] = exp_data["Pooled_" + unique_batches[1] + "_" + e].drop(columns=m)
-        exp_data["Samples_" + unique_batches[0] + "_" + e] = exp_data["Samples_" + unique_batches[0] + "_" + e].drop(columns=m)
-        exp_data["Samples_" + unique_batches[1] + "_" + e] = exp_data["Samples_" + unique_batches[1] + "_" + e].drop(columns=m)
+        for b in unique_batches:
+            try:
+                exp_data["Pooled_" + b + "_" + e] = exp_data["Pooled_" + b + "_" + e].drop(columns=m)
+            except:
+                logging.warning(m + " is missing from Pooled_" + b + "_" + e)
+            try:    
+                exp_data["Samples_" + b + "_" + e] = exp_data["Samples_" + b + "_" + e].drop(columns=m)
+            except:
+                logging.warning(m + " is missing from Samples" + b + "_" + e)
 
 # generate pca from expression data
 def generate_pca(exp_data, title, e, dir_input):
@@ -209,39 +219,78 @@ def generate_pca(exp_data, title, e, dir_input):
     plt.grid(True)
     plt.savefig(dir_input + "/" + title + "_PCA_" + e + ".png")
 
-
-# use biolgoical replicates to conduct batch normalization 
-###### NOT SCALABLE assumes 2 batches 
-def normalization(exp_data, e, unique_batches):
-    batch1 = exp_data["Samples_" + unique_batches[0] + "_" + e].drop(['batch'], axis=1)
-    batch2 = exp_data["Samples_" + unique_batches[1] + "_" +e].drop(['batch'], axis=1)
-    replicates = list(set(batch1.index) & set(batch2.index))
-    logging.info("Initializing batch normalization with " + str(len(replicates)) + " biological replicates.")
-    rep1 = batch1.loc[replicates,:]
-    rep2 = batch2.loc[replicates,:]
-    ratios = rep2 / rep1
-    mad = sp.median_abs_deviation(ratios)
-    med = ratios.median()
-    upper = med + 5*mad
-    lower = med - 5*mad
+def correction_factor(rep1, rep2):
     med_ratios = {}
-    # calculate median ratio, excluding outilers from this calculation (should outliers be removed completely?)
+    ratios = rep2 / rep1
+    ratios = ratios.dropna(how = "all")
+    mad = sp.median_abs_deviation(ratios)
+    upper = ratios.median() + 5*mad
+    lower = ratios.median() - 5*mad
     for m in ratios.columns:
         temp = ratios.loc[list(ratios[m] < upper[m]) and list(ratios[m] > lower[m]), m]
         med_ratios[m] = temp.median()
-    correction_factors = {k: 1/v for k, v in med_ratios.items()}
-    len(correction_factors)
-    for m in batch2.columns:
-        exp_data["Samples_62323_" + e][m] = batch2[m]*correction_factors[m]
+    correction = {k: 1/v for k, v in med_ratios.items()}
+    return correction
+
+# use biolgoical replicates to conduct batch normalization 
+def normalization(exp_data, e, unique_batches, mode):
+    bdf = {}
+    samples = []
+    for b in unique_batches:
+        bdf[b] = exp_data["Samples_" + b + "_" + e].drop(['batch'], axis=1)
+        samples = samples + list(bdf[b].index)
+
+    replicates = [i for i in set(samples) if samples.count(i) > 1]
+
+    logging.info("Initializing batch normalization with " + str(len(replicates)) + " biological replicates.")
+    reps = {}
+    for b in unique_batches:
+        reps[b] = bdf[b].loc[list(set(bdf[b].index) & set(replicates)),:]
+
+    #110123 is reference batch for plasma
+    if mode == "placenta":
+        cf = correction_factor(reps["32425"], reps["62323"])
+        for m in reps["62323"].columns:
+            exp_data["Samples_62323_" + e][m] = reps["62323"][m]*cf[m]
+    else:
+        cf1 = correction_factor(reps["110123"], reps["51223"])
+        cf2 = correction_factor(reps["110123"], reps["112524"])
+        for m in reps["51223"].columns:
+            exp_data["Samples_51223_" + e][m] = exp_data["Samples_51223_" + e][m]*cf1[m]
+        for m in reps["112524"].columns:
+            exp_data["Samples_112524_" + e][m] = exp_data["Samples_112524_" + e][m]*cf2[m]
+
 
 # average replicate expression values
-def merge_rep(exp_data, e, unique_batches):
-    replicates = list(set(exp_data["Samples_" + unique_batches[0] + "_" + e].index) & set(exp_data["Samples_" + str(unique_batches[1]) + "_" + e].index))
-    rep1 = exp_data["Samples_" + unique_batches[0] + "_" + e].loc[replicates,:]
-    rep2 = exp_data["Samples_" + unique_batches[1] + "_" + e].loc[replicates,:]
-    rep_avg = (rep1 + rep2)/2
-    exp_data["Samples_" + str(unique_batches[0]) + "_" + e].loc[rep_avg.index,:] = rep_avg
-    exp_data["Samples_" + str(unique_batches[1]) + "_" + e].loc[rep_avg.index,:] = rep_avg
+def merge_rep(exp_data, e, unique_batches, mode):
+    samples = []
+    for b in unique_batches:
+        samples = samples + list(exp_data["Samples_" + b + "_" + e].drop(['batch'], axis=1).index)
+    logging.info("Getting replicates for merging...")
+    replicates = [i for i in set(samples) if samples.count(i) > 1]
+    if mode == "placenta":
+        logging.info("Placenta mode...")
+        rep1 = exp_data["Samples_" + unique_batches[0] + "_" + e].loc[replicates,:].drop(['batch'], axis=1)
+        rep2 = exp_data["Samples_" + unique_batches[1] + "_" + e].loc[replicates,:].drop(['batch'], axis=1)
+        rep_avg = (rep1 + rep2)/2
+        exp_data["Samples_" + str(unique_batches[0]) + "_" + e].loc[rep_avg.index,:] = rep_avg
+        exp_data["Samples_" + str(unique_batches[1]) + "_" + e].loc[rep_avg.index,:] = rep_avg
+    else:
+        logging.info("Plasma mode...")
+        reps = {}
+        for b in unique_batches:
+            reps[b] = exp_data["Samples_" + b + "_" + e].loc[list(set(exp_data["Samples_" + b + "_" + e].index) & set(replicates)),:].drop(['batch'], axis=1)
+        avg1 = ((reps["51223"] + reps["110123"])/2).dropna(how="all")
+        avg2 = ((reps["112524"] + reps["110123"])/2).dropna(how="all")
+
+        # replace for 511223 and 110123
+        exp_data["Samples_51223_" + e].loc[avg1.index,:] = avg1
+        exp_data["Samples_110123_" + e].loc[avg1.index,:] = avg1
+
+        # replace for 112524 and 110123
+        exp_data["Samples_112524_" + e].loc[avg2.index,:] = avg2
+        exp_data["Samples_110123_" + e].loc[avg2.index,:] = avg2
+        
 
 # do log2 transformation on expression data
 def log2_transform(exp_data,e, unique_batches):
@@ -283,7 +332,18 @@ def combine_pos_neg(mode, batch, exp_data, pos_comp, neg_comp):
 def formatting(final, meta, mode, dir_input):
     for k in final.keys():
         if "Samples" in k:
-            final[k]["group"] = meta.loc[final[k].index,:]["group"]
+            #final[k]["group"] = meta.loc[final[k].index,:]["group"]
+            group = []
+            for id in final[k].index:
+                try:
+                    group.append(meta.loc[id[:-1].strip(),:]["group"])
+                except KeyError:
+                    group.append(meta.loc[id[:-1].strip() + "E",:]["group"])
+                except KeyError:
+                    group.append(meta.loc[id + "E",:]["group"])
+                except:
+                    logging.error("Issue with indexing " + id + " in meta data.")
+            final[k]["group"] = group
             if mode == 'plasma':
                 for t in TIMEPOINTS:
                     temp = pd.DataFrame()
@@ -299,7 +359,7 @@ def formatting(final, meta, mode, dir_input):
             final[k].to_csv(dir_input + "/" + k + ".csv")
     
 # do all cleaning steps split by charge
-def cleanHelper(exp_data, e, dir_input, unique_batches):
+def cleanHelper(exp_data, e, dir_input, unique_batches, mode):
     MAD_or_missing(exp_data, "MAD", e) # MAD test 
     MAD_or_missing(exp_data, "sample_missing", e) # sample >50% missingness test
     rsd_or_missing(exp_data, "RSD", e, unique_batches) # RSD test (consider metabolite as missing)
@@ -307,15 +367,21 @@ def cleanHelper(exp_data, e, dir_input, unique_batches):
         #Have not added by group check yet, mtbl doesn't have any missing mtbl expression anyway
     logging.info("Generating unnormalized PCA plot...")
     generate_pca(exp_data, "Unnormalized_MTBL_Expression", e, dir_input) # generate unnormalized PCA
-    normalization(exp_data, e, unique_batches) # batch normalization using replicates
+    normalization(exp_data, e, unique_batches, mode) # batch normalization using replicates
     logging.info("Generating batch unnormalized PCA plot")
     generate_pca(exp_data, "Batch_Normalized_MTBL_Expression", e, dir_input) # generate normalized PCA
-    merge_rep(exp_data, e, unique_batches) # average replicates expression 
+    merge_rep(exp_data, e, unique_batches, mode) # average replicates expression 
     logging.info("Applying log2 transformation...")
     log2_transform(exp_data, e, unique_batches) # log2 transform all data
 
 # function for data cleaning
 def clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp, dir_input, meta):
+    if "plasma" in dir_input:
+        mode = "plasma"
+    elif "placenta" in dir_input:
+        mode = "placenta"
+    else:
+        logging.error("Formatting Error: output directory doesn't specify 'plasma' or 'placenta'")
     unique_batches = list(set(pos_batch["batch"]))
     unique_batches = [str(x) for x in unique_batches]
     logging.info("Batches: " + str(unique_batches))
@@ -329,8 +395,8 @@ def clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp, dir_input,
     split_exp(neg_exp, neg_batch, "NEG", exp_data, unique_batches)
 
     # do cleaning steps split by charge
-    cleanHelper(exp_data, "POS", dir_input, unique_batches)
-    cleanHelper(exp_data, "NEG", dir_input, unique_batches)
+    cleanHelper(exp_data, "POS", dir_input, unique_batches, mode)
+    cleanHelper(exp_data, "NEG", dir_input, unique_batches, mode)
 
     # remove duplicate metabolite entries based on computed quality scores
     logging.info("Removing multiplet parent metabolites by quality score...")
@@ -355,12 +421,8 @@ def clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp, dir_input,
      # 1/2 minium imputation of missing, no mtbl are missing
     #min_imputation()
     logging.info("Exporting csv files...")
-    if "plasma" in dir_input:
-        formatting(final, meta, "plasma", dir_input) # add group columns, split files by timepoint
-    elif "placenta" in dir_input:
-        formatting(final, meta, "placenta", dir_input) 
-    else:
-        logging.error("Formatting Error: output directory doesn't specify 'plasma' or 'placenta'")
+    formatting(final, meta, mode, dir_input) # add group columns, split files by timepoint
+
         
 
 # Give folder with both postive and negative metabolomic expression, batch info, and compound metadata
