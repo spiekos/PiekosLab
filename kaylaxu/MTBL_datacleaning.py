@@ -160,24 +160,13 @@ def MAD_or_missing(exp_data, mode, e):
 #### add by group check
 # rsd = calculate RSD (sd/mean * 100) in QC pools and remove metabolites with RSD > 30%
 # mode >20% missing = remove metabolites with >20% missing
-def rsd_or_missing(exp_data, mode, e, unique_batches):
-    if mode == "RSD":
-        rsd = pd.DataFrame()
-        for b in unique_batches:
-            rsd[b] = (exp_data["Pooled_" + b + "_" + e].std()/exp_data["Pooled_" + b + "_" + e].mean())*100 
-        failed = rsd.index[(rsd > RSD).sum(axis=1) > 0]
-    elif mode == "mtbl_missing":
-        missing = pd.DataFrame()
-        for b in unique_batches:
-            missing[b] = exp_data["Samples_" + b + "_" + e].isna().sum()
-        failed = missing.index[(missing > MTBL_MISSING*len(missing.index)).sum(axis=0)]
-    else:
-        logging.error("Invalid mode for rsd_or_missing(): choose RSD or mtbl_missing")
+def rsd(exp_data, e, unique_batches):
+    rsd = pd.DataFrame()
+    for b in unique_batches:
+        rsd[b] = (exp_data["Pooled_" + b + "_" + e].std()/exp_data["Pooled_" + b + "_" + e].mean())*100 
+    failed = rsd.index[(rsd > RSD).sum(axis=1) > 0]
     for m in failed:
-        if mode == "RSD":
-            logging.info("QC: Compound " + str(m) + " failed the RSD < 30 check\n" + str(rsd.loc[m,:]))
-        else:
-            logging.info("QC: Compound " + str(m) + " failed the <20% missing check.")
+        logging.info("QC: Compound " + str(m) + " failed the RSD < 30 check\n" + str(rsd.loc[m,:]))
         for b in unique_batches:
             try:
                 exp_data["Pooled_" + b + "_" + e] = exp_data["Pooled_" + b + "_" + e].drop(columns=m)
@@ -187,6 +176,37 @@ def rsd_or_missing(exp_data, mode, e, unique_batches):
                 exp_data["Samples_" + b + "_" + e] = exp_data["Samples_" + b + "_" + e].drop(columns=m)
             except:
                 logging.warning(m + " is missing from Samples" + b + "_" + e)
+
+def sample_missing(exp_data, e, unique_batches):
+    missing_dict = {}
+    
+    # 1. Correctly calculate missing fraction per batch (Samples only)
+    for b in unique_batches:
+        df_b = exp_data["Samples_" + b + "_" + e]
+        # Calculate fraction: (number of NaNs) / (number of samples in this batch)
+        missing_dict[b] = df_b.isna().sum() / len(df_b.index)
+        
+    # 2. Combine into a DataFrame safely
+    missing = pd.DataFrame(missing_dict)
+    
+    # 3. Mask: if ANY batch has > 20% missingness for a metabolite, flag it
+    mask = (missing > MTBL_MISSING).sum(axis=1) > 0
+    failed = missing.loc[mask].index
+    
+    # 4. Safely drop failed metabolites from all dataframes
+    for m in failed:
+        logging.info(f"QC: Compound {m} failed the <20% missing check.")
+        for b in unique_batches:
+            sample_key = "Samples_" + b + "_" + e
+            pooled_key = "Pooled_" + b + "_" + e
+            
+            # Drop only if the column actually exists in that specific batch
+            if m in exp_data[sample_key].columns:
+                exp_data[sample_key] = exp_data[sample_key].drop(columns=m)
+            if m in exp_data[pooled_key].columns:
+                exp_data[pooled_key] = exp_data[pooled_key].drop(columns=m)
+
+
 
 # generate pca from expression data
 def generate_pca(exp_data, title, e, dir_input):
@@ -251,7 +271,7 @@ def normalization(exp_data, e, unique_batches, mode):
     if mode == "placenta":
         cf = correction_factor(reps["32425"], reps["62323"])
         for m in reps["62323"].columns:
-            exp_data["Samples_62323_" + e][m] = reps["62323"][m]*cf[m]
+            exp_data["Samples_62323_" + e][m] = exp_data["Samples_62323_" + e][m]*cf[m]
     else:
         cf1 = correction_factor(reps["110123"], reps["51223"])
         cf2 = correction_factor(reps["110123"], reps["112524"])
@@ -335,14 +355,23 @@ def formatting(final, meta, mode, dir_input):
             #final[k]["group"] = meta.loc[final[k].index,:]["group"]
             group = []
             for id in final[k].index:
-                try:
-                    group.append(meta.loc[id[:-1].strip(),:]["group"])
-                except KeyError:
-                    group.append(meta.loc[id[:-1].strip() + "E",:]["group"])
-                except KeyError:
-                    group.append(meta.loc[id + "E",:]["group"])
-                except:
-                    logging.error("Issue with indexing " + id + " in meta data.")
+                keys_to_try = [
+                    id,
+                    id[:-1].strip(),
+                    id[:-1].strip() + "E",
+                    id + "E"
+                ]
+                found = False
+                for key in keys_to_try:
+                    try:
+                        group.append(meta.loc[key, :]["group"])
+                        found = True
+                        break # Success! Exit the loop and stop trying fallbacks
+                    except KeyError:
+                        continue # That key failed, try the next one in the list
+                if not found:
+                    logging.error(f"Issue with indexing {id} in meta data.")
+            
             final[k]["group"] = group
             if mode == 'plasma':
                 for t in TIMEPOINTS:
@@ -362,8 +391,8 @@ def formatting(final, meta, mode, dir_input):
 def cleanHelper(exp_data, e, dir_input, unique_batches, mode):
     MAD_or_missing(exp_data, "MAD", e) # MAD test 
     MAD_or_missing(exp_data, "sample_missing", e) # sample >50% missingness test
-    rsd_or_missing(exp_data, "RSD", e, unique_batches) # RSD test (consider metabolite as missing)
-    rsd_or_missing(exp_data, "mtbl_missing", e, unique_batches) # metabolite >20% missingness test
+    rsd(exp_data,  e, unique_batches) # RSD test (consider metabolite as missing)
+    sample_missing(exp_data, e, unique_batches) # metabolite >20% missingness test
         #Have not added by group check yet, mtbl doesn't have any missing mtbl expression anyway
     logging.info("Generating unnormalized PCA plot...")
     generate_pca(exp_data, "Unnormalized_MTBL_Expression", e, dir_input) # generate unnormalized PCA
@@ -426,9 +455,12 @@ def clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp, dir_input,
         
 
 # Give folder with both postive and negative metabolomic expression, batch info, and compound metadata
+#def main(directory, meta):
 def main():
     dir_input = sys.argv[1] # e.g. /Users/kaylaxu/Desktop/data/clean_data/MTBL_placenta
     meta_input = sys.argv[2] # e.g. /Users/kaylaxu/Desktop/data/raw_data/dp3 master table v2.xlsx
+#    dir_input = directory
+#    meta_input = meta
 
     logging.basicConfig( # initiate log file
         filename='MTBL_cleaning.log',
