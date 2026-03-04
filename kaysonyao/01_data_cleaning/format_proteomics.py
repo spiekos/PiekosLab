@@ -6,6 +6,19 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+_POSTNATAL_TO_PRENATAL_MAP: dict[str, str] = {
+    "EA": "A",
+    "EB": "B",
+    "EC": "C",
+    "ED": "D",
+    "EE": "E",
+}
+
+# Metadata columns carried through the wide matrix (non-analyte).
+_META_COLS: frozenset[str] = frozenset(
+    {"Group", "Subgroup", "GestAgeDelivery", "SampleGestAge"}
+)
+
 
 def remove_internal_whitespace(s: pd.Series) -> pd.Series:
     """Remove all whitespace characters from a string series."""
@@ -43,16 +56,24 @@ def format_proteomics_data(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
 
     Steps:
     1) Remove all internal whitespace in SampleID and SubjectID.
-    2) Derive longitudinal suffix from SampleID vs SubjectID.
-    3) Drop Batch column.
-    4) Warn and exclude rows with no recognizable longitudinal suffix.
-    5) Split rows by suffix.
-    6) For each split dataframe:
-       - Drop SubjectID
-       - Remove suffix from SampleID (leave base subject ID)
+    2) Derive longitudinal suffix from SampleID vs SubjectID (stored as OriginalLabel).
+    3) Warn and exclude rows with no recognizable longitudinal suffix.
+    4) Merge postnatal suffixes into their prenatal equivalents using
+       _POSTNATAL_TO_PRENATAL_MAP (EA→A, EB→B, EC→C, ED→D, EE→E).
+       The merged label is stored as LongitudinalLabel.
+    5) Drop Batch column.
+    6) Split rows by LongitudinalLabel.
+    7) For each split dataframe:
+       - Strip the ORIGINAL suffix from SampleID to restore the base subject ID.
+         (Crucial: stripping must use the original "EA"/"A" suffix, not the
+          remapped label, so "DP3-0005EA" → "DP3-0005", not "DP3-0005E".)
+       - Drop SubjectID, OriginalLabel, LongitudinalLabel.
+       - If a subject contributed both a prenatal and a postnatal sample that
+         land in the same merged bucket, aggregate duplicate SampleIDs:
+         analyte columns → median, metadata columns → first value.
 
     Returns:
-        dict mapping suffix label -> dataframe
+        dict mapping merged suffix label (e.g. "A") -> dataframe
     """
     required = {"SampleID", "SubjectID"}
     missing = required - set(df.columns)
@@ -63,29 +84,61 @@ def format_proteomics_data(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
     out["SampleID"] = remove_internal_whitespace(out["SampleID"])
     out["SubjectID"] = remove_internal_whitespace(out["SubjectID"])
 
-    out["LongitudinalLabel"] = [
+    # Step 2: extract original suffix (e.g. "A", "EA").
+    out["OriginalLabel"] = [
         extract_suffix(sid, subid) for sid, subid in zip(out["SampleID"], out["SubjectID"])
     ]
 
-    # Warn about rows dropped due to missing suffix (issue #10).
-    no_suffix = out[out["LongitudinalLabel"] == ""]
+    # Step 3: drop rows with no suffix.
+    no_suffix = out[out["OriginalLabel"] == ""]
     if not no_suffix.empty:
         logger.warning(
             "%d sample(s) have no longitudinal suffix and will be excluded: %s",
             len(no_suffix),
             no_suffix["SampleID"].tolist(),
         )
-    out = out[out["LongitudinalLabel"] != ""].copy()
+    out = out[out["OriginalLabel"] != ""].copy()
 
+    # Step 4: merge postnatal → prenatal.
+    out["LongitudinalLabel"] = out["OriginalLabel"].replace(_POSTNATAL_TO_PRENATAL_MAP)
+    n_merged = (out["OriginalLabel"] != out["LongitudinalLabel"]).sum()
+    if n_merged > 0:
+        logger.info(
+            "Merged %d postnatal sample(s) (EA–EE → A–E) into prenatal equivalents.",
+            n_merged,
+        )
+
+    # Step 5: drop Batch.
     if "Batch" in out.columns:
         out = out.drop(columns=["Batch"])
 
     grouped: dict[str, pd.DataFrame] = {}
     for suffix, g in out.groupby("LongitudinalLabel", sort=True):
         g2 = g.copy()
-        # Remove suffix from SampleID to restore base subject ID.
-        g2["SampleID"] = g2["SampleID"].str.replace(rf"{re.escape(suffix)}$", "", regex=True)
-        g2 = g2.drop(columns=["SubjectID", "LongitudinalLabel"])
+
+        # Step 7a: strip the ORIGINAL suffix from each SampleID individually.
+        # This correctly handles mixed groups (e.g. "A" and "EA" → both become base ID).
+        g2["SampleID"] = [
+            sid[: -len(orig)] if orig and sid.endswith(orig) else sid
+            for sid, orig in zip(g2["SampleID"], g2["OriginalLabel"])
+        ]
+        g2 = g2.drop(columns=["SubjectID", "LongitudinalLabel", "OriginalLabel"])
+
+        # Step 7b: aggregate duplicates caused by pre+postnatal merge.
+        dup_mask = g2["SampleID"].duplicated(keep=False)
+        if dup_mask.any():
+            dup_ids = g2.loc[dup_mask, "SampleID"].unique().tolist()
+            logger.warning(
+                "Suffix '%s': %d subject(s) have both prenatal and postnatal samples "
+                "after merge; aggregating analytes by median, metadata by first: %s",
+                suffix, len(dup_ids), dup_ids,
+            )
+            present_meta = [c for c in g2.columns if c != "SampleID" and c in _META_COLS]
+            analyte_cols = [c for c in g2.columns if c != "SampleID" and c not in _META_COLS]
+            agg_dict: dict[str, str] = {c: "first" for c in present_meta}
+            agg_dict.update({c: "median" for c in analyte_cols})
+            g2 = g2.groupby("SampleID", sort=False).agg(agg_dict).reset_index()
+
         grouped[suffix] = g2
 
     return grouped
