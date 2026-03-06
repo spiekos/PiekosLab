@@ -140,30 +140,44 @@ python 02_exploratory_analysis/generate_differential_cluster_heatmap_limited_gro
 ---
 
 ### `prepare_enrichr_input.py`
-Splits significant analytes from the `Control vs Complication` binary comparison into
-directional gene lists and runs pathway enrichment via the **Enrichr API** using `gseapy`
-— equivalent to using the [Enrichr website](https://maayanlab.cloud/Enrichr/) but fully automated.
+Splits significant analytes into directional gene lists and runs pathway enrichment
+via the **Enrichr API** using `gseapy` — equivalent to the [Enrichr website](https://maayanlab.cloud/Enrichr/) but fully automated. Handles plasma cross-sectional (per timepoint), plasma longitudinal (per group × adjacent step), and placenta cross-sectional results.
 
-**Direction logic:**
-`fold_change = median_Complication − median_Control` (NPX values are in log2 scale), so:
-- `fold_change > 0` → protein is **higher in Complication** relative to Control
-- `fold_change < 0` → protein is **higher in Control** relative to Complication
+**Cross-sectional direction logic** (`fold_change = median_Complication − median_Control`):
+- `fold_change > 0` → protein **higher in Complication**
+- `fold_change < 0` → protein **higher in Control**
 
-**Databases queried by default:**
-- `GO_Biological_Process_2025`
-- `KEGG_2026`
-- `Reactome_Pathways_2024`
+**Longitudinal direction logic** (`median_delta = value_T_later − value_T_earlier`):
+- `median_delta > 0` → protein **increasing** at this timepoint step
+- `median_delta < 0` → protein **decreasing** at this timepoint step
 
-**Outputs** (saved to `data/enrichr_input/<timepoint>/Control_vs_Complication/`):
+**Databases queried by default:** `GO_Biological_Process_2025`, `KEGG_2026`, `Reactome_Pathways_2024`
+
+**Plasma cross-sectional outputs** (saved to `04_results_and_figures/enrichment/plasma/cross_sectional/<timepoint>/Control_vs_Complication/`):
 
 | File | Contents |
 |---|---|
-| `higher_in_Complication.txt` | Upregulated in Complication; can also be pasted manually into Enrichr |
-| `higher_in_Control.txt` | Upregulated in Control; can also be pasted manually into Enrichr |
+| `higher_in_Complication.txt` | Upregulated in Complication; can be pasted into Enrichr directly |
+| `higher_in_Control.txt` | Upregulated in Control |
 | `all_significant.txt` | All significant analytes regardless of direction |
-| `significant_with_direction.csv` | Full table with `direction` column for reference |
-| `enrichment/higher_in_Complication_enrichment.csv` | Enrichr results for Complication-upregulated proteins, all databases combined, sorted by adjusted p-value |
+| `significant_with_direction.csv` | Full table with `direction` column |
+| `enrichment/higher_in_Complication_enrichment.csv` | Enrichr results, all databases, sorted by adj. p-value |
 | `enrichment/higher_in_Control_enrichment.csv` | Enrichr results for Control-upregulated proteins |
+
+**Placenta cross-sectional outputs** (saved to `04_results_and_figures/enrichment/placenta/cross_sectional/Control_vs_Complication/`):
+
+Same file layout as plasma cross-sectional. No timepoint subdirectories (placenta has a single cross-sectional comparison).
+
+**Longitudinal outputs** (saved to `04_results_and_figures/enrichment/plasma/longitudinal/<group>/<T_b>_minus_<T_a>/`):
+
+| File | Contents |
+|---|---|
+| `increasing.txt` | Analytes rising at this timepoint step |
+| `decreasing.txt` | Analytes falling at this timepoint step |
+| `all_significant.txt` | All significant analytes |
+| `significant_with_direction.csv` | Full table with `direction` column |
+| `enrichment/increasing_enrichment.csv` | Enrichr results for increasing proteins |
+| `enrichment/decreasing_enrichment.csv` | Enrichr results for decreasing proteins |
 
 **Key enrichment output columns:** `Gene_set` (database), `Term`, `Overlap`, `P_value`, `Adj_P_value`, `Odds_Ratio`, `Combined_Score`, `Genes`
 
@@ -172,22 +186,27 @@ directional gene lists and runs pathway enrichment via the **Enrichr API** using
 **Usage:**
 
 ```bash
-# Default (no args): auto-discovers all plasma cross-sectional results (Control vs Complication),
-# writes gene lists and runs Enrichr enrichment across timepoints A–E
+# Default (no args): auto-discovers plasma CS (A–E) + longitudinal + placenta CS, runs all enrichment
 python 02_exploratory_analysis/prepare_enrichr_input.py
 
 # Query every available Enrichr database (~300+), mirroring the website behaviour
 python 02_exploratory_analysis/prepare_enrichr_input.py --all-databases
 
-# Single comparison with all databases
+# Single CS comparison with all databases
 python 02_exploratory_analysis/prepare_enrichr_input.py \
-    --sig-csv data/diff_analysis/results/plasma/cross_sectional/C/Control_vs_Complication_significant_analytes.csv \
+    --sig-csv 04_results_and_figures/differential_analysis/plasma/cross_sectional/C/Control_vs_Complication_significant_analytes.csv \
     --g1 Control \
     --g2 Complication \
     --all-databases
 
 # Gene lists only (no Enrichr API calls)
 python 02_exploratory_analysis/prepare_enrichr_input.py --skip-enrichment
+
+# Skip longitudinal enrichment, run CS only (plasma + placenta)
+python 02_exploratory_analysis/prepare_enrichr_input.py --skip-longitudinal
+
+# Skip placenta enrichment
+python 02_exploratory_analysis/prepare_enrichr_input.py --skip-placenta
 
 # Custom databases
 python 02_exploratory_analysis/prepare_enrichr_input.py \
@@ -198,57 +217,102 @@ python 02_exploratory_analysis/prepare_enrichr_input.py \
 
 | Flag | Default | Description |
 |---|---|---|
-| `--sig-csv` | — | Path to a single `*_significant_analytes.csv`; triggers single-comparison mode |
+| `--sig-csv` | — | Path to a single `*_significant_analytes.csv`; triggers single CS comparison mode |
 | `--g1` | — | Group 1 label (required with `--sig-csv`) |
 | `--g2` | — | Group 2 label (required with `--sig-csv`) |
-| `--results-dir` | `data/diff_analysis/results/plasma/cross_sectional` | Root results directory for auto-discovery |
-| `--output-dir` | `data/enrichr_input` | Root output directory |
-| `--gene-sets` | `GO_Biological_Process_2025 KEGG_2026 Reactome_Pathways_2024` | Space-separated Enrichr databases to query; ignored if `--all-databases` is set |
-| `--all-databases` | `False` | Query every available Enrichr database (~300+), mirroring the website; overrides `--gene-sets` |
+| `--results-dir` | `04_results_and_figures/differential_analysis/plasma/cross_sectional` | Root plasma CS results directory for auto-discovery |
+| `--longitudinal-results-dir` | `04_results_and_figures/differential_analysis/plasma/longitudinal` | Longitudinal results directory for auto-discovery |
+| `--placenta-results-dir` | `04_results_and_figures/differential_analysis/placenta/cross_sectional` | Placenta CS results directory for auto-discovery |
+| `--output-dir` | `04_results_and_figures/enrichment` | Root output directory |
+| `--gene-sets` | `GO_Biological_Process_2025 KEGG_2026 Reactome_Pathways_2024` | Space-separated Enrichr databases; ignored if `--all-databases` is set |
+| `--all-databases` | `False` | Query every available Enrichr database (~300+); overrides `--gene-sets` |
 | `--skip-enrichment` | `False` | Write gene list files only; skip all Enrichr API calls |
+| `--skip-longitudinal` | `False` | Skip longitudinal enrichment |
+| `--skip-placenta` | `False` | Skip placenta enrichment |
 
 ---
 
 ## Output directory structure
 
-```
-data/diff_analysis/results/
-├── plasma/
-│   ├── cross_sectional/
-│   │   ├── A/
-│   │   │   ├── Control_vs_Complication_differential_results.csv
-│   │   │   ├── Control_vs_Complication_significant_analytes.csv
-│   │   │   └── Control_vs_Complication/
-│   │   │       ├── Control_vs_Complication_heatmap.pdf
-│   │   │       ├── Control_vs_Complication_heatmap.png
-│   │   │       └── Control_vs_Complication_heatmap_data.csv
-│   │   ├── B/ … E/  (same structure)
-│   └── longitudinal/
-│       ├── Control_B_minus_A_longitudinal_results.csv
-│       ├── FGR_B_minus_A_longitudinal_results.csv
-│       ├── HDP_B_minus_A_longitudinal_results.csv
-│       ├── sPTB_B_minus_A_longitudinal_results.csv
-│       ├── Complication_B_minus_A_longitudinal_results.csv
-│       ├── … (one file per group × adjacent timepoint pair)
-│       ├── Control_longitudinal_heatmap.pdf
-│       ├── FGR_longitudinal_heatmap.pdf
-│       ├── HDP_longitudinal_heatmap.pdf
-│       ├── sPTB_longitudinal_heatmap.pdf
-│       └── Complication_longitudinal_heatmap.pdf
-├── placenta/
-│   └── cross_sectional/  (same structure as plasma)
-└── sample_counts_per_group_timepoint.csv
+All outputs are written under `04_results_and_figures/`, organized by pipeline step.
 
-data/enrichr_input/
-└── <timepoint>/
-    └── Control_vs_Complication/
-        ├── higher_in_Complication.txt
-        ├── higher_in_Control.txt
-        ├── all_significant.txt
-        ├── significant_with_direction.csv
-        └── enrichment/
-            ├── higher_in_Complication_enrichment.csv
-            └── higher_in_Control_enrichment.csv
+```
+04_results_and_figures/
+│
+├── differential_analysis/          ← identify_differential_analytes.py
+│   ├── sample_counts_per_group_timepoint.csv
+│   ├── plasma/
+│   │   ├── cross_sectional/
+│   │   │   ├── A/
+│   │   │   │   ├── Control_vs_Complication_differential_results.csv
+│   │   │   │   └── Control_vs_Complication_significant_analytes.csv
+│   │   │   ├── B/ … E/  (same structure)
+│   │   └── longitudinal/
+│   │       ├── Control_B_minus_A_longitudinal_results.csv
+│   │       ├── FGR_B_minus_A_longitudinal_results.csv
+│   │       ├── HDP_B_minus_A_longitudinal_results.csv
+│   │       ├── sPTB_B_minus_A_longitudinal_results.csv
+│   │       ├── Complication_B_minus_A_longitudinal_results.csv
+│   │       └── … (one file per group × adjacent timepoint pair)
+│   └── placenta/
+│       └── cross_sectional/
+│           ├── Control_vs_Complication_differential_results.csv
+│           └── Control_vs_Complication_significant_analytes.csv
+│
+├── heatmaps/                        ← generate_differential_cluster_heatmap_limited_group.py
+│   ├── plasma/
+│   │   ├── cross_sectional/
+│   │   │   ├── A/
+│   │   │   │   └── Control_vs_Complication/
+│   │   │   │       ├── Control_vs_Complication_heatmap.pdf
+│   │   │   │       ├── Control_vs_Complication_heatmap.png
+│   │   │   │       └── Control_vs_Complication_heatmap_data.csv
+│   │   │   ├── B/ … E/  (same structure)
+│   │   └── longitudinal/
+│   │       ├── Control_longitudinal_heatmap.pdf
+│   │       ├── FGR_longitudinal_heatmap.pdf
+│   │       ├── HDP_longitudinal_heatmap.pdf
+│   │       ├── sPTB_longitudinal_heatmap.pdf
+│   │       └── Complication_longitudinal_heatmap.pdf
+│   └── placenta/
+│       └── cross_sectional/
+│           └── Control_vs_Complication/
+│               ├── Control_vs_Complication_heatmap.pdf
+│               ├── Control_vs_Complication_heatmap.png
+│               └── Control_vs_Complication_heatmap_data.csv
+│
+└── enrichment/                      ← prepare_enrichr_input.py
+    ├── plasma/
+    │   ├── cross_sectional/
+    │   │   └── <timepoint>/
+    │   │       └── Control_vs_Complication/
+    │   │           ├── higher_in_Complication.txt
+    │   │           ├── higher_in_Control.txt
+    │   │           ├── all_significant.txt
+    │   │           ├── significant_with_direction.csv
+    │   │           └── enrichment/
+    │   │               ├── higher_in_Complication_enrichment.csv
+    │   │               └── higher_in_Control_enrichment.csv
+    │   └── longitudinal/
+    │       └── <group>/
+    │           └── <T_b>_minus_<T_a>/
+    │               ├── increasing.txt
+    │               ├── decreasing.txt
+    │               ├── all_significant.txt
+    │               ├── significant_with_direction.csv
+    │               └── enrichment/
+    │                   ├── increasing_enrichment.csv
+    │                   └── decreasing_enrichment.csv
+    └── placenta/
+        └── cross_sectional/
+            └── Control_vs_Complication/
+                ├── higher_in_Complication.txt
+                ├── higher_in_Control.txt
+                ├── all_significant.txt
+                ├── significant_with_direction.csv
+                └── enrichment/
+                    ├── higher_in_Complication_enrichment.csv
+                    └── higher_in_Control_enrichment.csv
 ```
 
 ---

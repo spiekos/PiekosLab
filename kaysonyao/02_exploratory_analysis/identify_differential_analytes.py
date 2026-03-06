@@ -180,7 +180,7 @@ if __name__ == "__main__":
         cleaned_dir_plasma  = os.path.join(
             wkdir, "data", "cleaned", "proteomics", "normalized_sliced_by_suffix"
         )
-        output_dir = os.path.join(wkdir, "data", "diff_analysis", "results")
+        output_dir = os.path.join(wkdir, "04_results_and_figures", "differential_analysis")
 
         _start_analysis_log(output_dir)
 

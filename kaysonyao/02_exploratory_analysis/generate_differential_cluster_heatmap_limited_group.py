@@ -150,7 +150,8 @@ if __name__ == "__main__":
         cleaned_dir_plasma  = os.path.join(
             wkdir, "data", "cleaned", "proteomics", "normalized_sliced_by_suffix"
         )
-        diff_dir = os.path.join(wkdir, "data", "diff_analysis", "results")
+        diff_dir    = os.path.join(wkdir, "04_results_and_figures", "differential_analysis")
+        heatmap_dir = os.path.join(wkdir, "04_results_and_figures", "heatmaps")
 
         # Single binary comparison: Control vs pooled Complication (FGR + HDP + sPTB)
         _CS_PAIRS         = [("Control", "Complication")]
@@ -160,7 +161,8 @@ if __name__ == "__main__":
         placenta_csv  = os.path.join(
             cleaned_dir_placenta, "proteomics_placenta_cleaned_with_metadata.csv"
         )
-        cross_results = os.path.join(diff_dir, "placenta", "cross_sectional")
+        cross_results  = os.path.join(diff_dir,    "placenta", "cross_sectional")
+        cross_heatmaps = os.path.join(heatmap_dir, "placenta", "cross_sectional")
         if os.path.exists(placenta_csv) and os.path.isdir(cross_results):
             logger.info("Generating placenta cross-sectional heatmap (Control vs Complication) …")
             for g1, g2 in _CS_PAIRS:
@@ -168,7 +170,7 @@ if __name__ == "__main__":
                     g1=g1, g2=g2,
                     data_path=placenta_csv,
                     results_dir=cross_results,
-                    output_dir=cross_results,
+                    output_dir=cross_heatmaps,
                     group_col="Group",
                     g2_source_groups=_COMPL_SOURCES,
                 )
@@ -180,10 +182,11 @@ if __name__ == "__main__":
 
         # ── Cross-sectional pairwise heatmaps: plasma per timepoint (A–E) ─
         for tp in ["A", "B", "C", "D", "E"]:
-            tp_csv     = os.path.join(
+            tp_csv      = os.path.join(
                 cleaned_dir_plasma, f"proteomics_plasma_formatted_suffix_{tp}.csv"
             )
-            tp_results = os.path.join(diff_dir, "plasma", "cross_sectional", tp)
+            tp_results  = os.path.join(diff_dir,    "plasma", "cross_sectional", tp)
+            tp_heatmaps = os.path.join(heatmap_dir, "plasma", "cross_sectional", tp)
             if os.path.exists(tp_csv) and os.path.isdir(tp_results):
                 logger.info(
                     "Generating plasma [%s] cross-sectional heatmap (Control vs Complication) …", tp
@@ -193,7 +196,7 @@ if __name__ == "__main__":
                         g1=g1, g2=g2,
                         data_path=tp_csv,
                         results_dir=tp_results,
-                        output_dir=tp_results,
+                        output_dir=tp_heatmaps,
                         group_col="Group",
                         g2_source_groups=_COMPL_SOURCES,
                     )
@@ -204,12 +207,13 @@ if __name__ == "__main__":
                 )
 
         # ── Longitudinal heatmaps: individual groups + pooled Complication ─
-        long_results = os.path.join(diff_dir, "plasma", "longitudinal")
+        long_results  = os.path.join(diff_dir,    "plasma", "longitudinal")
+        long_heatmaps = os.path.join(heatmap_dir, "plasma", "longitudinal")
         if os.path.isdir(long_results):
             for group in ["Control", "FGR", "HDP", "sPTB", "Complication"]:
                 plot_longitudinal_heatmap(
                     results_dir=long_results,
-                    output_dir=long_results,
+                    output_dir=long_heatmaps,
                     group=group,
                 )
         else:

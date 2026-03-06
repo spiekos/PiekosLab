@@ -743,7 +743,7 @@ if __name__ == "__main__":
     output_dir = os.path.join(wkdir, "data", "cleaned", "proteomics", "normalized_full_results")
     metadata_path = os.path.join(wkdir, "data", "dp3 master table v2.xlsx")
 
-    diag_base = os.path.join(wkdir, "data", "cleaned", "proteomics", "diagnostics")
+    diag_base = os.path.join(wkdir, "04_results_and_figures", "data_cleaning")
 
     plasma_files, placenta_files = collect_olink_files(data_dir)
 

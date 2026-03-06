@@ -356,11 +356,3 @@ if __name__ == "__main__":
         process_all_files(args.files, args.output_csv, metadata_path, meta_type=args.meta_type)
 
     main()
-
-# Run control vs. all the others for both longitudinal and cross-sectional for heatmap
-
-# get rid of the the insignificant analytes on the heatmap
-
-# Omics & Lasso workflow
-# 70-15-15 split for now, create correlation matrix, run lasso
-# validation with 10 folder cross validation, then test on the holdout set

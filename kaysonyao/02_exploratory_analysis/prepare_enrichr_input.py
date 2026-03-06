@@ -5,17 +5,33 @@ Description:
     Prepares gene/protein lists from differential analysis significant analyte
     CSVs and runs pathway enrichment via the Enrichr API (using gseapy).
 
-    For the cross-sectional binary comparison (Control vs Complication), significant
-    analytes are split into directional lists based on fold_change:
-        fold_change = median_group2 - median_group1  (NPX log2 scale)
+    Cross-sectional (Control vs Complication):
+        fold_change = median_Complication - median_Control  (NPX log2 scale)
         fold_change > 0  →  higher in Complication relative to Control
         fold_change < 0  →  higher in Control relative to Complication
 
-    Gene lists saved per comparison (data/enrichr_input/<timepoint>/Control_vs_Complication/):
-        higher_in_Complication.txt      one gene per line, ready for manual Enrichr paste
-        higher_in_Control.txt           one gene per line, ready for manual Enrichr paste
-        all_significant.txt             combined list (direction-agnostic)
-        significant_with_direction.csv  full table with direction annotation
+        Gene lists saved to 04_results_and_figures/enrichment/plasma/cross_sectional/<timepoint>/Control_vs_Complication/:
+            higher_in_Complication.txt      one gene per line, ready for manual Enrichr paste
+            higher_in_Control.txt           one gene per line, ready for manual Enrichr paste
+            all_significant.txt             combined list (direction-agnostic)
+            significant_with_direction.csv  full table with direction annotation
+
+    Placenta cross-sectional (Control vs Complication, no timepoints):
+        fold_change = median_Complication - median_Control  (NPX log2 scale)
+
+        Gene lists saved to 04_results_and_figures/enrichment/placenta/cross_sectional/Control_vs_Complication/:
+            (same file layout as plasma cross-sectional)
+
+    Longitudinal (within-group, per adjacent timepoint step):
+        median_delta = value_T_later - value_T_earlier  (per-participant, NPX log2 scale)
+        median_delta > 0  →  increasing from T_earlier to T_later
+        median_delta < 0  →  decreasing from T_earlier to T_later
+
+        Gene lists saved to 04_results_and_figures/enrichment/plasma/longitudinal/<group>/<T_b>_minus_<T_a>/:
+            increasing.txt                  analytes rising at this timepoint step
+            decreasing.txt                  analytes falling at this timepoint step
+            all_significant.txt             combined list
+            significant_with_direction.csv  full table with direction annotation
 
     Enrichment results saved per direction (enrichment/ subfolder):
         <direction>_enrichment.csv      all databases combined, sorted by Adjusted P-value
@@ -25,13 +41,13 @@ Description:
         All available (--all-databases): every library currently in Enrichr (~300+ databases)
 
 Usage:
-    # Default: auto-discover all plasma cross-sectional results and run enrichment
+    # Default: auto-discover CS + longitudinal results and run enrichment for all
     python prepare_enrichr_input.py
 
     # Query every available Enrichr database (mirrors the website behaviour)
     python prepare_enrichr_input.py --all-databases
 
-    # Single comparison with all databases
+    # Single CS comparison with all databases
     python prepare_enrichr_input.py \
         --sig-csv path/to/Control_vs_Complication_significant_analytes.csv \
         --g1 Control --g2 Complication \
@@ -46,6 +62,7 @@ Usage:
 """
 
 import os
+import re
 import sys
 import glob
 import argparse
@@ -67,14 +84,17 @@ _CS_PAIRS = [
     ("Control", "Complication"),
 ]
 
-# Default curated databases (fast; good coverage for plasma proteomics).
+# Longitudinal groups to process in default mode.
+_LONGITUDINAL_GROUPS = ["Control", "FGR", "HDP", "sPTB", "Complication"]
+
+# Default curated databases
 _DEFAULT_GENE_SETS = [
     "GO_Biological_Process_2025",
     "KEGG_2026",
     "Reactome_Pathways_2024",
 ]
 
-# Minimum gene list size to attempt enrichment (too few gives meaningless results).
+# Minimum gene list size to attempt enrichment
 _MIN_GENES_FOR_ENRICHMENT = 5
 
 
@@ -167,37 +187,23 @@ def prepare_enrichr_lists(
 
 
 # ---------------------------------------------------------------------------
-# Pathway enrichment
+# Pathway enrichment — shared core
 # ---------------------------------------------------------------------------
 
-def run_pathway_enrichment(
-    gene_lists: dict,
-    g1: str,
-    g2: str,
+def _run_enrichment_for_directions(
+    directions: dict,
     output_dir: str,
-    gene_sets: list = None,
+    gene_sets: list,
 ) -> None:
-    """Run Enrichr pathway enrichment for each directional gene list.
-
-    Queries the Enrichr API for each direction (higher_in_g2, higher_in_g1)
-    across all specified gene set databases, then saves one combined CSV per
-    direction sorted by Adjusted P-value.
+    """Run Enrichr for each {label: [genes]} pair and save one CSV per direction.
 
     Args:
-        gene_lists:  Output dict from prepare_enrichr_lists().
-        g1, g2:      Group labels — used to label output files.
-        output_dir:  Parent output directory; results go into an enrichment/ subfolder.
-        gene_sets:   Enrichr database names to query. Defaults to _DEFAULT_GENE_SETS.
+        directions:  Mapping of output label → gene list (e.g. {"increasing": [...]}).
+        output_dir:  Parent directory; results written to an enrichment/ subfolder.
+        gene_sets:   Enrichr library names to query.
     """
-
-    gene_sets  = gene_sets or _DEFAULT_GENE_SETS
     enrich_dir = os.path.join(output_dir, "enrichment")
     os.makedirs(enrich_dir, exist_ok=True)
-
-    directions = {
-        f"higher_in_{g2}": gene_lists["higher_in_g2"],
-        f"higher_in_{g1}": gene_lists["higher_in_g1"],
-    }
 
     for direction_label, genes in directions.items():
         if len(genes) < _MIN_GENES_FOR_ENRICHMENT:
@@ -217,7 +223,7 @@ def run_pathway_enrichment(
                 gene_list=genes,
                 gene_sets=gene_sets,
                 organism="human",
-                outdir=None,       # return DataFrame; don't write to disk
+                outdir=None,
                 verbose=False,
             )
         except Exception as exc:
@@ -225,12 +231,10 @@ def run_pathway_enrichment(
             continue
 
         results = enr.results
-
         if results.empty:
             logger.info("  No enrichment results returned for %s.", direction_label)
             continue
 
-        # Standardise column names across gseapy versions.
         results = results.rename(columns={
             "Adjusted P-value": "Adj_P_value",
             "P-value":          "P_value",
@@ -238,30 +242,124 @@ def run_pathway_enrichment(
             "Odds Ratio":       "Odds_Ratio",
             "Overlap":          "Overlap",
         })
-
         if "Adj_P_value" in results.columns:
             results = results.sort_values("Adj_P_value")
 
         out_path = os.path.join(enrich_dir, f"{direction_label}_enrichment.csv")
         results.to_csv(out_path, index=False)
 
-        # Summary log — concise regardless of how many databases were queried.
         if "Adj_P_value" in results.columns:
-            n_sig_total = (results["Adj_P_value"] < 0.05).sum()
+            n_sig_total    = (results["Adj_P_value"] < 0.05).sum()
             n_db_with_hits = (
                 results[results["Adj_P_value"] < 0.05]["Gene_set"].nunique()
                 if "Gene_set" in results.columns else "n/a"
             )
             top_terms = results[results["Adj_P_value"] < 0.05]["Term"].head(5).tolist()
             logger.info(
-                "    %d significant terms (adj p < 0.05) across %s database(s). "
-                "Top 5: %s",
-                n_sig_total,
-                n_db_with_hits,
+                "    %d significant terms (adj p < 0.05) across %s database(s). Top 5: %s",
+                n_sig_total, n_db_with_hits,
                 ", ".join(top_terms) if top_terms else "none",
             )
-
         logger.info("    Saved → %s", os.path.basename(out_path))
+
+
+def run_pathway_enrichment(
+    gene_lists: dict,
+    g1: str,
+    g2: str,
+    output_dir: str,
+    gene_sets: list = None,
+) -> None:
+    """Run Enrichr pathway enrichment for a cross-sectional comparison.
+
+    Args:
+        gene_lists:  Output dict from prepare_enrichr_lists().
+        g1, g2:      Group labels — used to label output files.
+        output_dir:  Parent output directory; results go into an enrichment/ subfolder.
+        gene_sets:   Enrichr database names to query. Defaults to _DEFAULT_GENE_SETS.
+    """
+    directions = {
+        f"higher_in_{g2}": gene_lists["higher_in_g2"],
+        f"higher_in_{g1}": gene_lists["higher_in_g1"],
+    }
+    _run_enrichment_for_directions(directions, output_dir, gene_sets or _DEFAULT_GENE_SETS)
+
+
+# ---------------------------------------------------------------------------
+# Longitudinal gene lists + enrichment
+# ---------------------------------------------------------------------------
+
+def prepare_enrichr_lists_longitudinal(
+    results_csv: str,
+    output_dir: str,
+) -> dict:
+    """Split significant longitudinal analytes into increasing/decreasing lists.
+
+    Reads a <group>_<T_b>_minus_<T_a>_longitudinal_results.csv produced by
+    run_longitudinal (utilities.py).  Direction is determined by median_delta:
+        median_delta > 0  →  increasing (rising from T_a to T_b)
+        median_delta < 0  →  decreasing (falling from T_a to T_b)
+
+    Returns:
+        dict with keys 'increasing', 'decreasing', 'all_significant'.
+    """
+    df = pd.read_csv(results_csv, index_col=0)
+
+    sig_df = df[df["significant"] == True] if "significant" in df.columns else pd.DataFrame()
+
+    if sig_df.empty:
+        logger.info("  No significant analytes in %s — skipping.", os.path.basename(results_csv))
+        return {"increasing": [], "decreasing": [], "all_significant": []}
+
+    if "median_delta" not in sig_df.columns:
+        logger.warning(
+            "  'median_delta' column missing in %s — cannot split by direction.",
+            results_csv,
+        )
+        all_sig = sig_df.index.tolist()
+        os.makedirs(output_dir, exist_ok=True)
+        _write_gene_list(all_sig, os.path.join(output_dir, "all_significant.txt"))
+        return {"increasing": [], "decreasing": [], "all_significant": all_sig}
+
+    increasing = sig_df.index[sig_df["median_delta"] > 0].tolist()
+    decreasing = sig_df.index[sig_df["median_delta"] < 0].tolist()
+    all_sig    = sig_df.index.tolist()
+
+    os.makedirs(output_dir, exist_ok=True)
+    _write_gene_list(increasing, os.path.join(output_dir, "increasing.txt"))
+    _write_gene_list(decreasing, os.path.join(output_dir, "decreasing.txt"))
+    _write_gene_list(all_sig,    os.path.join(output_dir, "all_significant.txt"))
+
+    sig_df = sig_df.copy()
+    sig_df["direction"] = sig_df["median_delta"].apply(
+        lambda d: "increasing" if d > 0 else "decreasing"
+    )
+    sig_df.to_csv(os.path.join(output_dir, "significant_with_direction.csv"))
+
+    logger.info(
+        "  %d total significant | %d increasing | %d decreasing",
+        len(all_sig), len(increasing), len(decreasing),
+    )
+    return {"increasing": increasing, "decreasing": decreasing, "all_significant": all_sig}
+
+
+def run_pathway_enrichment_longitudinal(
+    gene_lists: dict,
+    output_dir: str,
+    gene_sets: list = None,
+) -> None:
+    """Run Enrichr pathway enrichment for a longitudinal step.
+
+    Args:
+        gene_lists:  Output dict from prepare_enrichr_lists_longitudinal().
+        output_dir:  Parent output directory; results go into an enrichment/ subfolder.
+        gene_sets:   Enrichr database names to query. Defaults to _DEFAULT_GENE_SETS.
+    """
+    directions = {
+        "increasing": gene_lists["increasing"],
+        "decreasing": gene_lists["decreasing"],
+    }
+    _run_enrichment_for_directions(directions, output_dir, gene_sets or _DEFAULT_GENE_SETS)
 
 
 # ---------------------------------------------------------------------------
@@ -275,8 +373,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--sig-csv",
         default=None,
-        help="Path to a single *_significant_analytes.csv. "
-             "If omitted, auto-discovers all plasma cross-sectional results.",
+        help="Path to a single *_significant_analytes.csv; triggers single CS comparison mode.",
     )
     p.add_argument(
         "--g1",
@@ -286,18 +383,35 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--g2",
         default=None,
-        help="Group 2 label (required with --sig-csv; e.g. HDP).",
+        help="Group 2 label (required with --sig-csv; e.g. Complication).",
     )
     p.add_argument(
         "--results-dir",
         default=None,
-        help="Root differential results directory for auto-discovery "
-             "(default: data/diff_analysis/results/plasma/cross_sectional).",
+        help="Root cross-sectional results directory for auto-discovery "
+             "(default: 04_results_and_figures/differential_analysis/plasma/cross_sectional).",
+    )
+    p.add_argument(
+        "--longitudinal-results-dir",
+        default=None,
+        help="Longitudinal results directory for auto-discovery "
+             "(default: 04_results_and_figures/differential_analysis/plasma/longitudinal).",
+    )
+    p.add_argument(
+        "--placenta-results-dir",
+        default=None,
+        help="Placenta cross-sectional results directory for auto-discovery "
+             "(default: 04_results_and_figures/differential_analysis/placenta/cross_sectional).",
+    )
+    p.add_argument(
+        "--skip-placenta",
+        action="store_true",
+        help="Skip placenta enrichment.",
     )
     p.add_argument(
         "--output-dir",
         default=None,
-        help="Root output directory (default: data/enrichr_input).",
+        help="Root output directory (default: 04_results_and_figures/enrichment).",
     )
     p.add_argument(
         "--gene-sets",
@@ -318,6 +432,11 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Write gene list text files only; skip all Enrichr API calls.",
     )
+    p.add_argument(
+        "--skip-longitudinal",
+        action="store_true",
+        help="Skip longitudinal enrichment; run cross-sectional only.",
+    )
     return p
 
 
@@ -335,7 +454,8 @@ def main():
         if not args.g1 or not args.g2:
             parser.error("--g1 and --g2 are required when --sig-csv is provided.")
         out = args.output_dir or os.path.join(
-            os.getcwd(), "data", "enrichr_input", f"{args.g1}_vs_{args.g2}"
+            os.getcwd(),
+            "04_results_and_figures", "enrichment", f"{args.g1}_vs_{args.g2}",
         )
         gene_lists = prepare_enrichr_lists(args.sig_csv, out, args.g1, args.g2)
         if not args.skip_enrichment:
@@ -343,9 +463,13 @@ def main():
     else:
         _run_default_mode(
             results_root=args.results_dir,
+            longitudinal_root=getattr(args, "longitudinal_results_dir", None),
+            placenta_root=getattr(args, "placenta_results_dir", None),
             output_root=args.output_dir,
             gene_sets=gene_sets,
             skip_enrichment=args.skip_enrichment,
+            skip_longitudinal=getattr(args, "skip_longitudinal", False),
+            skip_placenta=getattr(args, "skip_placenta", False),
         )
 
 
@@ -353,60 +477,115 @@ def main():
 # Default (no-arg) mode
 # ---------------------------------------------------------------------------
 
+# Regex to parse longitudinal result filenames:
+# <group>_<T_b>_minus_<T_a>_longitudinal_results.csv  (T_b, T_a are single uppercase letters)
+_LONG_FILE_RE = re.compile(r"^(.+)_([A-E])_minus_([A-E])_longitudinal_results\.csv$")
+
+
 if __name__ == "__main__":
 
     def _run_default_mode(
         results_root=None,
+        longitudinal_root=None,
+        placenta_root=None,
         output_root=None,
         gene_sets=None,
         skip_enrichment=False,
+        skip_longitudinal=False,
+        skip_placenta=False,
     ) -> None:
-        wkdir        = os.getcwd()
-        results_root = results_root or os.path.join(
-            wkdir, "data", "diff_analysis", "results", "plasma", "cross_sectional"
+        wkdir             = os.getcwd()
+        results_root      = results_root or os.path.join(
+            wkdir, "04_results_and_figures", "differential_analysis", "plasma", "cross_sectional"
         )
-        output_root  = output_root or os.path.join(wkdir, "data", "enrichr_input")
+        longitudinal_root = longitudinal_root or os.path.join(
+            wkdir, "04_results_and_figures", "differential_analysis", "plasma", "longitudinal"
+        )
+        placenta_root     = placenta_root or os.path.join(
+            wkdir, "04_results_and_figures", "differential_analysis", "placenta", "cross_sectional"
+        )
+        output_root  = output_root or os.path.join(wkdir, "04_results_and_figures", "enrichment")
         gene_sets    = gene_sets or _DEFAULT_GENE_SETS
 
-        if not os.path.isdir(results_root):
-            logger.error("Results directory not found: %s", results_root)
-            return
+        # ── Cross-sectional ───────────────────────────────────────────────
+        if os.path.isdir(results_root):
+            timepoints = sorted([
+                d for d in os.listdir(results_root)
+                if os.path.isdir(os.path.join(results_root, d))
+            ])
+            logger.info(
+                "Cross-sectional: auto-discovering across %d timepoints: %s",
+                len(timepoints), timepoints,
+            )
+            total_cs = 0
+            for tp in timepoints:
+                tp_dir = os.path.join(results_root, tp)
+                logger.info("── CS Timepoint %s ──", tp)
+                for g1, g2 in _CS_PAIRS:
+                    sig_csv = os.path.join(tp_dir, f"{g1}_vs_{g2}_significant_analytes.csv")
+                    if not os.path.exists(sig_csv):
+                        logger.debug("  Not found: %s — skipping.", os.path.basename(sig_csv))
+                        continue
+                    out_dir    = os.path.join(output_root, "plasma", "cross_sectional", tp, f"{g1}_vs_{g2}")
+                    gene_lists = prepare_enrichr_lists(sig_csv, out_dir, g1, g2)
+                    if not skip_enrichment:
+                        run_pathway_enrichment(gene_lists, g1, g2, out_dir, gene_sets)
+                    total_cs += 1
+            logger.info("Cross-sectional: processed %d comparison(s).", total_cs)
+        else:
+            logger.warning("Cross-sectional results directory not found: %s", results_root)
 
-        timepoints = sorted([
-            d for d in os.listdir(results_root)
-            if os.path.isdir(os.path.join(results_root, d))
-        ])
-        if not timepoints:
-            logger.warning("No timepoint subdirectories found in %s", results_root)
-            return
+        # ── Longitudinal ──────────────────────────────────────────────────
+        if skip_longitudinal:
+            logger.info("Longitudinal enrichment skipped (--skip-longitudinal).")
+        elif os.path.isdir(longitudinal_root):
+            long_files = sorted(glob.glob(
+                os.path.join(longitudinal_root, "*_longitudinal_results.csv")
+            ))
+            logger.info(
+                "Longitudinal: found %d result file(s) in %s",
+                len(long_files), longitudinal_root,
+            )
+            total_long = 0
+            for fpath in long_files:
+                fname = os.path.basename(fpath)
+                m     = _LONG_FILE_RE.match(fname)
+                if not m:
+                    logger.debug("  Filename did not match expected pattern — skipping: %s", fname)
+                    continue
+                group, t_b, t_a = m.group(1), m.group(2), m.group(3)
+                delta_label     = f"{t_b}_minus_{t_a}"
+                logger.info("── Longitudinal [%s  %s] ──", group, delta_label)
+                out_dir    = os.path.join(output_root, "plasma", "longitudinal", group, delta_label)
+                gene_lists = prepare_enrichr_lists_longitudinal(fpath, out_dir)
+                if not skip_enrichment:
+                    run_pathway_enrichment_longitudinal(gene_lists, out_dir, gene_sets)
+                total_long += 1
+            logger.info("Longitudinal: processed %d file(s).", total_long)
+        else:
+            logger.warning("Longitudinal results directory not found: %s", longitudinal_root)
 
-        logger.info(
-            "Auto-discovering results across %d timepoints: %s",
-            len(timepoints), timepoints,
-        )
-
-        total_comparisons = 0
-        for tp in timepoints:
-            tp_dir = os.path.join(results_root, tp)
-            logger.info("── Timepoint %s ──", tp)
-
+        # ── Placenta cross-sectional ──────────────────────────────────────
+        if skip_placenta:
+            logger.info("Placenta enrichment skipped (--skip-placenta).")
+        elif os.path.isdir(placenta_root):
+            logger.info("Placenta CS: processing from %s", placenta_root)
+            total_placenta = 0
             for g1, g2 in _CS_PAIRS:
-                sig_csv = os.path.join(tp_dir, f"{g1}_vs_{g2}_significant_analytes.csv")
+                sig_csv = os.path.join(placenta_root, f"{g1}_vs_{g2}_significant_analytes.csv")
                 if not os.path.exists(sig_csv):
                     logger.debug("  Not found: %s — skipping.", os.path.basename(sig_csv))
                     continue
-
-                out_dir    = os.path.join(output_root, tp, f"{g1}_vs_{g2}")
+                logger.info("── Placenta CS [%s vs %s] ──", g1, g2)
+                out_dir    = os.path.join(output_root, "placenta", "cross_sectional", f"{g1}_vs_{g2}")
                 gene_lists = prepare_enrichr_lists(sig_csv, out_dir, g1, g2)
-
                 if not skip_enrichment:
                     run_pathway_enrichment(gene_lists, g1, g2, out_dir, gene_sets)
+                total_placenta += 1
+            logger.info("Placenta CS: processed %d comparison(s).", total_placenta)
+        else:
+            logger.warning("Placenta results directory not found: %s", placenta_root)
 
-                total_comparisons += 1
-
-        logger.info(
-            "Done. Processed %d comparisons. Output saved under: %s",
-            total_comparisons, output_root,
-        )
+        logger.info("Done. Output saved under: %s", output_root)
 
     main()
