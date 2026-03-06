@@ -15,7 +15,7 @@ Organized into the following sections:
 
 | Section | Contents |
 |---|---|
-| Shared constants | `FDR_THRESHOLD`, `MIN_N`, `LOG2_FC_THRESHOLD`, `MAX_ANALYTES`, `_METADATA_COLS`, `_TIMEPOINT_ORDER` |
+| Shared constants | `FDR_THRESHOLD`, `MIN_N`, `LOG2_FC_THRESHOLD`, `MAX_ANALYTES`, `_METADATA_COLS`, `_TIMEPOINT_ORDER`, `_CTRL_COLOUR`, `_COMPL_COLOUR` |
 | Data helpers | `load_data`, `normalise_group_labels`, `get_analyte_columns` |
 | Analysis log | `_start_analysis_log` |
 | Cross-sectional | `_test_one_pair`, `run_cross_sectional` |
@@ -31,40 +31,39 @@ Organized into the following sections:
 Runs cross-sectional and/or longitudinal differential analysis on cleaned proteomics CSVs.
 
 **Cross-sectional:**
-- All pairwise group comparisons derived from the `Group` column.
+- Pools FGR, HDP, and sPTB into a single `"Complication"` label; runs one `Control vs Complication` test per dataset.
 - Test: two-sided Mann-Whitney U.
-- Multiple testing: Benjamini-Hochberg FDR, corrected independently per comparison.
+- Multiple testing: Benjamini-Hochberg FDR, corrected per comparison.
 - Hit criteria: q < 0.05 **and** |log2 FC| ≥ log2(1.5) ≈ 0.585 (i.e. ≥ 1.5× linear fold change).
 - Minimum n = 5 non-missing observations per group per analyte.
-- Outputs per comparison: `<g1>_vs_<g2>_differential_results.csv` (all analytes) and
-  `<g1>_vs_<g2>_significant_analytes.csv` (hits only).
+- Outputs: `Control_vs_Complication_differential_results.csv` (all analytes) and
+  `Control_vs_Complication_significant_analytes.csv` (hits only).
 
 **Longitudinal:**
-- Adjacent timepoint deltas only (B−A, C−B, D−C, E−D) for a specified group.
-- Per-participant delta = value_T_later − value_T_earlier (paired on `SubjectID`).
-- Test: two-sided Wilcoxon signed-rank (`zero_method='wilcox'`).
+- Within-group Wilcoxon signed-rank on per-participant adjacent deltas (B−A, C−B, D−C, E−D).
+- Run separately for: `Control`, `FGR`, `HDP`, `sPTB`, and pooled `Complication` (FGR + HDP + sPTB merged).
 - Same FDR and fold-change thresholds as cross-sectional.
-- Output per delta: `<group>_<T_later>_minus_<T_earlier>_longitudinal_results.csv`.
+- Output per group × adjacent step: `<group>_<T_b>_minus_<T_a>_longitudinal_results.csv`.
 
 **Usage:**
 
 ```bash
-# Default (no args): runs all plasma timepoints + placenta, both cross-sectional
-# and longitudinal, using hard-coded paths relative to project root
+# Default (no args): Control vs Complication (pooled) for all plasma timepoints + placenta
+# (cross-sectional) and within-group longitudinal for Control/FGR/HDP/sPTB + Complication
 python 02_exploratory_analysis/identify_differential_analytes.py
 
-# Cross-sectional on a single cleaned CSV
+# Cross-sectional on a single cleaned CSV (pre-merge complications manually, or pass merged CSV)
 python 02_exploratory_analysis/identify_differential_analytes.py \
     --mode cross_sectional \
     --input data/cleaned/proteomics/normalized_sliced_by_suffix/proteomics_plasma_formatted_suffix_C.csv \
     --output-dir data/diff_analysis/results/plasma/cross_sectional/C
 
-# Longitudinal for one group
+# Longitudinal — within-group for one group (e.g. Complication, FGR, HDP, sPTB, or Control)
 python 02_exploratory_analysis/identify_differential_analytes.py \
     --mode longitudinal \
     --timepoint-files data/cleaned/.../suffix_A.csv data/cleaned/.../suffix_B.csv \
     --timepoint-labels A B \
-    --group Control \
+    --group Complication \
     --output-dir data/diff_analysis/results/plasma/longitudinal
 ```
 
@@ -78,7 +77,7 @@ python 02_exploratory_analysis/identify_differential_analytes.py \
 | `--output-dir` | `results` | Root output directory |
 | `--timepoint-files` | — | Space-separated CSVs in chronological order (longitudinal) |
 | `--timepoint-labels` | `T1 T2 …` | Labels matching each timepoint file (longitudinal) |
-| `--group` | — | Target group for longitudinal analysis (e.g. `Control`) |
+| `--group` | — | Complication group for longitudinal analysis (e.g. `FGR`, `HDP`, `sPTB`). Always compared against Control. |
 | `--subject-col` | `SubjectID` | Column used to pair participants across timepoints |
 
 ---
@@ -87,47 +86,43 @@ python 02_exploratory_analysis/identify_differential_analytes.py \
 Generates z-score heatmaps from differential analysis results.
 
 #### Cross-sectional heatmap (`plot_pairwise_cross_sectional_heatmap`)
-- **Rows:** all analytes up to `MAX_ANALYTES` (500), significant ones prioritised and marked with ★.
-- **Columns:** individual samples, Ward/Euclidean clustered within each group, then groups concatenated alphabetically.
+- **Rows:** significant analytes only (up to `MAX_ANALYTES` = 500, ranked by q-value). Default mode runs one `Control vs Complication` (pooled) comparison per dataset.
+- **Columns:** individual samples, Ward/Euclidean clustered within each group, then groups concatenated (Control first). When `g2_source_groups` is set (e.g. `["FGR", "HDP", "sPTB"]`), samples from those groups are relabelled as Complication for display.
 - **Values:** per-analyte z-score across all displayed samples (mean = 0, std = 1 per row), clipped ±2.5.
 - **Row clustering:** Ward linkage, Euclidean distance.
-- **Column colour bar:** one colour per group.
-- **Outputs:** `<g1>_vs_<g2>/<g1>_vs_<g2>_heatmap.pdf`, `…_heatmap.png` (300 dpi), `…_heatmap_data.csv`.
-
-> **Note on the mosaic appearance:** Including non-significant analytes (those without ★)
-> causes a salt-and-pepper mosaic because per-row z-scoring amplifies noise in
-> non-differential proteins to the same ±2.5 colour range as true hits. This is a
-> known visual artefact of the "show all" design; see PI discussion in progress.
+- **Column colour bar:** binary — Control (steelblue) vs Complication (tomato).
+- **Outputs:** `Control_vs_Complication/Control_vs_Complication_heatmap.pdf`, `…_heatmap.png` (300 dpi), `…_heatmap_data.csv`.
 
 #### Longitudinal heatmap (`plot_longitudinal_heatmap`)
-- **Rows:** analytes significant in ≥ 1 adjacent delta comparison, up to `MAX_ANALYTES`.
+- **Rows:** significant analytes in ≥ 1 adjacent step for the specified group, up to `MAX_ANALYTES`.
 - **Columns:** adjacent delta comparisons in fixed chronological order (B−A, C−B, D−C, E−D); not clustered.
-- **Values:** median delta per analyte per comparison, row-wise z-scored across comparisons, clipped ±2.0.
+- **Values:** `median_delta`, row-wise z-scored across comparisons, clipped ±2.0.
 - **Row clustering:** Ward linkage, Euclidean distance.
-- **Cell annotations:** significant cells (q < 0.05) marked with a dot (•); non-significant cells dimmed with a white overlay.
+- **Cell annotations:** significant cells marked with a dot (•); non-significant cells dimmed.
 - **Outputs:** `<group>_longitudinal_heatmap.pdf`, `…_heatmap.png` (300 dpi), `…_heatmap_data.csv`.
+- Default mode generates heatmaps for Control, FGR, HDP, sPTB, and pooled Complication.
 
 **Usage:**
 
 ```bash
-# Default (no args): generates all plasma pairwise CS heatmaps (A–E) +
-# placenta CS heatmaps + longitudinal heatmaps for all 4 groups
+# Default (no args): Control vs Complication CS heatmaps for plasma (A–E) + placenta,
+# plus longitudinal heatmaps for Control/FGR/HDP/sPTB/Complication
 python 02_exploratory_analysis/generate_differential_cluster_heatmap_limited_group.py
 
-# Single pairwise CS heatmap
+# Single CS heatmap (full cross-sectional, all groups via clustermap)
 python 02_exploratory_analysis/generate_differential_cluster_heatmap_limited_group.py \
     --mode cross_sectional \
     --input data/cleaned/.../suffix_C.csv \
     --results-dir data/diff_analysis/results/plasma/cross_sectional/C \
     --output-dir data/diff_analysis/results/plasma/cross_sectional/C \
-    --label Control_vs_HDP
+    --label cross_sectional
 
-# Longitudinal heatmap for one group
+# Longitudinal heatmap for one group (e.g. Complication, FGR, HDP, sPTB, or Control)
 python 02_exploratory_analysis/generate_differential_cluster_heatmap_limited_group.py \
     --mode longitudinal \
     --results-dir data/diff_analysis/results/plasma/longitudinal \
     --output-dir data/diff_analysis/results/plasma/longitudinal \
-    --group Control
+    --group Complication
 ```
 
 **CLI flags:**
@@ -139,42 +134,64 @@ python 02_exploratory_analysis/generate_differential_cluster_heatmap_limited_gro
 | `--results-dir` | — | Directory containing differential result CSVs (required) |
 | `--output-dir` | — | Directory to save heatmap outputs (required) |
 | `--group-col` | `Group` | Column name for group labels |
-| `--group` | — | Target group for longitudinal heatmap (required for longitudinal mode) |
+| `--group` | — | Group for longitudinal heatmap (e.g. `Control`, `FGR`, `HDP`, `sPTB`, or `Complication`). |
 | `--label` | `cross_sectional` | Filename prefix for CS heatmap output files |
 
 ---
 
 ### `prepare_enrichr_input.py`
-Splits significant analytes from each pairwise comparison into directional gene lists
-ready to paste into [Enrichr](https://maayanlab.cloud/Enrichr/) for pathway enrichment.
+Splits significant analytes from the `Control vs Complication` binary comparison into
+directional gene lists and runs pathway enrichment via the **Enrichr API** using `gseapy`
+— equivalent to using the [Enrichr website](https://maayanlab.cloud/Enrichr/) but fully automated.
 
 **Direction logic:**
-`fold_change = median_group2 − median_group1` (NPX values are in log2 scale), so:
-- `fold_change > 0` → protein is **higher in group2** relative to group1
-- `fold_change < 0` → protein is **higher in group1** relative to group2
+`fold_change = median_Complication − median_Control` (NPX values are in log2 scale), so:
+- `fold_change > 0` → protein is **higher in Complication** relative to Control
+- `fold_change < 0` → protein is **higher in Control** relative to Complication
 
-**Outputs per comparison** (saved to `data/enrichr_input/<timepoint>/<g1>_vs_<g2>/`):
+**Databases queried by default:**
+- `GO_Biological_Process_2025`
+- `KEGG_2026`
+- `Reactome_Pathways_2024`
+
+**Outputs** (saved to `data/enrichr_input/<timepoint>/Control_vs_Complication/`):
 
 | File | Contents |
 |---|---|
-| `higher_in_<g2>.txt` | Upregulated in group2; paste directly into Enrichr |
-| `higher_in_<g1>.txt` | Upregulated in group1; paste directly into Enrichr |
+| `higher_in_Complication.txt` | Upregulated in Complication; can also be pasted manually into Enrichr |
+| `higher_in_Control.txt` | Upregulated in Control; can also be pasted manually into Enrichr |
 | `all_significant.txt` | All significant analytes regardless of direction |
 | `significant_with_direction.csv` | Full table with `direction` column for reference |
+| `enrichment/higher_in_Complication_enrichment.csv` | Enrichr results for Complication-upregulated proteins, all databases combined, sorted by adjusted p-value |
+| `enrichment/higher_in_Control_enrichment.csv` | Enrichr results for Control-upregulated proteins |
+
+**Key enrichment output columns:** `Gene_set` (database), `Term`, `Overlap`, `P_value`, `Adj_P_value`, `Odds_Ratio`, `Combined_Score`, `Genes`
+
+**Dependency:** requires `gseapy` (`pip install gseapy`). If not installed, the script still writes the gene list text files but skips the API calls.
 
 **Usage:**
 
 ```bash
-# Default (no args): auto-discovers all plasma cross-sectional significant_analytes.csv
-# files across timepoints A–E and writes lists to data/enrichr_input/
+# Default (no args): auto-discovers all plasma cross-sectional results (Control vs Complication),
+# writes gene lists and runs Enrichr enrichment across timepoints A–E
 python 02_exploratory_analysis/prepare_enrichr_input.py
 
-# Single comparison
+# Query every available Enrichr database (~300+), mirroring the website behaviour
+python 02_exploratory_analysis/prepare_enrichr_input.py --all-databases
+
+# Single comparison with all databases
 python 02_exploratory_analysis/prepare_enrichr_input.py \
-    --sig-csv data/diff_analysis/results/plasma/cross_sectional/C/Control_vs_HDP_significant_analytes.csv \
+    --sig-csv data/diff_analysis/results/plasma/cross_sectional/C/Control_vs_Complication_significant_analytes.csv \
     --g1 Control \
-    --g2 HDP \
-    --output-dir data/enrichr_input/C/Control_vs_HDP
+    --g2 Complication \
+    --all-databases
+
+# Gene lists only (no Enrichr API calls)
+python 02_exploratory_analysis/prepare_enrichr_input.py --skip-enrichment
+
+# Custom databases
+python 02_exploratory_analysis/prepare_enrichr_input.py \
+    --gene-sets GO_Biological_Process_2025 GO_Molecular_Function_2023 KEGG_2026
 ```
 
 **CLI flags:**
@@ -186,6 +203,9 @@ python 02_exploratory_analysis/prepare_enrichr_input.py \
 | `--g2` | — | Group 2 label (required with `--sig-csv`) |
 | `--results-dir` | `data/diff_analysis/results/plasma/cross_sectional` | Root results directory for auto-discovery |
 | `--output-dir` | `data/enrichr_input` | Root output directory |
+| `--gene-sets` | `GO_Biological_Process_2025 KEGG_2026 Reactome_Pathways_2024` | Space-separated Enrichr databases to query; ignored if `--all-databases` is set |
+| `--all-databases` | `False` | Query every available Enrichr database (~300+), mirroring the website; overrides `--gene-sets` |
+| `--skip-enrichment` | `False` | Write gene list files only; skip all Enrichr API calls |
 
 ---
 
@@ -196,30 +216,39 @@ data/diff_analysis/results/
 ├── plasma/
 │   ├── cross_sectional/
 │   │   ├── A/
-│   │   │   ├── Control_vs_HDP_differential_results.csv
-│   │   │   ├── Control_vs_HDP_significant_analytes.csv
-│   │   │   ├── … (one pair per comparison)
-│   │   │   └── Control_vs_HDP/
-│   │   │       ├── Control_vs_HDP_heatmap.pdf
-│   │   │       ├── Control_vs_HDP_heatmap.png
-│   │   │       └── Control_vs_HDP_heatmap_data.csv
+│   │   │   ├── Control_vs_Complication_differential_results.csv
+│   │   │   ├── Control_vs_Complication_significant_analytes.csv
+│   │   │   └── Control_vs_Complication/
+│   │   │       ├── Control_vs_Complication_heatmap.pdf
+│   │   │       ├── Control_vs_Complication_heatmap.png
+│   │   │       └── Control_vs_Complication_heatmap_data.csv
 │   │   ├── B/ … E/  (same structure)
 │   └── longitudinal/
 │       ├── Control_B_minus_A_longitudinal_results.csv
+│       ├── FGR_B_minus_A_longitudinal_results.csv
+│       ├── HDP_B_minus_A_longitudinal_results.csv
+│       ├── sPTB_B_minus_A_longitudinal_results.csv
+│       ├── Complication_B_minus_A_longitudinal_results.csv
 │       ├── … (one file per group × adjacent timepoint pair)
 │       ├── Control_longitudinal_heatmap.pdf
-│       └── Control_longitudinal_heatmap_data.csv
+│       ├── FGR_longitudinal_heatmap.pdf
+│       ├── HDP_longitudinal_heatmap.pdf
+│       ├── sPTB_longitudinal_heatmap.pdf
+│       └── Complication_longitudinal_heatmap.pdf
 ├── placenta/
 │   └── cross_sectional/  (same structure as plasma)
 └── sample_counts_per_group_timepoint.csv
 
 data/enrichr_input/
 └── <timepoint>/
-    └── <g1>_vs_<g2>/
-        ├── higher_in_<g2>.txt
-        ├── higher_in_<g1>.txt
+    └── Control_vs_Complication/
+        ├── higher_in_Complication.txt
+        ├── higher_in_Control.txt
         ├── all_significant.txt
-        └── significant_with_direction.csv
+        ├── significant_with_direction.csv
+        └── enrichment/
+            ├── higher_in_Complication_enrichment.csv
+            └── higher_in_Control_enrichment.csv
 ```
 
 ---
@@ -237,12 +266,3 @@ All thresholds live in `utilities.py` and apply to both cross-sectional and long
 | `MIN_SIG_ANALYTES` | 5 | Minimum significant analytes required to generate a heatmap |
 | `_PNG_DPI` | 300 | PNG resolution for saved heatmaps |
 
----
-
-## Change log
-
-| Date | Change |
-|---|---|
-| 2026-03-04 | Added `utilities.py`; moved all functions/constants from `identify_differential_analytes.py` and `generate_differential_cluster_heatmap_limited_group.py` into it. Both scripts now import from `utilities`. |
-| 2026-03-04 | Added `prepare_enrichr_input.py` to split significant analytes into directional Enrichr-ready gene lists. |
-| 2026-03-04 | Heatmap script changed to show **all analytes** (up to 500) with significant ones marked ★, rather than filtering to significant-only. Pending PI review of mosaic appearance. |

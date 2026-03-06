@@ -10,7 +10,6 @@ Shared constants, data loading helpers, statistical analysis functions
 # Standard library
 import datetime
 import glob
-import itertools
 import logging
 import os
 import platform
@@ -47,6 +46,10 @@ MAX_ANALYTES    = 500
 MIN_SIG_ANALYTES = 5
 _PNG_DPI         = 300
 _TIMEPOINT_ORDER = ["A", "B", "C", "D", "E"]
+
+# Binary column colour scheme: Control (blue) vs Complication (orange-red)
+_CTRL_COLOUR  = "steelblue"
+_COMPL_COLOUR = "tomato"
 
 
 # ---------------------------------------------------------------------------
@@ -156,10 +159,13 @@ def run_cross_sectional(
     analyte_cols: list,
     group_col: str = "Group",
     output_dir: str = "results/cross_sectional",
+    control_group: str = "Control",
 ) -> None:
-    """Run all pairwise Mann-Whitney U tests with per-comparison BH FDR correction.
+    """Run Mann-Whitney U tests (control vs each complication group) with BH FDR correction.
 
-    For each pairwise group comparison:
+    Only comparisons of the form (control_group, X) are run — one per non-control group.
+
+    For each comparison:
       - Requires >= MIN_N non-missing observations per group per analyte.
       - Applies BH FDR correction independently per comparison.
       - Saves <g1>_vs_<g2>_differential_results.csv (all analytes, sorted by q-value).
@@ -167,8 +173,11 @@ def run_cross_sectional(
     """
     os.makedirs(output_dir, exist_ok=True)
     groups = sorted(df[group_col].dropna().unique())
-    pairs  = list(itertools.combinations(groups, 2))
-    logger.info("Cross-sectional: %d groups → %d pairwise comparisons", len(groups), len(pairs))
+    pairs  = [(control_group, g) for g in groups if g != control_group]
+    logger.info(
+        "Cross-sectional: %s vs %d complication group(s) → %d comparison(s)",
+        control_group, len(pairs), len(pairs),
+    )
 
     for g1, g2 in pairs:
         df_g1 = df.loc[df[group_col] == g1, analyte_cols]
@@ -354,6 +363,7 @@ def run_longitudinal(
         )
 
 
+
 # ---------------------------------------------------------------------------
 # Sample count report
 # ---------------------------------------------------------------------------
@@ -473,17 +483,14 @@ def plot_cross_sectional_heatmap(
               f"(threshold = {MIN_SIG_ANALYTES}).")
         return
 
-    selected_analytes = list(analyte_cols)
-    if len(selected_analytes) > MAX_ANALYTES:
-        sig_list     = [a for a in selected_analytes if a in sig_set]
-        non_sig_list = [a for a in selected_analytes if a not in sig_set]
-        if len(sig_list) >= MAX_ANALYTES:
-            min_q             = _rank_analytes_by_min_q(sig_list, results_dir)
-            selected_analytes = min_q.nsmallest(MAX_ANALYTES).index.tolist()
-        else:
-            selected_analytes = sig_list + non_sig_list[:MAX_ANALYTES - len(sig_list)]
-        n_shown_sig = len([a for a in selected_analytes if a in sig_set])
-        print(f"Capped at {MAX_ANALYTES} analytes ({n_shown_sig} significant).")
+    # Significant analytes only
+    sig_list = [a for a in analyte_cols if a in sig_set]
+    if len(sig_list) > MAX_ANALYTES:
+        min_q             = _rank_analytes_by_min_q(sig_list, results_dir)
+        selected_analytes = min_q.nsmallest(MAX_ANALYTES).index.tolist()
+        print(f"Capped at {MAX_ANALYTES} significant analytes.")
+    else:
+        selected_analytes = sig_list
 
     X       = df[selected_analytes].copy()
     col_mean = X.mean(axis=0)
@@ -500,7 +507,7 @@ def plot_cross_sectional_heatmap(
         ordered_samples.extend(_within_group_order(g_X))
 
     X_z_plot       = X_z.loc[ordered_samples].T
-    X_z_plot.index = [f"{a} ★" if a in sig_set else a for a in X_z_plot.index]
+    X_z_plot.index = X_z_plot.index.tolist()  # all rows are significant
 
     palette        = sns.color_palette("tab10", n_colors=len(group_order))
     group_color_map = dict(zip(group_order, palette))
@@ -512,7 +519,6 @@ def plot_cross_sectional_heatmap(
 
     n_samples    = X_z_plot.shape[1]
     n_total      = X_z_plot.shape[0]
-    n_sig        = len([a for a in selected_analytes if a in sig_set])
     figw         = max(20, n_samples * 0.22 + 6)
     figh         = max(10, n_total * 0.20)
     row_fontsize = max(5, min(9, int(180 / n_total)))
@@ -537,8 +543,8 @@ def plot_cross_sectional_heatmap(
     cg.ax_heatmap.set_ylabel("")
     plt.setp(cg.ax_heatmap.get_yticklabels(), fontsize=row_fontsize)
     cg.figure.suptitle(
-        f"Cross-sectional Heatmap  |  {n_total} analytes shown  "
-        f"({n_sig} significant ★)  |  {n_samples} samples",
+        f"Cross-sectional Heatmap  |  {n_total} significant analytes  "
+        f"|  {n_samples} samples",
         y=0.99, fontsize=11,
     )
 
@@ -553,7 +559,7 @@ def plot_cross_sectional_heatmap(
     plt.close(cg.figure)
 
     X_z_plot.to_csv(os.path.join(output_dir, f"{label}_heatmap_data.csv"))
-    print(f"Saved cross-sectional heatmap: {n_total} analytes ({n_sig} significant ★) "
+    print(f"Saved cross-sectional heatmap: {n_total} significant analytes "
           f"× {n_samples} samples → {output_dir}/")
 
 
@@ -564,12 +570,21 @@ def plot_pairwise_cross_sectional_heatmap(
     results_dir: str,
     output_dir: str,
     group_col: str = "Group",
+    g2_source_groups: list = None,
 ) -> None:
     """Generate a pairwise cross-sectional heatmap for one group comparison.
 
-    Shows all analytes (capped at MAX_ANALYTES, significant ones prioritised).
-    Significant analytes for this specific pair are marked with ★ in the row label.
+    Shows only significant analytes for this pair (up to MAX_ANALYTES, ranked by q-value).
+    Column colour bar uses a binary Control vs Complication scheme.
     Saves outputs to <output_dir>/<g1>_vs_<g2>/ subfolder.
+
+    Parameters
+    ----------
+    g2_source_groups : list, optional
+        When g2 is a pooled label (e.g. "Complication"), supply the original
+        group names that were merged into it (e.g. ["FGR", "HDP", "sPTB"]).
+        The function will filter the data to [g1] + g2_source_groups and
+        relabel g2_source_groups as g2 before plotting.
     """
     pair_label = f"{g1}_vs_{g2}"
     pair_dir   = os.path.join(output_dir, pair_label)
@@ -589,26 +604,29 @@ def plot_pairwise_cross_sectional_heatmap(
 
     os.makedirs(pair_dir, exist_ok=True)
 
-    df          = pd.read_csv(data_path, index_col=0)
-    mask        = df[group_col].isin([g1, g2])
-    df          = df.loc[mask].copy()
+    df = pd.read_csv(data_path, index_col=0)
+    if g2_source_groups is not None:
+        # Filter to g1 + underlying source groups, then relabel them as g2
+        mask = df[group_col].isin([g1] + list(g2_source_groups))
+        df   = df.loc[mask].copy()
+        df.loc[df[group_col] != g1, group_col] = g2
+    else:
+        mask = df[group_col].isin([g1, g2])
+        df   = df.loc[mask].copy()
     analyte_cols = get_analyte_columns(df)
 
-    selected_analytes = list(analyte_cols)
-    if len(selected_analytes) > MAX_ANALYTES:
-        sig_list     = [a for a in selected_analytes if a in sig_set]
-        non_sig_list = [a for a in selected_analytes if a not in sig_set]
-        if len(sig_list) >= MAX_ANALYTES:
-            sig_list_ranked = (
-                res.loc[[a for a in sig_list if a in res.index], "q_value"]
-                .sort_values()
-                .index.tolist()
-            )
-            selected_analytes = sig_list_ranked[:MAX_ANALYTES]
-        else:
-            selected_analytes = sig_list + non_sig_list[:MAX_ANALYTES - len(sig_list)]
-        n_shown_sig = len([a for a in selected_analytes if a in sig_set])
-        print(f"  {pair_label}: capped at {MAX_ANALYTES} analytes ({n_shown_sig} significant).")
+    # Significant analytes only
+    sig_list = [a for a in analyte_cols if a in sig_set]
+    if len(sig_list) > MAX_ANALYTES:
+        sig_list_ranked = (
+            res.loc[[a for a in sig_list if a in res.index], "q_value"]
+            .sort_values()
+            .index.tolist()
+        )
+        selected_analytes = sig_list_ranked[:MAX_ANALYTES]
+        print(f"  {pair_label}: capped at {MAX_ANALYTES} significant analytes.")
+    else:
+        selected_analytes = sig_list
 
     X        = df[selected_analytes].copy()
     col_mean = X.mean(axis=0)
@@ -624,19 +642,17 @@ def plot_pairwise_cross_sectional_heatmap(
         ordered_samples.extend(_within_group_order(g_X))
 
     X_z_plot       = X_z.loc[ordered_samples].T
-    X_z_plot.index = [f"{a} ★" if a in sig_set else a for a in X_z_plot.index]
+    X_z_plot.index = X_z_plot.index.tolist()  # all rows are significant
 
-    palette         = sns.color_palette("tab10", n_colors=2)
-    group_color_map = {g1: palette[0], g2: palette[1]}
-    col_colors      = pd.Series(
-        [group_color_map[groups[s]] for s in ordered_samples],
+    # Binary colour bar: Control (steelblue) vs Complication (tomato)
+    col_colors = pd.Series(
+        [_CTRL_COLOUR if groups[s] == "Control" else _COMPL_COLOUR for s in ordered_samples],
         index=ordered_samples,
-        name=group_col,
+        name="Control vs Complication",
     )
 
     n_samples    = X_z_plot.shape[1]
     n_total      = X_z_plot.shape[0]
-    n_sig        = len([a for a in selected_analytes if a in sig_set])
     figw         = max(20, n_samples * 0.22 + 6)
     figh         = max(10, n_total * 0.20)
     row_fontsize = max(5, min(9, int(180 / n_total)))
@@ -662,7 +678,7 @@ def plot_pairwise_cross_sectional_heatmap(
     plt.setp(cg.ax_heatmap.get_yticklabels(), fontsize=row_fontsize)
     cg.figure.suptitle(
         f"Cross-sectional Heatmap  |  {g1} vs {g2}  |  "
-        f"{n_total} analytes shown  ({n_sig} significant ★)  |  {n_samples} samples",
+        f"{n_total} significant analytes  |  {n_samples} samples",
         y=0.99, fontsize=11,
     )
 
@@ -677,7 +693,7 @@ def plot_pairwise_cross_sectional_heatmap(
     plt.close(cg.figure)
 
     X_z_plot.to_csv(os.path.join(pair_dir, f"{pair_label}_heatmap_data.csv"))
-    print(f"  Saved {pair_label}: {n_total} analytes ({n_sig} significant ★) "
+    print(f"  Saved {pair_label}: {n_total} significant analytes "
           f"× {n_samples} samples → {pair_dir}/")
 
 
@@ -766,19 +782,16 @@ def plot_longitudinal_heatmap(
               f"(threshold = {MIN_SIG_ANALYTES}).")
         return
 
-    all_analytes = list(matrix.index)
-    if len(all_analytes) > MAX_ANALYTES:
-        sig_list     = [a for a in all_analytes if a in all_sig]
-        non_sig_list = [a for a in all_analytes if a not in all_sig]
-        if len(sig_list) >= MAX_ANALYTES:
-            n_sig_comps  = pd.Series(
-                {a: sum(a in s for s in sig_per_comp.values()) for a in sig_list}
-            )
-            all_analytes = n_sig_comps.nlargest(MAX_ANALYTES).index.tolist()
-        else:
-            all_analytes = sig_list + non_sig_list[:MAX_ANALYTES - len(sig_list)]
-        print(f"Capped at {MAX_ANALYTES} analytes "
-              f"({len([a for a in all_analytes if a in all_sig])} significant).")
+    # Significant analytes only
+    sig_list = [a for a in matrix.index if a in all_sig]
+    if len(sig_list) > MAX_ANALYTES:
+        n_sig_comps  = pd.Series(
+            {a: sum(a in s for s in sig_per_comp.values()) for a in sig_list}
+        )
+        all_analytes = n_sig_comps.nlargest(MAX_ANALYTES).index.tolist()
+        print(f"Capped at {MAX_ANALYTES} significant analytes.")
+    else:
+        all_analytes = sig_list
 
     matrix   = matrix.loc[all_analytes]
     row_mean = matrix.mean(axis=1)
@@ -848,3 +861,5 @@ def plot_longitudinal_heatmap(
     matrix_z.to_csv(os.path.join(output_dir, f"{group}_longitudinal_heatmap_data.csv"))
     print(f"Saved longitudinal heatmap: {n_total} analytes ({n_sig} significant) "
           f"× {n_comps} comparisons → {output_dir}/")
+
+

@@ -9,14 +9,16 @@ Cross-sectional heatmap:
     Values = z-score of per-analyte abundance across all samples, clipped ±2.5.
     Row clustering: Ward linkage, Euclidean distance.
 
-Longitudinal heatmap:
-    Rows = analytes significant (q < 0.05) in >= 1 delta comparison; capped at
-           100, ranked by number of significant comparisons.
-    Columns = delta comparisons in fixed chronological order (earlier T_a first,
-              T_b ascending within; not clustered).
-    Values = median delta per analyte per comparison, row-wise z-scored, clipped ±2.0.
+Longitudinal heatmap (cross-group):
+    Rows = analytes where Control vs Complication delta is significant (q < 0.05)
+           in >= 1 adjacent comparison; capped at 500, ranked by number of
+           significant comparisons.
+    Columns = delta comparisons in fixed chronological order (B-A, C-B, D-C, E-D);
+              not clustered.
+    Values = fold_change (median_delta_complication - median_delta_control),
+             row-wise z-scored across comparisons, clipped ±2.0.
     Row clustering: Ward linkage, Euclidean distance.
-    Significant cells (q < 0.05) marked with a dot; non-significant cells dimmed.
+    Significant cells marked with a dot; non-significant cells dimmed.
 
 Usage:
     # Cross-sectional
@@ -26,12 +28,12 @@ Usage:
         --results-dir results/cross_sectional \
         --output-dir results/cross_sectional
 
-    # Longitudinal
+    # Longitudinal (specify complication group)
     python generate_differential_cluster_heatmap_limited_group.py \
         --mode longitudinal \
         --results-dir results/longitudinal \
         --output-dir results/longitudinal \
-        --group Control
+        --group HDP
 """
 
 import os
@@ -90,8 +92,8 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--group",
-        help="Target group for longitudinal heatmap (e.g. Control). "
-             "Required for longitudinal mode.",
+        help="Complication group for longitudinal heatmap (e.g. FGR, HDP, sPTB). "
+             "Required for longitudinal mode. Heatmap shows Control vs this group.",
     )
     p.add_argument(
         "--label",
@@ -122,7 +124,7 @@ def main():
 
     if args.mode in ("longitudinal", "both"):
         if not args.group:
-            parser.error("--group is required for longitudinal mode.")
+            parser.error("--group is required for longitudinal mode (group name, e.g. FGR, HDP, sPTB, or Complication).")
         plot_longitudinal_heatmap(
             results_dir=args.results_dir,
             output_dir=args.output_dir,
@@ -150,14 +152,9 @@ if __name__ == "__main__":
         )
         diff_dir = os.path.join(wkdir, "data", "diff_analysis", "results")
 
-        _CS_PAIRS = [
-            ("Control", "FGR"),
-            ("Control", "HDP"),
-            ("Control", "sPTB"),
-            ("FGR",     "HDP"),
-            ("FGR",     "sPTB"),
-            ("HDP",     "sPTB"),
-        ]
+        # Single binary comparison: Control vs pooled Complication (FGR + HDP + sPTB)
+        _CS_PAIRS         = [("Control", "Complication")]
+        _COMPL_SOURCES    = ["FGR", "HDP", "sPTB"]
 
         # ── Cross-sectional pairwise heatmaps: placenta ───────────────────
         placenta_csv  = os.path.join(
@@ -165,7 +162,7 @@ if __name__ == "__main__":
         )
         cross_results = os.path.join(diff_dir, "placenta", "cross_sectional")
         if os.path.exists(placenta_csv) and os.path.isdir(cross_results):
-            logger.info("Generating placenta pairwise cross-sectional heatmaps …")
+            logger.info("Generating placenta cross-sectional heatmap (Control vs Complication) …")
             for g1, g2 in _CS_PAIRS:
                 plot_pairwise_cross_sectional_heatmap(
                     g1=g1, g2=g2,
@@ -173,10 +170,11 @@ if __name__ == "__main__":
                     results_dir=cross_results,
                     output_dir=cross_results,
                     group_col="Group",
+                    g2_source_groups=_COMPL_SOURCES,
                 )
         else:
             logger.warning(
-                "Skipping placenta cross-sectional heatmaps: CSV or results dir not found.\n"
+                "Skipping placenta cross-sectional heatmap: CSV or results dir not found.\n"
                 "  CSV:     %s\n  Results: %s", placenta_csv, cross_results,
             )
 
@@ -187,7 +185,9 @@ if __name__ == "__main__":
             )
             tp_results = os.path.join(diff_dir, "plasma", "cross_sectional", tp)
             if os.path.exists(tp_csv) and os.path.isdir(tp_results):
-                logger.info("Generating plasma [%s] pairwise cross-sectional heatmaps …", tp)
+                logger.info(
+                    "Generating plasma [%s] cross-sectional heatmap (Control vs Complication) …", tp
+                )
                 for g1, g2 in _CS_PAIRS:
                     plot_pairwise_cross_sectional_heatmap(
                         g1=g1, g2=g2,
@@ -195,36 +195,28 @@ if __name__ == "__main__":
                         results_dir=tp_results,
                         output_dir=tp_results,
                         group_col="Group",
+                        g2_source_groups=_COMPL_SOURCES,
                     )
             else:
                 logger.warning(
-                    "Skipping plasma cross-sectional heatmaps [%s]: CSV or results dir not found.\n"
+                    "Skipping plasma cross-sectional heatmap [%s]: CSV or results dir not found.\n"
                     "  CSV:     %s\n  Results: %s", tp, tp_csv, tp_results,
                 )
 
-        # ── Longitudinal heatmap: plasma (one heatmap per group) ─────────
+        # ── Longitudinal heatmaps: individual groups + pooled Complication ─
         long_results = os.path.join(diff_dir, "plasma", "longitudinal")
-        for group in ["Control", "FGR", "HDP", "sPTB"]:
-            if os.path.isdir(long_results):
+        if os.path.isdir(long_results):
+            for group in ["Control", "FGR", "HDP", "sPTB", "Complication"]:
                 plot_longitudinal_heatmap(
                     results_dir=long_results,
                     output_dir=long_results,
                     group=group,
                 )
-            else:
-                logger.warning(
-                    "Skipping longitudinal heatmap [%s]: results dir not found: %s",
-                    group, long_results,
-                )
+        else:
+            logger.warning(
+                "Skipping longitudinal heatmaps: results dir not found: %s", long_results,
+            )
 
         logger.info("Heatmap generation complete.")
 
     main()
-
-
-# (log transformed value) fold change reach 1.5 filter
-# Show every protein if the number of significant proteins are close to 500
-# Report how many samples in each group in each timepoint in both plasma and placenta
-# Stop filtering for non significant analytes, just show all and mark significant ones with a dot or star
-
-# Find Optimal scaling for omics data
