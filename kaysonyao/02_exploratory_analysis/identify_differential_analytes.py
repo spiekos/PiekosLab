@@ -151,11 +151,10 @@ def main():
         }
         analyte_cols = get_analyte_columns(next(iter(timepoint_dfs.values())))
         logger.info("Loaded %d timepoints, %d analytes", len(timepoint_dfs), len(analyte_cols))
-        run_longitudinal_cross_group(
+        run_longitudinal(
             timepoint_dfs,
             analyte_cols,
-            control_group="Control",
-            complication_group=args.group,
+            group=args.group,
             group_col=args.group_col,
             subject_col=args.subject_col,
             output_dir=long_dir,
