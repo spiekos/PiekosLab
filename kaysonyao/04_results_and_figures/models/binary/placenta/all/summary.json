@@ -1,0 +1,51 @@
+{
+  "tissue": "placenta",
+  "timepoint": "all",
+  "outcome": "Complication",
+  "complications_pooled": [
+    "HDP",
+    "FGR",
+    "sPTB"
+  ],
+  "n_train": 79,
+  "n_val": 17,
+  "n_test": 18,
+  "n_features_pretlasso": 2789,
+  "n_features_postlasso": 24,
+  "best_model_val": "SVM",
+  "best_val_pr_auc": 0.6548446923446922,
+  "test_metrics": {
+    "LogisticRegression": {
+      "pr_auc": 0.43554310613134145,
+      "roc_auc": 0.34567901234567905,
+      "accuracy": 0.5,
+      "precision": 0.5,
+      "recall": 0.4444444444444444,
+      "f1": 0.47058823529411764
+    },
+    "RandomForest": {
+      "pr_auc": 0.8125,
+      "roc_auc": 0.7777777777777778,
+      "accuracy": 0.6666666666666666,
+      "precision": 0.6666666666666666,
+      "recall": 0.6666666666666666,
+      "f1": 0.6666666666666666
+    },
+    "XGBoost": {
+      "pr_auc": 0.799466736966737,
+      "roc_auc": 0.7407407407407408,
+      "accuracy": 0.6111111111111112,
+      "precision": 0.625,
+      "recall": 0.5555555555555556,
+      "f1": 0.5882352941176471
+    },
+    "SVM": {
+      "pr_auc": 0.40663061520904664,
+      "roc_auc": 0.2716049382716049,
+      "accuracy": 0.5,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1": 0.6666666666666666
+    }
+  }
+}

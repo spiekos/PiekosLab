@@ -1,0 +1,51 @@
+{
+  "tissue": "plasma",
+  "timepoint": "C",
+  "outcome": "Complication",
+  "complications_pooled": [
+    "HDP",
+    "FGR",
+    "sPTB"
+  ],
+  "n_train": 89,
+  "n_val": 19,
+  "n_test": 20,
+  "n_features_pretlasso": 2815,
+  "n_features_postlasso": 2743,
+  "best_model_val": "LogisticRegression",
+  "best_val_pr_auc": 0.881166932482722,
+  "test_metrics": {
+    "LogisticRegression": {
+      "pr_auc": 0.6720775362486592,
+      "roc_auc": 0.6161616161616161,
+      "accuracy": 0.55,
+      "precision": 0.625,
+      "recall": 0.45454545454545453,
+      "f1": 0.5263157894736842
+    },
+    "RandomForest": {
+      "pr_auc": 0.7319354887536706,
+      "roc_auc": 0.6565656565656566,
+      "accuracy": 0.6,
+      "precision": 0.6666666666666666,
+      "recall": 0.5454545454545454,
+      "f1": 0.6
+    },
+    "XGBoost": {
+      "pr_auc": 0.6854947941635249,
+      "roc_auc": 0.6363636363636364,
+      "accuracy": 0.55,
+      "precision": 0.625,
+      "recall": 0.45454545454545453,
+      "f1": 0.5263157894736842
+    },
+    "SVM": {
+      "pr_auc": 0.8021145521145521,
+      "roc_auc": 0.7171717171717171,
+      "accuracy": 0.65,
+      "precision": 0.7,
+      "recall": 0.6363636363636364,
+      "f1": 0.6666666666666666
+    }
+  }
+}
