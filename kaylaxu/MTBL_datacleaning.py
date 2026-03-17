@@ -45,8 +45,7 @@ warnings.filterwarnings("ignore")
 #       2. Check the correlation between the POS and NEG values
 #               1. If it is r >= 0.9, then average the two samples (or if one is missing, take the non-missing vaue)
 #               2. If r < 0.9, keep both separately and append _POS or _NEG to the compound name respectively.
-# 13. Perform 1/2 minimum imputation of missing data.
-# 14. Handle all additional formatting considerations described above. 
+# 13. Handle all additional formatting: adding group, spliting by timepoint, output to csv.
 
 # GLOBAL VARIABLES
 RSD = 30
@@ -114,11 +113,9 @@ def split_exp(exp, batch, e, exp_data, unique_batches):
     is_pooled = ["Pooled" in s for s in exp.index]
     pooled = exp.iloc[is_pooled,:]
     pooled['batch'] = batch["batch"][is_pooled]
-    
     is_sample = ["Pooled" not in s for s in exp.index]
     sample = exp.iloc[is_sample,:]
     sample['batch'] = batch["batch"][is_sample]
-
     for b in unique_batches:
         exp_data["Pooled_" + str(b) + "_" + e] = pooled[pooled['batch'] == int(b)]
         newIndex = []
@@ -159,7 +156,7 @@ def MAD_or_missing(exp_data, mode, e):
 
 #### add by group check
 # rsd = calculate RSD (sd/mean * 100) in QC pools and remove metabolites with RSD > 30%
-# mode >20% missing = remove metabolites with >20% missing
+
 def rsd(exp_data, e, unique_batches):
     rsd = pd.DataFrame()
     for b in unique_batches:
@@ -177,35 +174,24 @@ def rsd(exp_data, e, unique_batches):
             except:
                 logging.warning(m + " is missing from Samples" + b + "_" + e)
 
+#  >20% missing = remove metabolites with >20% missing
 def sample_missing(exp_data, e, unique_batches):
     missing_dict = {}
-    
-    # 1. Correctly calculate missing fraction per batch (Samples only)
     for b in unique_batches:
         df_b = exp_data["Samples_" + b + "_" + e]
-        # Calculate fraction: (number of NaNs) / (number of samples in this batch)
         missing_dict[b] = df_b.isna().sum() / len(df_b.index)
-        
-    # 2. Combine into a DataFrame safely
     missing = pd.DataFrame(missing_dict)
-    
-    # 3. Mask: if ANY batch has > 20% missingness for a metabolite, flag it
     mask = (missing > MTBL_MISSING).sum(axis=1) > 0
     failed = missing.loc[mask].index
-    
-    # 4. Safely drop failed metabolites from all dataframes
     for m in failed:
         logging.info(f"QC: Compound {m} failed the <20% missing check.")
         for b in unique_batches:
             sample_key = "Samples_" + b + "_" + e
             pooled_key = "Pooled_" + b + "_" + e
-            
-            # Drop only if the column actually exists in that specific batch
             if m in exp_data[sample_key].columns:
                 exp_data[sample_key] = exp_data[sample_key].drop(columns=m)
             if m in exp_data[pooled_key].columns:
                 exp_data[pooled_key] = exp_data[pooled_key].drop(columns=m)
-
 
 
 # generate pca from expression data
@@ -239,6 +225,7 @@ def generate_pca(exp_data, title, e, dir_input):
     plt.grid(True)
     plt.savefig(dir_input + "/" + title + "_PCA_" + e + ".png")
 
+# calculate corection factor between batches
 def correction_factor(rep1, rep2):
     med_ratios = {}
     ratios = rep2 / rep1
@@ -259,14 +246,11 @@ def normalization(exp_data, e, unique_batches, mode):
     for b in unique_batches:
         bdf[b] = exp_data["Samples_" + b + "_" + e].drop(['batch'], axis=1)
         samples = samples + list(bdf[b].index)
-
     replicates = [i for i in set(samples) if samples.count(i) > 1]
-
     logging.info("Initializing batch normalization with " + str(len(replicates)) + " biological replicates.")
     reps = {}
     for b in unique_batches:
         reps[b] = bdf[b].loc[list(set(bdf[b].index) & set(replicates)),:]
-
     #110123 is reference batch for plasma
     if mode == "placenta":
         cf = correction_factor(reps["32425"], reps["62323"])
@@ -302,11 +286,9 @@ def merge_rep(exp_data, e, unique_batches, mode):
             reps[b] = exp_data["Samples_" + b + "_" + e].loc[list(set(exp_data["Samples_" + b + "_" + e].index) & set(replicates)),:].drop(['batch'], axis=1)
         avg1 = ((reps["51223"] + reps["110123"])/2).dropna(how="all")
         avg2 = ((reps["112524"] + reps["110123"])/2).dropna(how="all")
-
         # replace for 511223 and 110123
         exp_data["Samples_51223_" + e].loc[avg1.index,:] = avg1
         exp_data["Samples_110123_" + e].loc[avg1.index,:] = avg1
-
         # replace for 112524 and 110123
         exp_data["Samples_112524_" + e].loc[avg2.index,:] = avg2
         exp_data["Samples_110123_" + e].loc[avg2.index,:] = avg2
