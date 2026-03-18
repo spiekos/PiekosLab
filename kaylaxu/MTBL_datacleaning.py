@@ -336,25 +336,33 @@ def formatting(final, meta, mode, dir_input):
         if "Samples" in k:
             #final[k]["group"] = meta.loc[final[k].index,:]["group"]
             group = []
+            subgroup = []
+            gest_age = []
+            gest_age_collection = []
             for id in final[k].index:
                 keys_to_try = [
                     id,
-                    id[:-1].strip(),
-                    id[:-1].strip() + "E",
-                    id + "E"
+                    id[:-1].strip() + "E" + id[-1],
+                    id[:-1].strip() + " " + id[-1]
                 ]
                 found = False
                 for key in keys_to_try:
                     try:
-                        group.append(meta.loc[key, :]["group"])
+                        group.append(list(meta.loc[meta["Sample ID"] == key, :]["group"])[0])
+                        subgroup.append(list(meta.loc[meta["Sample ID"] == key, :]["subgroup"])[0])
+                        gest_age.append(list(meta.loc[meta["Sample ID"] == key, :]["gest age del"])[0])
+                        gest_age_collection.append(list(meta.loc[meta["Sample ID"] == key, :]["sample gest Age"])[0])
                         found = True
                         break # Success! Exit the loop and stop trying fallbacks
-                    except KeyError:
+                    except:
                         continue # That key failed, try the next one in the list
                 if not found:
                     logging.error(f"Issue with indexing {id} in meta data.")
             
             final[k]["group"] = group
+            final[k]["subgroup"] = subgroup
+            final[k]["gestational_age"] = gest_age
+            final[k]["gestational_age_at_collection"] = gest_age_collection
             if mode == 'plasma':
                 for t in TIMEPOINTS:
                     temp = pd.DataFrame()
@@ -459,8 +467,8 @@ def main():
     neg_exp = pd.read_csv(dir_input + "/neg_expression.csv", index_col=0)
     neg_batch = pd.read_csv(dir_input + "/neg_batch.csv", index_col=0)
     neg_comp = pd.read_csv(dir_input + "/neg_compounds.csv", index_col=0)
-    meta = pd.read_excel(meta_input, index_col=0)
-
+    meta = pd.read_excel(meta_input, index_col=0, sheet_name="n=133 metabolomics")
+    meta = meta[meta.index.notna()]
     # call cleaning functions
     clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp, dir_input, meta)
 
