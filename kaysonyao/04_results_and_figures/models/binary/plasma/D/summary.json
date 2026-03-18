@@ -10,6 +10,18 @@
   "n_train": 76,
   "n_val": 16,
   "n_test": 17,
+  "class_dist_train": {
+    "control": 39,
+    "complication": 37
+  },
+  "class_dist_val": {
+    "control": 8,
+    "complication": 8
+  },
+  "class_dist_test": {
+    "control": 9,
+    "complication": 8
+  },
   "n_features_pretlasso": 2815,
   "n_features_postlasso": 7,
   "best_model_val": "LogisticRegression",

@@ -55,6 +55,7 @@ from utilities import (
     N_CV_FOLDS,
     RANDOM_STATE,
     load_data,
+    load_significant_analytes,
     get_analyte_columns,
     normalise_group_labels,
     split_70_15_15,
@@ -119,6 +120,7 @@ def run_multilabel_pipeline(
     outcomes: list,
     output_dir: str,
     n_trials: int = 50,
+    sig_analytes: list | None = None,
 ) -> dict | None:
     """
     Run the multi-label classification pipeline for one (tissue, timepoint).
@@ -128,12 +130,15 @@ def run_multilabel_pipeline(
 
     Parameters
     ----------
-    df         : cleaned wide-format DataFrame
-    tissue     : 'plasma' or 'placenta'
-    timepoint  : timepoint label, e.g. 'A'; use 'all' for placenta
-    outcomes   : list of outcome strings, e.g. ['HDP', 'FGR', 'sPTB']
-    output_dir : where to save results
-    n_trials   : number of Optuna trials per model
+    df           : cleaned wide-format DataFrame
+    tissue       : 'plasma' or 'placenta'
+    timepoint    : timepoint label, e.g. 'A'; use 'all' for placenta
+    outcomes     : list of outcome strings, e.g. ['HDP', 'FGR', 'sPTB']
+    output_dir   : where to save results
+    n_trials     : number of Optuna trials per model
+    sig_analytes : optional pre-filter list of analyte names from differential analysis.
+                   When provided, only those columns are used as features.
+                   If None or empty, all analyte columns are used (fallback).
 
     Returns
     -------
@@ -149,7 +154,29 @@ def run_multilabel_pipeline(
     if Y_all is None:
         return None
 
-    analyte_cols = get_analyte_columns(df)
+    all_analyte_cols = get_analyte_columns(df)
+
+    if sig_analytes:
+        analyte_cols = [c for c in sig_analytes if c in df.columns]
+        if not analyte_cols:
+            logger.warning(
+                "%s None of the %d significant analytes found in dataset — "
+                "falling back to all %d analytes.",
+                tag, len(sig_analytes), len(all_analyte_cols),
+            )
+            analyte_cols = all_analyte_cols
+        else:
+            logger.info(
+                "%s Pre-filtered to %d / %d significant analytes.",
+                tag, len(analyte_cols), len(all_analyte_cols),
+            )
+    else:
+        logger.info(
+            "%s No significant analytes list — using all %d analytes.",
+            tag, len(all_analyte_cols),
+        )
+        analyte_cols = all_analyte_cols
+
     X_all = df.loc[Y_all.index, analyte_cols]
 
     # ── 2. 70 / 15 / 15 split (stratify on first outcome as proxy) ────────
@@ -367,6 +394,7 @@ def run_plasma(
     timepoints: list,
     outcomes: list,
     n_trials: int,
+    sig_analytes_dir: str | None = None,
 ) -> list:
     summaries = []
     for tp in timepoints:
@@ -381,8 +409,24 @@ def run_plasma(
         df = load_data(csv_path)
         logger.info("Plasma timepoint %s loaded: %d samples × %d cols", tp, *df.shape)
 
+        sig_analytes = None
+        if sig_analytes_dir:
+            sig_csv = os.path.join(
+                sig_analytes_dir, "plasma", "cross_sectional", tp,
+                "Control_vs_Complication_differential_results.csv",
+            )
+            sig_analytes = load_significant_analytes(sig_csv)
+            if sig_analytes:
+                logger.info("Plasma tp=%s: %d significant analytes loaded (q<0.05).", tp, len(sig_analytes))
+            else:
+                logger.warning(
+                    "Plasma tp=%s: no significant analytes found (q<0.05) — using all features.", tp
+                )
+
         out_dir = os.path.join(output_root, "plasma", tp)
-        result  = run_multilabel_pipeline(df, "plasma", tp, outcomes, out_dir, n_trials)
+        result  = run_multilabel_pipeline(
+            df, "plasma", tp, outcomes, out_dir, n_trials, sig_analytes
+        )
         if result:
             summaries.append(result)
 
@@ -398,6 +442,7 @@ def run_placenta(
     output_root: str,
     outcomes: list,
     n_trials: int,
+    sig_analytes_dir: str | None = None,
 ) -> list:
     if not os.path.exists(placenta_csv):
         logger.warning("Placenta CSV not found: %s — skipping.", placenta_csv)
@@ -406,8 +451,22 @@ def run_placenta(
     df = load_data(placenta_csv)
     logger.info("Placenta loaded: %d samples × %d cols", *df.shape)
 
+    sig_analytes = None
+    if sig_analytes_dir:
+        sig_csv = os.path.join(
+            sig_analytes_dir, "placenta", "cross_sectional",
+            "Control_vs_Complication_differential_results.csv",
+        )
+        sig_analytes = load_significant_analytes(sig_csv)
+        if sig_analytes:
+            logger.info("Placenta: %d significant analytes loaded (q<0.05).", len(sig_analytes))
+        else:
+            logger.warning("Placenta: no significant analytes found (q<0.05) — using all features.")
+
     out_dir = os.path.join(output_root, "placenta", "all")
-    result  = run_multilabel_pipeline(df, "placenta", "all", outcomes, out_dir, n_trials)
+    result  = run_multilabel_pipeline(
+        df, "placenta", "all", outcomes, out_dir, n_trials, sig_analytes
+    )
     return [result] if result else []
 
 
@@ -462,6 +521,17 @@ def _build_parser() -> argparse.ArgumentParser:
         "--n-trials", type=int, default=50,
         help="Optuna trials per model per condition.",
     )
+    p.add_argument(
+        "--sig-analytes-dir",
+        default=os.path.join(wkdir, "04_results_and_figures", "differential_analysis"),
+        help=(
+            "Root directory of differential analysis outputs containing "
+            "Control_vs_Complication_significant_analytes.csv files. "
+            "Features are restricted to significant analytes where available; "
+            "timepoints with no significant analytes fall back to all features. "
+            "Pass '' to disable and always use all features."
+        ),
+    )
     p.add_argument("--skip-plasma",   action="store_true", help="Skip plasma analysis.")
     p.add_argument("--skip-placenta", action="store_true", help="Skip placenta analysis.")
     return p
@@ -471,6 +541,11 @@ def main() -> None:
     args = _build_parser().parse_args()
     logger.info("Outcomes modelled jointly: %s", args.outcomes)
     logger.info("Optuna trials per model:   %d", args.n_trials)
+    sig_dir = args.sig_analytes_dir if args.sig_analytes_dir else None
+    if sig_dir:
+        logger.info("Significant analytes dir: %s", sig_dir)
+    else:
+        logger.info("No significant analytes filter — using all features.")
     all_summaries = []
 
     if not args.skip_plasma:
@@ -481,6 +556,7 @@ def main() -> None:
             args.timepoints,
             args.outcomes,
             args.n_trials,
+            sig_analytes_dir=sig_dir,
         )
 
     if not args.skip_placenta:
@@ -490,6 +566,7 @@ def main() -> None:
             args.output_dir,
             args.outcomes,
             args.n_trials,
+            sig_analytes_dir=sig_dir,
         )
 
     # Aggregate summary table
@@ -501,22 +578,15 @@ def main() -> None:
                     row = {
                         "tissue":    s["tissue"],
                         "timepoint": s["timepoint"],
-                        "model":     model_name,
                         "outcome":   outcome,
-                        "n_train":   s["n_train"],
-                        "n_val":     s["n_val"],
-                        "n_test":    s["n_test"],
-                        "n_features_pretlasso": s["n_features_pretlasso"],
-                        "n_features_postlasso": s["n_features_postlasso"],
-                        "best_model_val":        s["best_model_val"],
-                        "best_val_macro_pr_auc": round(s["best_val_macro_pr_auc"], 4),
+                        "model":     model_name,
                     }
                     row.update({k: round(v, 4) for k, v in metrics.items()})
                     rows.append(row)
 
+        os.makedirs(args.output_dir, exist_ok=True)
         summary_df = pd.DataFrame(rows)
         out_path   = os.path.join(args.output_dir, "all_results_summary.csv")
-        os.makedirs(args.output_dir, exist_ok=True)
         summary_df.to_csv(out_path, index=False)
         logger.info("Aggregate summary saved → %s", out_path)
 

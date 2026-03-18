@@ -10,6 +10,18 @@
   "n_train": 93,
   "n_val": 20,
   "n_test": 20,
+  "class_dist_train": {
+    "control": 39,
+    "complication": 54
+  },
+  "class_dist_val": {
+    "control": 8,
+    "complication": 12
+  },
+  "class_dist_test": {
+    "control": 9,
+    "complication": 11
+  },
   "n_features_pretlasso": 2815,
   "n_features_postlasso": 2,
   "best_model_val": "RandomForest",

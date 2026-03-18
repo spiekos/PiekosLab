@@ -46,6 +46,7 @@ import os
 import sys
 
 # Third-party
+import joblib
 import numpy as np
 import pandas as pd
 
@@ -56,6 +57,7 @@ from utilities import (
     TIMEPOINTS,
     RANDOM_STATE,
     load_data,
+    load_significant_analytes,
     get_analyte_columns,
     normalise_group_labels,
     split_70_15_15,
@@ -129,12 +131,19 @@ def run_binary_pipeline(
     complications: list,
     output_dir: str,
     n_trials: int = 50,
+    sig_analytes: list | None = None,
 ) -> dict | None:
     """
     Full binary classification pipeline for one (tissue, timepoint).
 
     Labels: Control=0, pooled Complication (HDP/FGR/sPTB)=1.
     Hyperparameters are tuned via Optuna TPE using the val set (PR-AUC objective).
+
+    Parameters
+    ----------
+    sig_analytes : optional pre-filter list of analyte names from differential analysis.
+                   When provided, only those columns are used as features.
+                   If None or empty, all analyte columns are used (fallback).
     """
     os.makedirs(output_dir, exist_ok=True)
     tag = f"[{tissue} | tp={timepoint} | Control vs Complication]"
@@ -146,7 +155,30 @@ def run_binary_pipeline(
     if y_all is None:
         return None
 
-    analyte_cols = get_analyte_columns(df)
+    all_analyte_cols = get_analyte_columns(df)
+
+    if sig_analytes:
+        # Intersect with columns actually present in this dataset
+        analyte_cols = [c for c in sig_analytes if c in df.columns]
+        if not analyte_cols:
+            logger.warning(
+                "%s None of the %d significant analytes found in dataset — "
+                "falling back to all %d analytes.",
+                tag, len(sig_analytes), len(all_analyte_cols),
+            )
+            analyte_cols = all_analyte_cols
+        else:
+            logger.info(
+                "%s Pre-filtered to %d / %d significant analytes.",
+                tag, len(analyte_cols), len(all_analyte_cols),
+            )
+    else:
+        logger.info(
+            "%s No significant analytes list — using all %d analytes.",
+            tag, len(all_analyte_cols),
+        )
+        analyte_cols = all_analyte_cols
+
     X_all = df.loc[y_all.index, analyte_cols]
 
     # ── 2. 70 / 15 / 15 stratified split ──────────────────────────────────
@@ -240,12 +272,17 @@ def run_binary_pipeline(
     y_trainval = pd.concat([y_train, y_val])
 
     test_results = {}
+    _saved_scaler = None
     for model_name in model_names:
         model = build_tuned_model_binary(model_name, tuned_params[model_name], y_trainval)
         metrics, scaler = evaluate_binary(model, X_trainval, y_trainval, X_test_sel, y_test)
         test_results[model_name] = metrics
 
+        # Persist fitted model
+        joblib.dump(model, os.path.join(output_dir, f"{model_name}.joblib"))
+
         if model_name == best_model_name:
+            _saved_scaler = scaler
             X_te_s = scaler.transform(X_test_sel)
             y_prob = model.predict_proba(X_te_s)[:, 1]
             plot_pr_curve(
@@ -273,9 +310,26 @@ def run_binary_pipeline(
             metrics["pr_auc"], metrics["roc_auc"], metrics["f1"], metrics["accuracy"],
         )
 
+    # Persist scaler + scaled datasets for feature interpretation
+    if _saved_scaler is not None:
+        joblib.dump(_saved_scaler, os.path.join(output_dir, "scaler.joblib"))
+        X_tv_sc = _saved_scaler.transform(X_trainval)
+        X_te_sc = _saved_scaler.transform(X_test_sel)
+        pd.DataFrame(X_tv_sc, columns=selected_features, index=X_trainval.index).to_csv(
+            os.path.join(output_dir, "X_trainval_scaled.csv")
+        )
+        pd.DataFrame(X_te_sc, columns=selected_features, index=X_test_sel.index).to_csv(
+            os.path.join(output_dir, "X_test_scaled.csv")
+        )
+        y_test.to_csv(os.path.join(output_dir, "y_test.csv"), header=True)
+
     test_df = pd.DataFrame(test_results).T
     test_df.index.name = "model"
     test_df.to_csv(os.path.join(output_dir, "test_results.csv"))
+
+    def _class_dist(y: pd.Series) -> dict:
+        vc = y.value_counts()
+        return {"control": int(vc.get(0, 0)), "complication": int(vc.get(1, 0))}
 
     summary = {
         "tissue":                tissue,
@@ -285,6 +339,9 @@ def run_binary_pipeline(
         "n_train":               int(len(y_train)),
         "n_val":                 int(len(y_val)),
         "n_test":                int(len(y_test)),
+        "class_dist_train":      _class_dist(y_train),
+        "class_dist_val":        _class_dist(y_val),
+        "class_dist_test":       _class_dist(y_test),
         "n_features_pretlasso":  len(analyte_cols),
         "n_features_postlasso":  len(selected_features),
         "best_model_val":        best_model_name,
@@ -309,6 +366,7 @@ def run_plasma(
     timepoints: list,
     complications: list,
     n_trials: int,
+    sig_analytes_dir: str | None = None,
 ) -> list:
     summaries = []
     for tp in timepoints:
@@ -322,8 +380,24 @@ def run_plasma(
         df = load_data(csv_path)
         logger.info("Plasma timepoint %s loaded: %d samples × %d cols", tp, *df.shape)
 
+        sig_analytes = None
+        if sig_analytes_dir:
+            sig_csv = os.path.join(
+                sig_analytes_dir, "plasma", "cross_sectional", tp,
+                "Control_vs_Complication_differential_results.csv",
+            )
+            sig_analytes = load_significant_analytes(sig_csv)
+            if sig_analytes:
+                logger.info("Plasma tp=%s: %d significant analytes loaded (q<0.05).", tp, len(sig_analytes))
+            else:
+                logger.warning(
+                    "Plasma tp=%s: no significant analytes found (q<0.05) — using all features.", tp
+                )
+
         out_dir = os.path.join(output_root, "plasma", tp)
-        result  = run_binary_pipeline(df, "plasma", tp, complications, out_dir, n_trials)
+        result  = run_binary_pipeline(
+            df, "plasma", tp, complications, out_dir, n_trials, sig_analytes
+        )
         if result:
             summaries.append(result)
     return summaries
@@ -334,6 +408,7 @@ def run_placenta(
     output_root: str,
     complications: list,
     n_trials: int,
+    sig_analytes_dir: str | None = None,
 ) -> list:
     if not os.path.exists(placenta_csv):
         logger.warning("Placenta CSV not found: %s — skipping.", placenta_csv)
@@ -342,8 +417,22 @@ def run_placenta(
     df = load_data(placenta_csv)
     logger.info("Placenta loaded: %d samples × %d cols", *df.shape)
 
+    sig_analytes = None
+    if sig_analytes_dir:
+        sig_csv = os.path.join(
+            sig_analytes_dir, "placenta", "cross_sectional",
+            "Control_vs_Complication_differential_results.csv",
+        )
+        sig_analytes = load_significant_analytes(sig_csv)
+        if sig_analytes:
+            logger.info("Placenta: %d significant analytes loaded (q<0.05).", len(sig_analytes))
+        else:
+            logger.warning("Placenta: no significant analytes found (q<0.05) — using all features.")
+
     out_dir = os.path.join(output_root, "placenta", "all")
-    result  = run_binary_pipeline(df, "placenta", "all", complications, out_dir, n_trials)
+    result  = run_binary_pipeline(
+        df, "placenta", "all", complications, out_dir, n_trials, sig_analytes
+    )
     return [result] if result else []
 
 
@@ -386,6 +475,17 @@ def _build_parser() -> argparse.ArgumentParser:
         "--n-trials", type=int, default=50,
         help="Optuna trials per model per condition.",
     )
+    p.add_argument(
+        "--sig-analytes-dir",
+        default=os.path.join(wkdir, "04_results_and_figures", "differential_analysis"),
+        help=(
+            "Root directory of differential analysis outputs containing "
+            "Control_vs_Complication_significant_analytes.csv files. "
+            "Features are restricted to significant analytes where available; "
+            "timepoints with no significant analytes fall back to all features. "
+            "Pass '' to disable and always use all features."
+        ),
+    )
     p.add_argument("--skip-plasma",   action="store_true")
     p.add_argument("--skip-placenta", action="store_true")
     return p
@@ -395,6 +495,11 @@ def main() -> None:
     args = _build_parser().parse_args()
     logger.info("Pooling as Complication: %s", args.complications)
     logger.info("Optuna trials per model: %d", args.n_trials)
+    sig_dir = args.sig_analytes_dir if args.sig_analytes_dir else None
+    if sig_dir:
+        logger.info("Significant analytes dir: %s", sig_dir)
+    else:
+        logger.info("No significant analytes filter — using all features.")
     all_summaries = []
 
     if not args.skip_plasma:
@@ -402,6 +507,7 @@ def main() -> None:
         all_summaries += run_plasma(
             args.plasma_dir, args.output_dir,
             args.timepoints, args.complications, args.n_trials,
+            sig_analytes_dir=sig_dir,
         )
 
     if not args.skip_placenta:
@@ -409,33 +515,27 @@ def main() -> None:
         all_summaries += run_placenta(
             args.placenta_csv, args.output_dir,
             args.complications, args.n_trials,
+            sig_analytes_dir=sig_dir,
         )
 
     if all_summaries:
         rows = []
         for s in all_summaries:
-            row = {
-                "tissue":    s["tissue"],
-                "timepoint": s["timepoint"],
-                "outcome":   s["outcome"],
-                "n_train":   s["n_train"],
-                "n_val":     s["n_val"],
-                "n_test":    s["n_test"],
-                "n_features_pretlasso": s["n_features_pretlasso"],
-                "n_features_postlasso": s["n_features_postlasso"],
-                "best_model_val":       s["best_model_val"],
-                "best_val_pr_auc":      round(s["best_val_pr_auc"], 4),
-            }
             for model_name, metrics in s["test_metrics"].items():
-                for metric_name, val in metrics.items():
-                    row[f"{model_name}_{metric_name}"] = round(val, 4)
-            rows.append(row)
+                row = {
+                    "tissue":    s["tissue"],
+                    "timepoint": s["timepoint"],
+                    "model":     model_name,
+                }
+                row.update({k: round(v, 4) for k, v in metrics.items()})
+                rows.append(row)
+
+        os.makedirs(args.output_dir, exist_ok=True)
 
         summary_df = pd.DataFrame(rows)
-        out_path   = os.path.join(args.output_dir, "all_results_summary.csv")
-        os.makedirs(args.output_dir, exist_ok=True)
-        summary_df.to_csv(out_path, index=False)
-        logger.info("Aggregate summary saved → %s", out_path)
+        csv_path   = os.path.join(args.output_dir, "all_results_summary.csv")
+        summary_df.to_csv(csv_path, index=False)
+        logger.info("Aggregate summary saved → %s", csv_path)
 
     logger.info("Binary classifier pipeline complete.")
 
