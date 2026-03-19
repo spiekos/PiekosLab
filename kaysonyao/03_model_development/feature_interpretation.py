@@ -3,25 +3,25 @@ Feature interpretation for the best binary classifier at each (tissue, timepoint
 
 Three methods applied to the best model selected by test PR-AUC:
 
-  1. Gini / coefficient importance   – model-native weights (coef_ or
+  1. Gini / coefficient importance  - model-native weights (coef_ or
                                        feature_importances_), ranked by |value|.
   2. SHAP (Shapley Additive Explanations)
-       - TreeExplainer  for RF / XGBoost (exact, no background required)
-       - LinearExplainer for LogisticRegression
-       - KernelExplainer for SVM
+      - TreeExplainer  for RF / XGBoost (exact, no background required)
+      - LinearExplainer for LogisticRegression
+      - KernelExplainer for SVM
        Background size: 100 samples first; upgraded to 1000 if no error.
   3. LIME (Local Interpretable Model-agnostic Explanations)
-       - num_samples tuned via Spearman stability across [100, 500, 1000, 2000, 5000].
-       - Picks smallest num_samples with mean ρ ≥ 0.95 vs the highest setting.
+      - num_samples tuned via Spearman stability across [100, 500, 1000, 2000, 5000].
+      - Picks smallest num_samples with mean rho >= 0.95 vs the highest setting.
 
-Loads pre-saved artifacts from binary_classifier.py — no model reconstruction:
-    {ModelName}.joblib       → fitted model
-    scaler.joblib            → fitted RobustScaler (train+val)
-    X_trainval_scaled.csv    → scaled training+validation features
-    X_test_scaled.csv        → scaled test features
-    y_test.csv               → test labels
-    lasso_selected_features.csv → feature names
-    all_results_summary.csv  → best model per (tissue, timepoint) by test PR-AUC
+Loads pre-saved artifacts from binary_classifier.py - no model reconstruction:
+    {ModelName}.joblib      -> fitted model
+    scaler.joblib           -> fitted RobustScaler (train+val)
+    X_trainval_scaled.csv   -> scaled training+validation features
+    X_test_scaled.csv       -> scaled test features
+    y_test.csv              -> test labels
+    lasso_selected_features.csv -> feature names
+    all_results_summary.csv -> best model per (tissue, timepoint) by test PR-AUC
 
 Usage
 -----
@@ -29,10 +29,10 @@ Usage
 
     # Optional flags:
     python 03_model_development/feature_interpretation.py \\
-        --binary-results-dir 04_results_and_figures/models/binary \\
-        --timepoints A B C     \\
-        --shap-bg-start 100    \\
-        --shap-bg-max   1000
+       --binary-results-dir 04_results_and_figures/models/binary \\
+       --timepoints A B C     \\
+       --shap-bg-start 100    \\
+       --shap-bg-max   1000
 """
 
 import os
@@ -60,7 +60,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
 # ---------------------------------------------------------------------------
 # 1. Gini / coefficient importance
 # ---------------------------------------------------------------------------
@@ -73,7 +72,6 @@ def compute_gini_importance(model, feature_names: list) -> pd.Series:
     else:
         return pd.Series(dtype=float)
     return pd.Series(vals, index=feature_names, name="importance")
-
 
 def plot_gini(importance: pd.Series, title: str, output_path: str, top_n: int = 30):
     idx  = importance.abs().nlargest(top_n).index
@@ -91,7 +89,6 @@ def plot_gini(importance: pd.Series, title: str, output_path: str, top_n: int = 
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
-
 # ---------------------------------------------------------------------------
 # 2. SHAP
 # ---------------------------------------------------------------------------
@@ -99,7 +96,7 @@ def plot_gini(importance: pd.Series, title: str, output_path: str, top_n: int = 
 def _extract_shap_matrix(shap_result, n_features: int) -> np.ndarray:
     """Normalise any SHAP output format to (n_samples, n_features)."""
     vals = shap_result.values if hasattr(shap_result, "values") else shap_result
-    if isinstance(vals, list):          # KernelExplainer → [class0, class1]
+    if isinstance(vals, list):          # KernelExplainer -> [class0, class1]
         vals = vals[1] if len(vals) == 2 else vals[0]
     vals = np.array(vals)
     if vals.ndim == 3 and vals.shape[2] == 2:   # TreeExplainer binary (n, f, 2)
@@ -108,7 +105,6 @@ def _extract_shap_matrix(shap_result, n_features: int) -> np.ndarray:
         vals = vals.reshape(1, -1)
     assert vals.shape[1] == n_features
     return vals
-
 
 def run_shap(
     model,
@@ -150,19 +146,19 @@ def run_shap(
                 result = explainer(X_df)
         return _extract_shap_matrix(result, n_features)
 
-    # Try bg_start; upgrade to bg_max on success
+    # Try bg_max first; fall back to bg_start if it fails (single computation)
     shap_matrix, final_bg = None, bg_start
-    for n_bg in sorted({bg_start, bg_max}):
+    for n_bg in sorted({bg_start, bg_max}, reverse=True):
         try:
             shap_matrix = _compute(n_bg)
             final_bg    = n_bg
             logger.info("  SHAP: success at n=%d", n_bg)
-        except Exception as exc:
-            logger.warning("  SHAP: failed at n=%d — %s", n_bg, exc)
             break
+        except Exception as exc:
+            logger.warning("  SHAP: failed at n=%d - %s", n_bg, exc)
 
     if shap_matrix is None:
-        logger.error("  SHAP: all attempts failed — skipping.")
+        logger.error("  SHAP: all attempts failed - skipping.")
         return None
 
     mean_abs = pd.Series(np.abs(shap_matrix).mean(axis=0),
@@ -195,73 +191,57 @@ def run_shap(
 
     return mean_abs
 
-
 # ---------------------------------------------------------------------------
-# 3. LIME — num_samples stability tuning
+# 3. LIME - num_samples stability tuning
 # ---------------------------------------------------------------------------
 
 def _lime_explain(lime_exp, predict_fn, inst: np.ndarray,
-                  feature_names: list, ns: int) -> np.ndarray:
-    n = len(feature_names)
-    feat_idx = {f: i for i, f in enumerate(feature_names)}
+                  feat_idx: dict, n_features: int, ns: int) -> np.ndarray:
+    """Explain one instance. feat_idx and n_features are precomputed by the caller."""
     exp = lime_exp.explain_instance(inst, predict_fn,
-                                    num_features=n, num_samples=ns, labels=(1,))
-    vec = np.zeros(n)
+                                    num_features=n_features, num_samples=ns, labels=(1,))
+    vec = np.zeros(n_features)
     for fname, w in exp.as_list(label=1):
         if fname in feat_idx:
             vec[feat_idx[fname]] = w
     return vec
 
-
 def _lime_tune(lime_exp, predict_fn, X_test_sc: np.ndarray,
-               feature_names: list, candidates: list) -> int:
-    probe_idx = np.linspace(0, len(X_test_sc) - 1,
-                            min(3, len(X_test_sc)), dtype=int)
-    ns_max  = max(candidates)
-    refs    = [_lime_explain(lime_exp, predict_fn, X_test_sc[i],
-                             feature_names, ns_max) for i in probe_idx]
-
-    for ns in sorted(candidates):
-        corrs = []
-        for i, ref in zip(probe_idx, refs):
-            w = _lime_explain(lime_exp, predict_fn, X_test_sc[i], feature_names, ns)
-            r, _ = spearmanr(np.abs(w), np.abs(ref))
-            if not np.isnan(r):
-                corrs.append(r)
-        mean_r = np.mean(corrs) if corrs else 0.0
-        logger.info("  LIME stability: num_samples=%5d  ρ=%.3f", ns, mean_r)
-        if mean_r >= 0.95:
-            logger.info("  LIME: chosen num_samples=%d", ns)
-            return ns
-
-    logger.warning("  LIME: no candidate reached ρ≥0.95 — using max=%d", ns_max)
-    return ns_max
-
-
-def _plot_stability_curve(lime_exp, predict_fn, X_test_sc, feature_names,
-                          candidates, chosen_ns, output_path):
+               feat_idx: dict, n_features: int,
+               candidates: list) -> tuple:
+    """Tune num_samples via Spearman rho stability. Returns (chosen_ns, probe_idx, refs, rhos)."""
     probe_idx = np.linspace(0, len(X_test_sc) - 1,
                             min(3, len(X_test_sc)), dtype=int)
     ns_max = max(candidates)
     refs   = [_lime_explain(lime_exp, predict_fn, X_test_sc[i],
-                            feature_names, ns_max) for i in probe_idx]
+                            feat_idx, n_features, ns_max) for i in probe_idx]
     rhos   = []
     for ns in sorted(candidates):
-        c = []
+        corrs = []
         for i, ref in zip(probe_idx, refs):
-            w = _lime_explain(lime_exp, predict_fn, X_test_sc[i], feature_names, ns)
+            w = _lime_explain(lime_exp, predict_fn, X_test_sc[i], feat_idx, n_features, ns)
             r, _ = spearmanr(np.abs(w), np.abs(ref))
             if not np.isnan(r):
-                c.append(r)
-        rhos.append(np.mean(c) if c else np.nan)
+                corrs.append(r)
+        mean_r = np.mean(corrs) if corrs else 0.0
+        rhos.append(mean_r)
+        logger.info("  LIME stability: num_samples=%5d  rho=%.3f", ns, mean_r)
+        if mean_r >= 0.95:
+            logger.info("  LIME: chosen num_samples=%d", ns)
+            return ns, probe_idx, refs, rhos
 
+    logger.warning("  LIME: no candidate reached rho>=0.95 - using max=%d", ns_max)
+    return ns_max, probe_idx, refs, rhos
+
+def _plot_stability_curve(candidates, rhos, chosen_ns, output_path):
+    """Plot LIME stability curve from precomputed rhos (no LIME re-runs)."""
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.plot(sorted(candidates), rhos, marker="o", color="#2ca02c")
-    ax.axhline(0.95, color="gray", linestyle="--", lw=0.8, label="ρ = 0.95")
+    ax.axhline(0.95, color="gray", linestyle="--", lw=0.8, label="rho = 0.95")
     ax.axvline(chosen_ns, color="red", linestyle="--", lw=0.8,
                label=f"chosen = {chosen_ns}")
     ax.set_xlabel("num_samples")
-    ax.set_ylabel("Mean Spearman ρ")
+    ax.set_ylabel("Mean Spearman rho")
     ax.set_title("LIME stability across num_samples", fontsize=10)
     ax.legend(fontsize=8)
     ax.set_ylim([0, 1.05])
@@ -269,7 +249,6 @@ def _plot_stability_curve(lime_exp, predict_fn, X_test_sc, feature_names,
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
-
 
 def run_lime(
     model,
@@ -283,7 +262,8 @@ def run_lime(
         candidates = [100, 500, 1000, 2000, 5000]
 
     os.makedirs(output_dir, exist_ok=True)
-    n = len(feature_names)
+    n        = len(feature_names)
+    feat_idx = {f: i for i, f in enumerate(feature_names)}   # precomputed once
 
     lime_exp   = LimeTabularExplainer(
         training_data=X_trainval_sc,
@@ -295,17 +275,19 @@ def run_lime(
     )
     predict_fn = model.predict_proba
 
-    tuned_ns = _lime_tune(lime_exp, predict_fn, X_test_sc, feature_names, candidates)
+    tuned_ns, _, _, rhos = _lime_tune(
+        lime_exp, predict_fn, X_test_sc, feat_idx, n, candidates
+    )
 
-    logger.info("  LIME: explaining %d test samples (num_samples=%d) …",
+    logger.info("  LIME: explaining %d test samples (num_samples=%d) ...",
                 len(X_test_sc), tuned_ns)
     weight_matrix = np.zeros((len(X_test_sc), n))
     for i, inst in enumerate(X_test_sc):
         try:
             weight_matrix[i] = _lime_explain(lime_exp, predict_fn,
-                                             inst, feature_names, tuned_ns)
+                                             inst, feat_idx, n, tuned_ns)
         except Exception as exc:
-            logger.warning("  LIME: sample %d failed — %s", i, exc)
+            logger.warning("  LIME: sample %d failed - %s", i, exc)
 
     mean_abs = pd.Series(np.abs(weight_matrix).mean(axis=0),
                          index=feature_names, name="mean_abs_lime"
@@ -326,11 +308,9 @@ def run_lime(
     fig.savefig(os.path.join(output_dir, "lime_bar.png"), dpi=150, bbox_inches="tight")
     plt.close(fig)
 
-    _plot_stability_curve(lime_exp, predict_fn, X_test_sc, feature_names,
-                          candidates, tuned_ns,
+    _plot_stability_curve(candidates, rhos, tuned_ns,
                           output_path=os.path.join(output_dir, "lime_stability.png"))
     return mean_abs
-
 
 # ---------------------------------------------------------------------------
 # Combined panel plot
@@ -360,7 +340,6 @@ def plot_combined(gini, shap_vals, lime_vals, title, output_path, top_n=20):
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
-
 # ---------------------------------------------------------------------------
 # Per-(tissue, timepoint) driver
 # ---------------------------------------------------------------------------
@@ -370,7 +349,7 @@ def interpret_one(tissue, timepoint, results_dir, output_dir,
     tag = f"[{tissue.upper()} {timepoint}]"
     logger.info("%s Best model: %s", tag, best_model_name)
 
-    # ── load artifacts ─────────────────────────────────────────────────────
+    # load artifacts
     def _load(fname):
         p = os.path.join(results_dir, fname)
         if not os.path.exists(p):
@@ -384,7 +363,7 @@ def interpret_one(tissue, timepoint, results_dir, output_dir,
         X_test_sc     = pd.read_csv(_load("X_test_scaled.csv"),     index_col=0).values
         y_test        = pd.read_csv(_load("y_test.csv"), index_col=0).squeeze()
     except FileNotFoundError as exc:
-        logger.warning("%s Missing artifact %s — skipping. Re-run binary_classifier.py first.", tag, exc)
+        logger.warning("%s Missing artifact %s - skipping. Re-run binary_classifier.py first.", tag, exc)
         return
 
     logger.info("%s  trainval=%d  test=%d  features=%d",
@@ -392,36 +371,35 @@ def interpret_one(tissue, timepoint, results_dir, output_dir,
 
     os.makedirs(output_dir, exist_ok=True)
 
-    # ── 1. Gini ────────────────────────────────────────────────────────────
-    logger.info("%s  Gini …", tag)
+    # 1. Gini
+    logger.info("%s  Gini ...", tag)
     gini = compute_gini_importance(model, feature_names)
     if not gini.empty:
         gini.sort_values(key=lambda s: s.abs(), ascending=False).to_csv(
             os.path.join(output_dir, "gini_importance.csv"), header=True)
         plot_gini(gini,
-                  title=f"Gini/Coef — {best_model_name} | {tissue} {timepoint}",
+                  title=f"Gini/Coef - {best_model_name} | {tissue} {timepoint}",
                   output_path=os.path.join(output_dir, "gini_importance.png"))
     else:
         logger.warning("%s  Model has no Gini/coef_ attribute.", tag)
 
-    # ── 2. SHAP ────────────────────────────────────────────────────────────
-    logger.info("%s  SHAP (bg_start=%d, bg_max=%d) …", tag, bg_start, bg_max)
+    # 2. SHAP
+    logger.info("%s  SHAP (bg_start=%d, bg_max=%d) ...", tag, bg_start, bg_max)
     shap_result = run_shap(model, best_model_name,
                            X_trainval_sc, X_test_sc, feature_names,
                            output_dir, bg_start=bg_start, bg_max=bg_max)
 
-    # ── 3. LIME ────────────────────────────────────────────────────────────
-    logger.info("%s  LIME (stability tuning) …", tag)
+    # 3. LIME
+    logger.info("%s  LIME (stability tuning) ...", tag)
     lime_result = run_lime(model, X_trainval_sc, X_test_sc,
                            feature_names, output_dir)
 
-    # ── Combined panel ─────────────────────────────────────────────────────
+    # Combined panel
     plot_combined(gini if not gini.empty else None, shap_result, lime_result,
                   title=f"{best_model_name} | {tissue} {timepoint}",
                   output_path=os.path.join(output_dir, "combined_importance.png"))
 
-    logger.info("%s  Done → %s", tag, output_dir)
-
+    logger.info("%s  Done -> %s", tag, output_dir)
 
 # ---------------------------------------------------------------------------
 # Main
@@ -459,14 +437,14 @@ def main():
     for (t, tp), m in best.items():
         pr = summary.loc[(summary.tissue == t) & (summary.timepoint == tp)
                          & (summary.model == m), "pr_auc"].values[0]
-        logger.info("  %-10s %-5s → %-20s (%.4f)", t, tp, m, pr)
+        logger.info("  %-10s %-5s -> %-20s (%.4f)", t, tp, m, pr)
 
     if not args.skip_plasma:
         logger.info("=== PLASMA ===")
         for tp in args.timepoints:
             bm = best.get(("plasma", tp))
             if bm is None:
-                logger.warning("Plasma %s not in summary — skipping.", tp)
+                logger.warning("Plasma %s not in summary - skipping.", tp)
                 continue
             interpret_one(
                 tissue="plasma", timepoint=tp,
@@ -481,7 +459,7 @@ def main():
         logger.info("=== PLACENTA ===")
         bm = best.get(("placenta", "all"))
         if bm is None:
-            logger.warning("Placenta not in summary — skipping.")
+            logger.warning("Placenta not in summary - skipping.")
         else:
             interpret_one(
                 tissue="placenta", timepoint="all",
@@ -491,7 +469,6 @@ def main():
                 bg_start=args.shap_bg_start,
                 bg_max=args.shap_bg_max,
             )
-
 
 if __name__ == "__main__":
     main()

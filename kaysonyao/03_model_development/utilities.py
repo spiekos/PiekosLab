@@ -3,8 +3,8 @@ Shared utilities for the DP3 proteomics modeling pipeline.
 
 Provides data loading, feature selection (LASSO), train/val/test splitting,
 cross-validation helpers, and evaluation metrics used by:
-  - binary_classifier.py   (per-outcome binary models)
-  - multilabel_classifier.py  (joint multi-label models)
+ - binary_classifier.py   (per-outcome binary models)
+ - multilabel_classifier.py  (joint multi-label models)
 
 Run all scripts from the project root so that os.getcwd() resolves correctly.
 """
@@ -21,7 +21,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.linear_model import LogisticRegressionCV, MultiTaskElasticNetCV
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold, KFold
@@ -55,7 +55,6 @@ TIMEPOINTS = ["A", "B", "C", "D", "E"]
 N_CV_FOLDS = 10
 RANDOM_STATE = 42
 
-
 # ---------------------------------------------------------------------------
 # Data helpers
 # ---------------------------------------------------------------------------
@@ -63,7 +62,6 @@ RANDOM_STATE = 42
 def load_data(path: str) -> pd.DataFrame:
     """Load cleaned wide-format CSV (index=SampleID, columns=metadata+analytes)."""
     return pd.read_csv(path, index_col=0)
-
 
 def load_significant_analytes(
     diff_results_csv: str,
@@ -79,13 +77,13 @@ def load_significant_analytes(
     handles effect-size filtering.
 
     Parameters
-    ----------
+   ----------
     diff_results_csv : path to ``<comparison>_differential_results.csv``
     q_threshold      : FDR q-value cut-off (default 0.05)
 
     Returns
     -------
-    list of str  — analyte names, or None if the file is missing / no analytes
+    list of str  - analyte names, or None if the file is missing / no analytes
                    survive the threshold.
     """
     if not os.path.exists(diff_results_csv):
@@ -93,25 +91,21 @@ def load_significant_analytes(
     df = pd.read_csv(diff_results_csv, index_col=0)
     if df.empty or "q_value" not in df.columns:
         return None
-    # Exclude analytes that were not tested (excluded flag) or have NaN q-values
     tested = df[df.get("excluded", pd.Series(False, index=df.index)) == False]
     sig = tested[tested["q_value"] < q_threshold]
     analytes = sig.index.dropna().tolist()
     return analytes if analytes else None
 
-
 def get_analyte_columns(df: pd.DataFrame) -> list:
     """Return analyte (feature) column names by excluding metadata columns."""
     return [c for c in df.columns if c not in _METADATA_COLS]
 
-
 def normalise_group_labels(df: pd.DataFrame) -> pd.DataFrame:
-    """Normalise Group column capitalisation (e.g. 'sptb' → 'sPTB')."""
+    """Normalise Group column capitalisation (e.g. 'sptb' -> 'sPTB')."""
     df = df.copy()
     if "Group" in df.columns:
         df["Group"] = df["Group"].replace(_GROUP_LABEL_MAP)
     return df
-
 
 # ---------------------------------------------------------------------------
 # Train / val / test split
@@ -137,13 +131,12 @@ def split_70_15_15(
     X_train, X_tmp, y_train, y_tmp = train_test_split(
         X, y, test_size=0.30, random_state=random_state, stratify=strat
     )
-    # 15/30 = 0.50 of the remaining 30 % → each 15 %
+    # 15/30 = 0.50 of the remaining 30 % -> each 15 %
     strat_tmp = y_tmp if stratify else None
     X_val, X_test, y_val, y_test = train_test_split(
         X_tmp, y_tmp, test_size=0.50, random_state=random_state, stratify=strat_tmp
     )
     return X_train, X_val, X_test, y_train, y_val, y_test
-
 
 # ---------------------------------------------------------------------------
 # Correlation matrix
@@ -184,8 +177,7 @@ def plot_correlation_matrix(
     plt.tight_layout()
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
-    logger.info("Correlation matrix saved → %s", output_path)
-
+    logger.info("Correlation matrix saved -> %s", output_path)
 
 # ---------------------------------------------------------------------------
 # LASSO feature selection
@@ -198,42 +190,31 @@ def lasso_feature_selection_binary(
     random_state: int = RANDOM_STATE,
 ) -> list:
     """
-    Elastic-net logistic regression CV to select features for a binary outcome.
-
-    l1_ratios grid: [0.1, 0.5, 0.7, 0.9, 1.0]
-      - ratio=1.0 → pure L1 (maximum sparsity)
-      - ratio<1.0 → elastic net (L1+L2 mix): tends to retain correlated feature
-        groups instead of picking just one representative, yielding more features.
-    CV picks the ratio + C combination that maximises held-out log-loss.
-
-    Returns
-    -------
-    selected_features : list of str
-        Column names with non-zero coefficients at the CV-chosen (ratio, C).
+    Elastic-net logistic regression CV (l1_ratios 0.1..1.0) for binary feature selection.
+    Returns column names with non-zero coefficients at the CV-chosen (ratio, C).
     """
     scaler = RobustScaler()
     X_scaled = scaler.fit_transform(X_train)
 
-    # Guard: need at least 2 classes in training — skips if split left 0 positives
     vc = pd.Series(y_train).value_counts()
     if len(vc) < 2:
         logger.warning(
-            "ElasticNet binary: training set has only one class (%s) — returning no features.",
+            "ElasticNet binary: training set has only one class (%s) - returning no features.",
             vc.index[0],
         )
         return []
 
-    # Cap folds to smallest class size — avoids ValueError when n < n_splits
+    # Cap folds to smallest class size - avoids ValueError when n < n_splits
     min_class = int(vc.min())
     cv_actual = max(2, min(cv, min_class))
     if cv_actual < cv:
         logger.warning(
-            "ElasticNet binary: capping CV folds %d → %d (small class).", cv, cv_actual
+            "ElasticNet binary: capping CV folds %d -> %d (small class).", cv, cv_actual
         )
 
     enet = LogisticRegressionCV(
-        l1_ratios=(0.1, 0.5, 0.7, 0.9, 1.0),  # search over L1/L2 mix ratios
-        solver="saga",                           # required for elastic-net in sklearn ≥ 1.8
+        l1_ratios=(0.1, 0.5, 0.7, 0.9, 1.0),
+        solver="saga",                           # required for elastic-net in sklearn >= 1.8
         cv=cv_actual,
         class_weight="balanced",
         random_state=random_state,
@@ -252,7 +233,6 @@ def lasso_feature_selection_binary(
         len(selected), X_train.shape[1], chosen_ratio,
     )
     return selected
-
 
 def lasso_feature_selection_multilabel(
     X_train: pd.DataFrame,
@@ -275,7 +255,7 @@ def lasso_feature_selection_multilabel(
     X_scaled = scaler.fit_transform(X_train)
 
     enet = MultiTaskElasticNetCV(
-        l1_ratio=(0.1, 0.5, 0.7, 0.9, 1.0),  # search over L1/L2 mix ratios
+        l1_ratio=(0.1, 0.5, 0.7, 0.9, 1.0),
         cv=cv,
         random_state=random_state,
         max_iter=10000,
@@ -283,8 +263,7 @@ def lasso_feature_selection_multilabel(
     )
     enet.fit(X_scaled, Y_train.values)
 
-    # coef_ shape: (n_outcomes, n_features); keep features non-zero in ANY outcome
-    coef = enet.coef_   # shape (n_outcomes, n_features)
+    coef = enet.coef_   # (n_outcomes, n_features)
     mask = np.any(coef != 0.0, axis=0)
     selected = [col for col, m in zip(X_train.columns, mask) if m]
     logger.info(
@@ -292,7 +271,6 @@ def lasso_feature_selection_multilabel(
         len(selected), X_train.shape[1], enet.l1_ratio_,
     )
     return selected
-
 
 # ---------------------------------------------------------------------------
 # Base models
@@ -335,7 +313,6 @@ def get_base_models_binary(random_state: int = RANDOM_STATE) -> dict:
         ),
     }
 
-
 def get_base_models_multilabel(random_state: int = RANDOM_STATE) -> dict:
     """
     Return base estimators for multi-label classification (wrapped in MultiOutputClassifier).
@@ -369,7 +346,6 @@ def get_base_models_multilabel(random_state: int = RANDOM_STATE) -> dict:
             random_state=random_state,
         ),
     }
-
 
 # ---------------------------------------------------------------------------
 # Optuna TPE hyperparameter tuning
@@ -417,11 +393,10 @@ def _build_model_from_trial_binary(trial, model_name: str, y_train, random_state
     else:
         raise ValueError(f"Unknown model name: {model_name}")
 
-
 def _build_model_from_trial_multilabel(trial, model_name: str, random_state: int):
     """Instantiate a base model from an Optuna trial for multi-label classification.
 
-    No scale_pos_weight for XGBoost — each output head is fitted independently
+    No scale_pos_weight for XGBoost - each output head is fitted independently
     by MultiOutputClassifier so class imbalance is handled per-outcome at fit time.
     """
     if model_name == "LogisticRegression":
@@ -461,7 +436,6 @@ def _build_model_from_trial_multilabel(trial, model_name: str, random_state: int
         )
     else:
         raise ValueError(f"Unknown model name: {model_name}")
-
 
 def tune_hyperparams_binary(
     model_name: str,
@@ -512,7 +486,6 @@ def tune_hyperparams_binary(
     )
     return study.best_params, float(study.best_value)
 
-
 def tune_hyperparams_multilabel(
     model_name: str,
     X_train: pd.DataFrame,
@@ -557,7 +530,7 @@ def tune_hyperparams_multilabel(
             try:
                 scores.append(average_precision_score(Y_val.iloc[:, i], prob))
             except ValueError:
-                pass   # only one class in val — skip this outcome
+                pass   # only one class in val - skip this outcome
         return float(np.mean(scores)) if scores else 0.0
 
     study = optuna.create_study(
@@ -572,19 +545,13 @@ def tune_hyperparams_multilabel(
     )
     return study.best_params, float(study.best_value)
 
-
 def build_tuned_model_binary(
     model_name: str,
     params: dict,
     y_train=None,
     random_state: int = RANDOM_STATE,
 ):
-    """
-    Instantiate a fresh (unfitted) binary model from tuned hyperparameters.
-
-    y_train is used to compute XGBoost scale_pos_weight; pass the set the model
-    will actually be trained on (e.g. train+val for final evaluation).
-    """
+    """Instantiate a fresh binary model from tuned hyperparameters. y_train sets XGBoost scale_pos_weight."""
     if model_name == "LogisticRegression":
         return LogisticRegression(
             C=params["C"], l1_ratio=0, solver="lbfgs",
@@ -625,7 +592,6 @@ def build_tuned_model_binary(
     else:
         raise ValueError(f"Unknown model name: {model_name}")
 
-
 def build_tuned_model_multilabel(
     model_name: str,
     params: dict,
@@ -637,7 +603,6 @@ def build_tuned_model_multilabel(
     from sklearn.multioutput import MultiOutputClassifier
     base = build_tuned_model_binary(model_name, params, y_train=None, random_state=random_state)
     return MultiOutputClassifier(base, n_jobs=-1)
-
 
 # ---------------------------------------------------------------------------
 # Cross-validation
@@ -653,13 +618,13 @@ def run_cv_binary(
     """
     Stratified k-fold CV for a binary model.
 
-    Returns dict with mean ± std for PR-AUC, ROC-AUC, F1, Accuracy.
+    Returns dict with mean +/- std for PR-AUC, ROC-AUC, F1, Accuracy.
     """
-    # Cap folds to smallest class size — avoids ValueError when n < n_splits
+    # Cap folds to smallest class size - avoids ValueError when n < n_splits
     min_class = int(y.value_counts().min())
     n_splits_actual = max(2, min(n_splits, min_class))
     if n_splits_actual < n_splits:
-        logger.warning("CV binary: capping folds %d → %d (small class).", n_splits, n_splits_actual)
+        logger.warning("CV binary: capping folds %d -> %d (small class).", n_splits, n_splits_actual)
 
     cv = StratifiedKFold(n_splits=n_splits_actual, shuffle=True, random_state=random_state)
     scaler = RobustScaler()
@@ -693,7 +658,6 @@ def run_cv_binary(
         "acc_std":      float(np.std(accs)),
     }
 
-
 def run_cv_multilabel(
     model,
     X: pd.DataFrame,
@@ -704,7 +668,7 @@ def run_cv_multilabel(
     """
     K-fold CV for a multi-label model.
 
-    Returns dict with mean ± std PR-AUC and ROC-AUC averaged across outcomes,
+    Returns dict with mean +/- std PR-AUC and ROC-AUC averaged across outcomes,
     plus per-outcome breakdown.
     """
     cv = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
@@ -722,7 +686,7 @@ def run_cv_multilabel(
         X_val_s = scaler.transform(X_val)
 
         model.fit(X_tr_s, Y_tr)
-        Y_prob = model.predict_proba(X_val_s)   # list of arrays for MultiOutputClassifier
+        Y_prob = model.predict_proba(X_val_s)
 
         for i, outcome in enumerate(outcome_names):
             prob = Y_prob[i][:, 1] if hasattr(Y_prob[i], "shape") else Y_prob[:, i]
@@ -754,7 +718,6 @@ def run_cv_multilabel(
     }
     return results
 
-
 # ---------------------------------------------------------------------------
 # Final evaluation on held-out test set
 # ---------------------------------------------------------------------------
@@ -766,10 +729,7 @@ def evaluate_binary(
     X_test: pd.DataFrame,
     y_test: pd.Series,
 ) -> dict:
-    """
-    Fit on training data (already feature-selected + scaled) and evaluate on test set.
-    Returns a dict of evaluation metrics.
-    """
+    """Fit on training data and evaluate on test set. Returns metrics dict."""
     scaler = RobustScaler()
     X_tr_s  = scaler.fit_transform(X_train)
     X_te_s  = scaler.transform(X_test)
@@ -787,7 +747,6 @@ def evaluate_binary(
         "f1":        float(f1_score(y_test, y_pred, zero_division=0)),
     }, scaler
 
-
 def evaluate_multilabel(
     model,
     X_train: pd.DataFrame,
@@ -795,10 +754,7 @@ def evaluate_multilabel(
     X_test: pd.DataFrame,
     Y_test: pd.DataFrame,
 ) -> dict:
-    """
-    Fit on training data and evaluate multi-label model on test set.
-    Returns per-outcome and macro-averaged metrics.
-    """
+    """Fit on training data and evaluate multi-label model on test set."""
     scaler = RobustScaler()
     X_tr_s  = scaler.fit_transform(X_train)
     X_te_s  = scaler.transform(X_test)
@@ -821,7 +777,6 @@ def evaluate_multilabel(
             "f1":        float(f1_score(Y_test.iloc[:, i], pred, zero_division=0)),
         }
     return results, scaler
-
 
 # ---------------------------------------------------------------------------
 # Plotting helpers
@@ -849,7 +804,6 @@ def plot_pr_curve(
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
-
 def plot_roc_curve(
     y_true: np.ndarray,
     y_score: np.ndarray,
@@ -872,7 +826,6 @@ def plot_roc_curve(
     plt.tight_layout()
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
-
 
 def save_feature_importance(
     feature_names: list,
@@ -898,198 +851,3 @@ def save_feature_importance(
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
-
-# ---------------------------------------------------------------------------
-# Formatted Excel results table
-# ---------------------------------------------------------------------------
-
-def generate_results_table(
-    summary_df: pd.DataFrame,
-    output_path: str,
-    title: str = "Classification Results",
-    subtitle: str = "Test-set metrics  ·  All models  ·  ★ = best PR-AUC per timepoint  ·  Random baseline PR-AUC ≈ 0.56",
-) -> None:
-    """
-    Write a formatted Excel results table from a long-format summary DataFrame.
-
-    The DataFrame must contain columns:
-        tissue, timepoint, model, pr_auc, roc_auc, f1, accuracy, precision, recall
-
-    For multi-label results, an optional 'outcome' column is supported; when
-    present, an extra column is inserted between 'timepoint' and 'model'.
-
-    Parameters
-    ----------
-    summary_df  : long-format results DataFrame (one row per tissue/timepoint/[outcome]/model)
-    output_path : destination .xlsx file path
-    title       : main title shown in row 1
-    subtitle    : subtitle shown in row 2
-    """
-    try:
-        import openpyxl
-        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-        from openpyxl.utils import get_column_letter
-    except ImportError:
-        logger.warning("openpyxl not installed — skipping Excel table generation.")
-        return
-
-    FONT        = "Arial"
-    C_NAVY      = "1F4E79"
-    C_BLUE      = "2E75B6"
-    C_BEST      = "E2EFDA"
-    C_ALT       = "F5F5F5"
-    C_WHITE     = "FFFFFF"
-    C_DARK      = "1F1F1F"
-    C_GREEN_TXT = "375623"
-    C_RED_TXT   = "C00000"
-
-    has_outcome = "outcome" in summary_df.columns
-
-    METRICS       = ["pr_auc", "roc_auc", "f1", "accuracy", "precision", "recall"]
-    METRIC_LABELS = ["PR-AUC", "ROC-AUC", "F1", "Accuracy", "Precision", "Recall"]
-
-    MODEL_DISPLAY = {
-        "LogisticRegression": "Logistic Regression",
-        "RandomForest":       "Random Forest",
-        "XGBoost":            "XGBoost",
-        "SVM":                "SVM",
-    }
-
-    col_defs = [("Timepoint", 12)]
-    if has_outcome:
-        col_defs.append(("Outcome", 10))
-    col_defs.append(("Model", 22))
-    for lbl in METRIC_LABELS:
-        col_defs.append((lbl, 9))
-    col_defs.append(("Best?", 7))
-    N_COLS   = len(col_defs)
-    last_col = get_column_letter(N_COLS)
-
-    def _fill(c):
-        return PatternFill("solid", fgColor=c)
-
-    def _border():
-        s = Side(style="thin", color="D0D0D0")
-        return Border(left=s, right=s, top=s, bottom=s)
-
-    group_cols = ["tissue", "timepoint"] + (["outcome"] if has_outcome else [])
-    best_idx   = summary_df.groupby(group_cols)["pr_auc"].idxmax()
-    df         = summary_df.copy()
-    df["is_best"] = False
-    df.loc[best_idx, "is_best"] = True
-
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Results"
-    ws.freeze_panes = "D4" if has_outcome else "C4"
-
-    for ci, (_, w) in enumerate(col_defs, 1):
-        ws.column_dimensions[get_column_letter(ci)].width = w
-
-    ws.merge_cells(f"A1:{last_col}1")
-    ws["A1"] = title
-    ws["A1"].font      = Font(name=FONT, size=12, bold=True, color=C_WHITE)
-    ws["A1"].fill      = _fill(C_NAVY)
-    ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
-    ws.row_dimensions[1].height = 22
-
-    ws.merge_cells(f"A2:{last_col}2")
-    ws["A2"] = subtitle
-    ws["A2"].font      = Font(name=FONT, size=9, italic=True, color="595959")
-    ws["A2"].fill      = _fill("EBF3FB")
-    ws["A2"].alignment = Alignment(horizontal="center", vertical="center")
-    ws.row_dimensions[2].height = 15
-
-    ws.row_dimensions[3].height = 22
-    for ci, (label, _) in enumerate(col_defs, 1):
-        c = ws.cell(row=3, column=ci, value=label)
-        c.font      = Font(name=FONT, size=9, bold=True, color=C_WHITE)
-        c.fill      = _fill(C_NAVY)
-        c.alignment = Alignment(horizontal="center", vertical="center")
-        c.border    = _border()
-
-    TISSUES = [t for t in ["plasma", "placenta"] if t in df["tissue"].values]
-    cur     = 4
-
-    for tissue_key in TISSUES:
-        sub = df[df["tissue"] == tissue_key]
-
-        ws.merge_cells(f"A{cur}:{last_col}{cur}")
-        c = ws.cell(row=cur, column=1, value=f"  {tissue_key.upper()}")
-        c.font      = Font(name=FONT, size=10, bold=True, color=C_WHITE)
-        c.fill      = _fill(C_BLUE)
-        c.alignment = Alignment(horizontal="left", vertical="center")
-        for ci in range(2, N_COLS + 1):
-            ws.cell(row=cur, column=ci).fill = _fill(C_BLUE)
-        ws.row_dimensions[cur].height = 18
-        cur += 1
-
-        for tp in sub["timepoint"].unique():
-            tp_sub        = sub[sub["timepoint"] == tp]
-            groups        = tp_sub.groupby("outcome") if has_outcome else [(None, tp_sub)]
-            first_tp_row  = True
-
-            for grp_key, grp_rows in groups:
-                first_out_row = True
-                for i, (_, r) in enumerate(grp_rows.iterrows()):
-                    bg = C_BEST if r["is_best"] else (C_ALT if i % 2 == 0 else C_WHITE)
-                    ws.row_dimensions[cur].height = 15
-                    ci = 1
-
-                    c = ws.cell(row=cur, column=ci, value=tp if first_tp_row else "")
-                    c.font = Font(name=FONT, size=10, bold=first_tp_row, color=C_DARK)
-                    c.fill = _fill(bg); c.alignment = Alignment(horizontal="center", vertical="center"); c.border = _border()
-                    ci += 1
-
-                    if has_outcome:
-                        c = ws.cell(row=cur, column=ci, value=grp_key if first_out_row else "")
-                        c.font = Font(name=FONT, size=10, color=C_DARK)
-                        c.fill = _fill(bg); c.alignment = Alignment(horizontal="center", vertical="center"); c.border = _border()
-                        ci += 1
-
-                    star    = "★  " if r["is_best"] else "    "
-                    display = MODEL_DISPLAY.get(r["model"], r["model"])
-                    c = ws.cell(row=cur, column=ci, value=star + display)
-                    c.font = Font(name=FONT, size=10, bold=r["is_best"], color=C_DARK)
-                    c.fill = _fill(bg); c.alignment = Alignment(horizontal="left", vertical="center"); c.border = _border()
-                    ci += 1
-
-                    for met in METRICS:
-                        val = r[met]
-                        c   = ws.cell(row=cur, column=ci, value=val)
-                        c.number_format = "0.000"
-                        c.fill = _fill(bg); c.alignment = Alignment(horizontal="center", vertical="center"); c.border = _border()
-                        if met == "pr_auc":
-                            txt = C_GREEN_TXT if val >= 0.80 else (C_RED_TXT if val < 0.60 else C_DARK)
-                            c.font = Font(name=FONT, size=10, bold=r["is_best"], color=txt)
-                        else:
-                            c.font = Font(name=FONT, size=10, bold=r["is_best"], color=C_DARK)
-                        ci += 1
-
-                    c = ws.cell(row=cur, column=ci, value="★" if r["is_best"] else "")
-                    c.font = Font(name=FONT, size=10, bold=True, color=C_GREEN_TXT)
-                    c.fill = _fill(bg); c.alignment = Alignment(horizontal="center", vertical="center"); c.border = _border()
-
-                    cur += 1
-                    first_tp_row  = False
-                    first_out_row = False
-
-            for ci in range(1, N_COLS + 1):
-                ws.cell(row=cur, column=ci).fill = _fill("E0E0E0")
-            ws.row_dimensions[cur].height = 2
-            cur += 1
-
-        cur += 1
-
-    cur += 1
-    ws.merge_cells(f"A{cur}:{last_col}{cur}")
-    ws.cell(row=cur, column=1,
-            value="★ Best model per timepoint (highest PR-AUC)  ·  "
-                  "Green PR-AUC ≥ 0.80  ·  Red PR-AUC < 0.60  ·  "
-                  "All metrics are test-set values on the held-out 15% split"
-    ).font = Font(name=FONT, size=8, italic=True, color="595959")
-    ws.row_dimensions[cur].height = 13
-
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    wb.save(output_path)
-    logger.info("Results table saved → %s", output_path)

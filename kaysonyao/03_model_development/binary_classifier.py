@@ -1,10 +1,10 @@
 """
 Binary classification pipeline for DP3 proteomics data.
 
-For each tissue (plasma / placenta) × timepoint, predict any pregnancy complication
+For each tissue (plasma / placenta) x timepoint, predict any pregnancy complication
 (Control=0 vs pooled Complication=1, where Complication = HDP + FGR + sPTB).
 
-Steps per tissue × timepoint:
+Steps per tissue x timepoint:
   1. Load cleaned data; label Control=0, any of HDP/FGR/sPTB=1 (Complication)
   2. 70 / 15 / 15 stratified train / val / test split
   3. Pearson correlation matrix of training features (saved as PNG)
@@ -75,11 +75,10 @@ from utilities import (
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s  %(levelname)-8s  %(name)s — %(message)s",
+    format="%(asctime)s  %(levelname)-8s  %(name)s - %(message)s",
     datefmt="%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -97,19 +96,18 @@ def _make_complication_labels(
     """
     keep = set(["Control"] + complications)
     mask = df["Group"].isin(keep)
-    sub  = df.loc[mask, "Group"].copy()
+    sub  = df.loc[mask, "Group"]
     y    = sub.isin(complications).astype(int)
     counts = y.value_counts()
     n_ctrl  = counts.get(0, 0)
     n_compl = counts.get(1, 0)
     if min(n_ctrl, n_compl) < 5:
         logger.warning(
-            "  Control=%d  Complication=%d — too few samples, skipping.", n_ctrl, n_compl
+            "  Control=%d  Complication=%d - too few samples, skipping.", n_ctrl, n_compl
         )
         return None
     logger.info("  Labels: Control=%d  Complication=%d", n_ctrl, n_compl)
     return y
-
 
 def _get_feature_importance(model_name: str, model) -> np.ndarray | None:
     """Extract feature importances or coefficients from a fitted model."""
@@ -119,6 +117,10 @@ def _get_feature_importance(model_name: str, model) -> np.ndarray | None:
         return model.feature_importances_
     return None
 
+def _class_dist(y: pd.Series) -> dict:
+    """Return Control/Complication counts for a label Series."""
+    vc = y.value_counts()
+    return {"control": int(vc.get(0, 0)), "complication": int(vc.get(1, 0))}
 
 # ---------------------------------------------------------------------------
 # Core per-dataset runner
@@ -140,7 +142,7 @@ def run_binary_pipeline(
     Hyperparameters are tuned via Optuna TPE using the val set (PR-AUC objective).
 
     Parameters
-    ----------
+   ----------
     sig_analytes : optional pre-filter list of analyte names from differential analysis.
                    When provided, only those columns are used as features.
                    If None or empty, all analyte columns are used (fallback).
@@ -149,7 +151,7 @@ def run_binary_pipeline(
     tag = f"[{tissue} | tp={timepoint} | Control vs Complication]"
     logger.info("%s Starting binary pipeline.", tag)
 
-    # ── 1. Build binary labels ─────────────────────────────────────────────
+    # 1. Build binary labels
     df = normalise_group_labels(df)
     y_all = _make_complication_labels(df, complications)
     if y_all is None:
@@ -162,7 +164,7 @@ def run_binary_pipeline(
         analyte_cols = [c for c in sig_analytes if c in df.columns]
         if not analyte_cols:
             logger.warning(
-                "%s None of the %d significant analytes found in dataset — "
+                "%s None of the %d significant analytes found in dataset - "
                 "falling back to all %d analytes.",
                 tag, len(sig_analytes), len(all_analyte_cols),
             )
@@ -174,17 +176,17 @@ def run_binary_pipeline(
             )
     else:
         logger.info(
-            "%s No significant analytes list — using all %d analytes.",
+            "%s No significant analytes list - using all %d analytes.",
             tag, len(all_analyte_cols),
         )
         analyte_cols = all_analyte_cols
 
     X_all = df.loc[y_all.index, analyte_cols]
 
-    # ── 2. 70 / 15 / 15 stratified split ──────────────────────────────────
+    # 2. 70 / 15 / 15 stratified split
     X_train, X_val, X_test, y_train, y_val, y_test = split_70_15_15(X_all, y_all)
     logger.info(
-        "%s Split — train=%d  val=%d  test=%d",
+        "%s Split - train=%d  val=%d  test=%d",
         tag, len(y_train), len(y_val), len(y_test),
     )
 
@@ -198,17 +200,17 @@ def run_binary_pipeline(
     split_df["label"] = y_all.loc[split_df["SampleID"]].values
     split_df.to_csv(os.path.join(output_dir, "sample_splits.csv"), index=False)
 
-    # ── 3. Correlation matrix (training features, pre-LASSO) ──────────────
+    # 3. Correlation matrix (training features, pre-LASSO)
     plot_correlation_matrix(
         X_train,
         output_path=os.path.join(output_dir, "correlation_matrix_pretrain.png"),
-        title=f"Pearson correlation — {tissue} {timepoint} (Control vs Complication)",
+        title=f"Pearson correlation - {tissue} {timepoint} (Control vs Complication)",
     )
 
-    # ── 4. LASSO feature selection on training set ─────────────────────────
+    # 4. LASSO feature selection on training set
     selected_features = lasso_feature_selection_binary(X_train, y_train)
     if len(selected_features) == 0:
-        logger.warning("%s LASSO selected 0 features — skipping.", tag)
+        logger.warning("%s LASSO selected 0 features - skipping.", tag)
         return None
 
     pd.Series(selected_features, name="feature").to_csv(
@@ -222,17 +224,17 @@ def run_binary_pipeline(
     plot_correlation_matrix(
         X_train_sel,
         output_path=os.path.join(output_dir, "correlation_matrix_postlasso.png"),
-        title=f"Pearson correlation (LASSO) — {tissue} {timepoint} (Control vs Complication)",
+        title=f"Pearson correlation (LASSO) - {tissue} {timepoint} (Control vs Complication)",
     )
 
-    # ── 5. Optuna TPE tuning on val set ───────────────────────────────────
+    # 5. Optuna TPE tuning on val set
     model_names = list(get_base_models_binary().keys())
-    logger.info("%s Optuna tuning (%d trials/model) …", tag, n_trials)
+    logger.info("%s Optuna tuning (%d trials/model) ...", tag, n_trials)
 
     tuned_params     = {}
     tuned_val_scores = {}
     for model_name in model_names:
-        logger.info("%s  Tuning %s …", tag, model_name)
+        logger.info("%s  Tuning %s ...", tag, model_name)
         best_params, best_val_pr = tune_hyperparams_binary(
             model_name, X_train_sel, y_train, X_val_sel, y_val,
             n_trials=n_trials, random_state=RANDOM_STATE,
@@ -240,18 +242,17 @@ def run_binary_pipeline(
         tuned_params[model_name]     = best_params
         tuned_val_scores[model_name] = best_val_pr
 
-    # Persist tuned hyperparameters (JSON-serialisable; max_depth=None → null)
     with open(os.path.join(output_dir, "tuned_hyperparams.json"), "w") as fh:
         json.dump({"model_params": tuned_params, "val_pr_auc": tuned_val_scores}, fh, indent=2)
 
-    # ── 6. 10-fold CV on train set with tuned params ───────────────────────
+    # 6. 10-fold CV on train set with tuned params
     cv_results = {}
     for model_name in model_names:
         model  = build_tuned_model_binary(model_name, tuned_params[model_name], y_train)
         cv_res = run_cv_binary(model, X_train_sel, y_train)
         cv_results[model_name] = cv_res
         logger.info(
-            "%s  [CV] %-20s  PR-AUC=%.3f±%.3f  ROC-AUC=%.3f±%.3f",
+            "%s  [CV] %-20s  PR-AUC=%.3f+/-%.3f  ROC-AUC=%.3f+/-%.3f",
             tag, model_name,
             cv_res["pr_auc_mean"],  cv_res["pr_auc_std"],
             cv_res["roc_auc_mean"], cv_res["roc_auc_std"],
@@ -261,7 +262,7 @@ def run_binary_pipeline(
     cv_df.index.name = "model"
     cv_df.to_csv(os.path.join(output_dir, "cv_results.csv"))
 
-    # ── 7. Best model by val PR-AUC, retrained on train+val → test ────────
+    # 7. Best model by val PR-AUC, retrained on train+val -> test
     best_model_name = max(tuned_val_scores, key=lambda m: tuned_val_scores[m])
     logger.info(
         "%s Best model (val PR-AUC=%.4f): %s",
@@ -287,12 +288,12 @@ def run_binary_pipeline(
             y_prob = model.predict_proba(X_te_s)[:, 1]
             plot_pr_curve(
                 y_test.values, y_prob,
-                title=f"PR curve — {model_name} | {tissue} {timepoint} (Control vs Complication)",
+                title=f"PR curve - {model_name} | {tissue} {timepoint} (Control vs Complication)",
                 output_path=os.path.join(output_dir, f"{model_name}_pr_curve.png"),
             )
             plot_roc_curve(
                 y_test.values, y_prob,
-                title=f"ROC curve — {model_name} | {tissue} {timepoint} (Control vs Complication)",
+                title=f"ROC curve - {model_name} | {tissue} {timepoint} (Control vs Complication)",
                 output_path=os.path.join(output_dir, f"{model_name}_roc_curve.png"),
             )
 
@@ -301,7 +302,7 @@ def run_binary_pipeline(
             save_feature_importance(
                 selected_features, fi,
                 output_path=os.path.join(output_dir, f"{model_name}_feature_importance.png"),
-                title=f"Top features — {model_name} | {tissue} {timepoint}",
+                title=f"Top features - {model_name} | {tissue} {timepoint}",
             )
 
         logger.info(
@@ -327,10 +328,6 @@ def run_binary_pipeline(
     test_df.index.name = "model"
     test_df.to_csv(os.path.join(output_dir, "test_results.csv"))
 
-    def _class_dist(y: pd.Series) -> dict:
-        vc = y.value_counts()
-        return {"control": int(vc.get(0, 0)), "complication": int(vc.get(1, 0))}
-
     summary = {
         "tissue":                tissue,
         "timepoint":             timepoint,
@@ -355,7 +352,6 @@ def run_binary_pipeline(
     logger.info("%s Done.", tag)
     return summary
 
-
 # ---------------------------------------------------------------------------
 # Plasma / placenta loops
 # ---------------------------------------------------------------------------
@@ -374,11 +370,11 @@ def run_plasma(
             plasma_dir, f"proteomics_plasma_formatted_suffix_{tp}.csv"
         )
         if not os.path.exists(csv_path):
-            logger.warning("Plasma timepoint %s CSV not found: %s — skipping.", tp, csv_path)
+            logger.warning("Plasma timepoint %s CSV not found: %s - skipping.", tp, csv_path)
             continue
 
         df = load_data(csv_path)
-        logger.info("Plasma timepoint %s loaded: %d samples × %d cols", tp, *df.shape)
+        logger.info("Plasma timepoint %s loaded: %d samples x %d cols", tp, *df.shape)
 
         sig_analytes = None
         if sig_analytes_dir:
@@ -391,7 +387,7 @@ def run_plasma(
                 logger.info("Plasma tp=%s: %d significant analytes loaded (q<0.05).", tp, len(sig_analytes))
             else:
                 logger.warning(
-                    "Plasma tp=%s: no significant analytes found (q<0.05) — using all features.", tp
+                    "Plasma tp=%s: no significant analytes found (q<0.05) - using all features.", tp
                 )
 
         out_dir = os.path.join(output_root, "plasma", tp)
@@ -402,7 +398,6 @@ def run_plasma(
             summaries.append(result)
     return summaries
 
-
 def run_placenta(
     placenta_csv: str,
     output_root: str,
@@ -411,11 +406,11 @@ def run_placenta(
     sig_analytes_dir: str | None = None,
 ) -> list:
     if not os.path.exists(placenta_csv):
-        logger.warning("Placenta CSV not found: %s — skipping.", placenta_csv)
+        logger.warning("Placenta CSV not found: %s - skipping.", placenta_csv)
         return []
 
     df = load_data(placenta_csv)
-    logger.info("Placenta loaded: %d samples × %d cols", *df.shape)
+    logger.info("Placenta loaded: %d samples x %d cols", *df.shape)
 
     sig_analytes = None
     if sig_analytes_dir:
@@ -427,14 +422,13 @@ def run_placenta(
         if sig_analytes:
             logger.info("Placenta: %d significant analytes loaded (q<0.05).", len(sig_analytes))
         else:
-            logger.warning("Placenta: no significant analytes found (q<0.05) — using all features.")
+            logger.warning("Placenta: no significant analytes found (q<0.05) - using all features.")
 
     out_dir = os.path.join(output_root, "placenta", "all")
     result  = run_binary_pipeline(
         df, "placenta", "all", complications, out_dir, n_trials, sig_analytes
     )
     return [result] if result else []
-
 
 # ---------------------------------------------------------------------------
 # CLI
@@ -490,7 +484,6 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--skip-placenta", action="store_true")
     return p
 
-
 def main() -> None:
     args = _build_parser().parse_args()
     logger.info("Pooling as Complication: %s", args.complications)
@@ -499,7 +492,7 @@ def main() -> None:
     if sig_dir:
         logger.info("Significant analytes dir: %s", sig_dir)
     else:
-        logger.info("No significant analytes filter — using all features.")
+        logger.info("No significant analytes filter - using all features.")
     all_summaries = []
 
     if not args.skip_plasma:
@@ -535,10 +528,9 @@ def main() -> None:
         summary_df = pd.DataFrame(rows)
         csv_path   = os.path.join(args.output_dir, "all_results_summary.csv")
         summary_df.to_csv(csv_path, index=False)
-        logger.info("Aggregate summary saved → %s", csv_path)
+        logger.info("Aggregate summary saved -> %s", csv_path)
 
     logger.info("Binary classifier pipeline complete.")
-
 
 if __name__ == "__main__":
     main()

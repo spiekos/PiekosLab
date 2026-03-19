@@ -1,9 +1,9 @@
 """
 Multi-label classification pipeline for DP3 proteomics data.
 
-For each tissue (plasma / placenta) × timepoint, jointly predict HDP / FGR / sPTB:
+For each tissue (plasma / placenta) x timepoint, jointly predict HDP / FGR / sPTB:
   1. Load cleaned data; keep Control + all complication rows; encode as binary columns
-  2. 70 / 15 / 15 train / val / test split (no stratification — multi-label)
+  2. 70 / 15 / 15 train / val / test split (no stratification - multi-label)
   3. Pearson correlation matrix of training features (saved as PNG)
   4. Multi-task LASSO (MultiTaskLassoCV) for joint feature selection
   5. Optuna TPE hyperparameter tuning for each model: train on X_train, score
@@ -49,10 +49,8 @@ import pandas as pd
 # Local
 sys.path.insert(0, os.path.dirname(__file__))
 from utilities import (
-    _METADATA_COLS,
     OUTCOMES,
     TIMEPOINTS,
-    N_CV_FOLDS,
     RANDOM_STATE,
     load_data,
     load_significant_analytes,
@@ -72,11 +70,10 @@ from utilities import (
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s  %(levelname)-8s  %(name)s — %(message)s",
+    format="%(asctime)s  %(levelname)-8s  %(name)s - %(message)s",
     datefmt="%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -88,26 +85,25 @@ def _build_multilabel_targets(
 ) -> pd.DataFrame | None:
     """
     Construct a binary indicator DataFrame (0/1) for each outcome column.
-    Rows whose Group is not in {Control} ∪ outcomes are dropped.
+    Rows whose Group is not in {Control} union outcomes are dropped.
 
     Returns None if any outcome has fewer than 5 positive samples.
     """
     keep_groups = set(["Control"] + outcomes)
     mask = df["Group"].isin(keep_groups)
-    sub  = df.loc[mask].copy()
+    sub  = df.loc[mask]
 
     Y = pd.DataFrame(index=sub.index)
     for outcome in outcomes:
         Y[outcome] = (sub["Group"] == outcome).astype(int)
         if Y[outcome].sum() < 5:
             logger.warning(
-                "Outcome '%s' has only %d positive samples — skipping tissue/timepoint.",
+                "Outcome '%s' has only %d positive samples - skipping tissue/timepoint.",
                 outcome, Y[outcome].sum()
             )
             return None
 
     return Y
-
 
 # ---------------------------------------------------------------------------
 # Core per-dataset runner
@@ -129,7 +125,7 @@ def run_multilabel_pipeline(
     (macro-average PR-AUC across all outcomes as the objective).
 
     Parameters
-    ----------
+   ----------
     df           : cleaned wide-format DataFrame
     tissue       : 'plasma' or 'placenta'
     timepoint    : timepoint label, e.g. 'A'; use 'all' for placenta
@@ -141,14 +137,14 @@ def run_multilabel_pipeline(
                    If None or empty, all analyte columns are used (fallback).
 
     Returns
-    -------
+   -------
     summary dict or None if skipped
     """
     os.makedirs(output_dir, exist_ok=True)
     tag = f"[{tissue} | tp={timepoint} | multilabel]"
     logger.info("%s Starting multi-label pipeline. Outcomes: %s", tag, outcomes)
 
-    # ── 1. Build multi-label targets ───────────────────────────────────────
+    # 1. Build multi-label targets
     df = normalise_group_labels(df)
     Y_all = _build_multilabel_targets(df, outcomes)
     if Y_all is None:
@@ -160,7 +156,7 @@ def run_multilabel_pipeline(
         analyte_cols = [c for c in sig_analytes if c in df.columns]
         if not analyte_cols:
             logger.warning(
-                "%s None of the %d significant analytes found in dataset — "
+                "%s None of the %d significant analytes found in dataset - "
                 "falling back to all %d analytes.",
                 tag, len(sig_analytes), len(all_analyte_cols),
             )
@@ -172,14 +168,14 @@ def run_multilabel_pipeline(
             )
     else:
         logger.info(
-            "%s No significant analytes list — using all %d analytes.",
+            "%s No significant analytes list - using all %d analytes.",
             tag, len(all_analyte_cols),
         )
         analyte_cols = all_analyte_cols
 
     X_all = df.loc[Y_all.index, analyte_cols]
 
-    # ── 2. 70 / 15 / 15 split (stratify on first outcome as proxy) ────────
+    # 2. 70 / 15 / 15 split (stratify on first outcome as proxy)
     strat_col = Y_all.iloc[:, 0]
     X_train, X_val, X_test, y_train_s, y_val_s, y_test_s = split_70_15_15(
         X_all, strat_col, stratify=True
@@ -189,11 +185,10 @@ def run_multilabel_pipeline(
     Y_test  = Y_all.loc[X_test.index]
 
     logger.info(
-        "%s Split — train=%d  val=%d  test=%d",
+        "%s Split - train=%d  val=%d  test=%d",
         tag, len(Y_train), len(Y_val), len(Y_test)
     )
 
-    # Save split indices
     split_rows = (
         [{"SampleID": i, "split": "train"} for i in X_train.index]
         + [{"SampleID": i, "split": "val"}   for i in X_val.index]
@@ -203,17 +198,17 @@ def run_multilabel_pipeline(
         os.path.join(output_dir, "sample_splits.csv"), index=False
     )
 
-    # ── 3. Correlation matrix (pre-LASSO) ─────────────────────────────────
+    # 3. Correlation matrix (pre-LASSO)
     plot_correlation_matrix(
         X_train,
         output_path=os.path.join(output_dir, "correlation_matrix_pretrain.png"),
-        title=f"Pearson correlation — {tissue} {timepoint} (multi-label)",
+        title=f"Pearson correlation - {tissue} {timepoint} (multi-label)",
     )
 
-    # ── 4. Multi-task LASSO feature selection ─────────────────────────────
+    # 4. Multi-task LASSO feature selection
     selected_features = lasso_feature_selection_multilabel(X_train, Y_train)
     if len(selected_features) == 0:
-        logger.warning("%s Multi-task LASSO selected 0 features — skipping.", tag)
+        logger.warning("%s Multi-task LASSO selected 0 features - skipping.", tag)
         return None
 
     pd.Series(selected_features, name="feature").to_csv(
@@ -228,17 +223,17 @@ def run_multilabel_pipeline(
     plot_correlation_matrix(
         X_train_sel,
         output_path=os.path.join(output_dir, "correlation_matrix_postlasso.png"),
-        title=f"Pearson correlation (LASSO features) — {tissue} {timepoint} (multi-label)",
+        title=f"Pearson correlation (LASSO features) - {tissue} {timepoint} (multi-label)",
     )
 
-    # ── 5. Optuna TPE tuning on val set ───────────────────────────────────
+    # 5. Optuna TPE tuning on val set
     model_names = ["LogisticRegression", "RandomForest", "XGBoost", "SVM"]
-    logger.info("%s Optuna tuning (%d trials/model) …", tag, n_trials)
+    logger.info("%s Optuna tuning (%d trials/model) ...", tag, n_trials)
 
     tuned_params     = {}
     tuned_val_scores = {}
     for model_name in model_names:
-        logger.info("%s  Tuning %s …", tag, model_name)
+        logger.info("%s  Tuning %s ...", tag, model_name)
         best_params, best_val_macro_pr = tune_hyperparams_multilabel(
             model_name, X_train_sel, Y_train, X_val_sel, Y_val,
             n_trials=n_trials, random_state=RANDOM_STATE,
@@ -246,14 +241,13 @@ def run_multilabel_pipeline(
         tuned_params[model_name]     = best_params
         tuned_val_scores[model_name] = best_val_macro_pr
 
-    # Persist tuned hyperparameters
     with open(os.path.join(output_dir, "tuned_hyperparams.json"), "w") as fh:
         json.dump(
             {"model_params": tuned_params, "val_macro_pr_auc": tuned_val_scores},
             fh, indent=2,
         )
 
-    # ── 6. 10-fold CV on train set with tuned params ───────────────────────
+    # 6. 10-fold CV on train set with tuned params
     cv_results = {}
     for model_name in model_names:
         model  = build_tuned_model_multilabel(model_name, tuned_params[model_name])
@@ -265,7 +259,6 @@ def run_multilabel_pipeline(
             tag, model_name, macro["pr_auc_mean"], macro["roc_auc_mean"],
         )
 
-    # Save CV results — one row per (model, outcome)
     cv_rows = []
     for model_name, res in cv_results.items():
         for key, vals in res.items():
@@ -280,7 +273,7 @@ def run_multilabel_pipeline(
         os.path.join(output_dir, "cv_results.csv"), index=False
     )
 
-    # ── 7. Best model by val macro PR-AUC; retrained on train+val → test ──
+    # 7. Best model by val macro PR-AUC; retrained on train+val -> test
     best_model_name = max(tuned_val_scores, key=lambda m: tuned_val_scores[m])
     logger.info(
         "%s Best model (val macro PR-AUC=%.4f): %s",
@@ -306,14 +299,14 @@ def run_multilabel_pipeline(
                 prob = Y_prob[i][:, 1] if hasattr(Y_prob[i], "shape") else Y_prob[:, i]
                 plot_pr_curve(
                     Y_test[outcome].values, prob,
-                    title=f"PR — {model_name} | {tissue} {timepoint} | {outcome}",
+                    title=f"PR - {model_name} | {tissue} {timepoint} | {outcome}",
                     output_path=os.path.join(
                         output_dir, f"{model_name}_{outcome}_pr_curve.png"
                     ),
                 )
                 plot_roc_curve(
                     Y_test[outcome].values, prob,
-                    title=f"ROC — {model_name} | {tissue} {timepoint} | {outcome}",
+                    title=f"ROC - {model_name} | {tissue} {timepoint} | {outcome}",
                     output_path=os.path.join(
                         output_dir, f"{model_name}_{outcome}_roc_curve.png"
                     ),
@@ -330,7 +323,7 @@ def run_multilabel_pipeline(
                 output_path=os.path.join(
                     output_dir, f"{model_name}_feature_importance_avg.png"
                 ),
-                title=f"Avg feature importance — {model_name} | {tissue} {timepoint}",
+                title=f"Avg feature importance - {model_name} | {tissue} {timepoint}",
             )
         elif hasattr(estimators[0], "coef_"):
             avg_coef = np.mean(
@@ -341,7 +334,7 @@ def run_multilabel_pipeline(
                 output_path=os.path.join(
                     output_dir, f"{model_name}_feature_importance_avg.png"
                 ),
-                title=f"Avg coefficient — {model_name} | {tissue} {timepoint}",
+                title=f"Avg coefficient - {model_name} | {tissue} {timepoint}",
             )
 
         # Log per-outcome test metrics
@@ -383,7 +376,6 @@ def run_multilabel_pipeline(
     logger.info("%s Done.", tag)
     return summary
 
-
 # ---------------------------------------------------------------------------
 # Plasma loop
 # ---------------------------------------------------------------------------
@@ -403,11 +395,11 @@ def run_plasma(
             f"proteomics_plasma_formatted_suffix_{tp}.csv",
         )
         if not os.path.exists(csv_path):
-            logger.warning("Plasma timepoint %s CSV not found: %s — skipping.", tp, csv_path)
+            logger.warning("Plasma timepoint %s CSV not found: %s - skipping.", tp, csv_path)
             continue
 
         df = load_data(csv_path)
-        logger.info("Plasma timepoint %s loaded: %d samples × %d cols", tp, *df.shape)
+        logger.info("Plasma timepoint %s loaded: %d samples x %d cols", tp, *df.shape)
 
         sig_analytes = None
         if sig_analytes_dir:
@@ -420,7 +412,7 @@ def run_plasma(
                 logger.info("Plasma tp=%s: %d significant analytes loaded (q<0.05).", tp, len(sig_analytes))
             else:
                 logger.warning(
-                    "Plasma tp=%s: no significant analytes found (q<0.05) — using all features.", tp
+                    "Plasma tp=%s: no significant analytes found (q<0.05) - using all features.", tp
                 )
 
         out_dir = os.path.join(output_root, "plasma", tp)
@@ -431,7 +423,6 @@ def run_plasma(
             summaries.append(result)
 
     return summaries
-
 
 # ---------------------------------------------------------------------------
 # Placenta loop
@@ -445,11 +436,11 @@ def run_placenta(
     sig_analytes_dir: str | None = None,
 ) -> list:
     if not os.path.exists(placenta_csv):
-        logger.warning("Placenta CSV not found: %s — skipping.", placenta_csv)
+        logger.warning("Placenta CSV not found: %s - skipping.", placenta_csv)
         return []
 
     df = load_data(placenta_csv)
-    logger.info("Placenta loaded: %d samples × %d cols", *df.shape)
+    logger.info("Placenta loaded: %d samples x %d cols", *df.shape)
 
     sig_analytes = None
     if sig_analytes_dir:
@@ -461,14 +452,13 @@ def run_placenta(
         if sig_analytes:
             logger.info("Placenta: %d significant analytes loaded (q<0.05).", len(sig_analytes))
         else:
-            logger.warning("Placenta: no significant analytes found (q<0.05) — using all features.")
+            logger.warning("Placenta: no significant analytes found (q<0.05) - using all features.")
 
     out_dir = os.path.join(output_root, "placenta", "all")
     result  = run_multilabel_pipeline(
         df, "placenta", "all", outcomes, out_dir, n_trials, sig_analytes
     )
     return [result] if result else []
-
 
 # ---------------------------------------------------------------------------
 # CLI
@@ -536,7 +526,6 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--skip-placenta", action="store_true", help="Skip placenta analysis.")
     return p
 
-
 def main() -> None:
     args = _build_parser().parse_args()
     logger.info("Outcomes modelled jointly: %s", args.outcomes)
@@ -545,7 +534,7 @@ def main() -> None:
     if sig_dir:
         logger.info("Significant analytes dir: %s", sig_dir)
     else:
-        logger.info("No significant analytes filter — using all features.")
+        logger.info("No significant analytes filter - using all features.")
     all_summaries = []
 
     if not args.skip_plasma:
@@ -588,10 +577,9 @@ def main() -> None:
         summary_df = pd.DataFrame(rows)
         out_path   = os.path.join(args.output_dir, "all_results_summary.csv")
         summary_df.to_csv(out_path, index=False)
-        logger.info("Aggregate summary saved → %s", out_path)
+        logger.info("Aggregate summary saved -> %s", out_path)
 
     logger.info("Multi-label classifier pipeline complete.")
-
 
 if __name__ == "__main__":
     main()
