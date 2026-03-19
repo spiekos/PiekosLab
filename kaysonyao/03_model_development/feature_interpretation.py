@@ -159,7 +159,7 @@ def run_shap(
             logger.info("  SHAP: success at n=%d", n_bg)
         except Exception as exc:
             logger.warning("  SHAP: failed at n=%d — %s", n_bg, exc)
-            break   # don't try larger if smaller already failed
+            break
 
     if shap_matrix is None:
         logger.error("  SHAP: all attempts failed — skipping.")
