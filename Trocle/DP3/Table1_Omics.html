@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<style>body{background-color:white;}</style>
+<style type="text/css">.Rtable1 table, table.Rtable1 {font-family: "Arial", Arial, sans-serif;font-size: 10pt;border-collapse: collapse;padding: 0px;margin: 0px;}.Rtable1 td {white-space:nowrap;}.Rtable1 th, .Rtable1 td {border: 0;text-align: center;padding: 0.5ex 1.5ex;margin: 0px;}.Rtable1 thead>tr:first-child>th {border-top: 2pt solid black;}.Rtable1 thead>tr:last-child>th {border-bottom: 1pt solid black;}.Rtable1 tbody>tr:last-child>td {border-bottom: 2pt solid black;}.Rtable1 th.grouplabel {padding-left: 0;padding-right: 0;}.Rtable1 th.grouplabel>div {margin-left: 1.5ex;margin-right: 1.5ex;border-bottom: 1pt solid black;}.Rtable1 th.grouplabel:last-child>div {margin-right: 0;}.Rtable1 .rowlabel {text-align: left;padding-left: 2.5ex;}.Rtable1 .firstrow.rowlabel {padding-left: 0.5ex;font-weight: bold;}.Rtable1-zebra tbody tr:nth-child(odd) {background-color: #eee;}table.Rtable1-times {font-family: "Times New Roman", Times, serif;}.Rtable1-shade th {background-color: #ccc;}.Rtable1-grid th, .Rtable1-grid td {border-left: 1pt solid black;border-right: 1pt solid black;}.Rtable1-grid thead>tr:first-child>th {border-top: 1pt solid black;}.Rtable1-grid thead>tr:last-child>th {border-bottom: 1pt solid black;}.Rtable1-grid tbody>tr:last-child>td {border-bottom: 1pt solid black;}.Rtable1-grid .firstrow, .Rtable1-grid .firstrow ~ td {border-top: 1pt solid black;}.Rtable1-grid th.grouplabel>div {margin-left: 0;margin-right: 0;border-bottom: 0;}.Rtable1-center td.rowlabel, .Rtable1-center td.firstrow.rowlabel {font-weight: bold;text-align: center;padding: 0.5ex 1.5ex;}.Rtable1 .Rtable1-footnote {font-size: smaller;padding: 0px;margin: 0px;text-align: left;white-space: normal;}</style>
+
+</head>
+<body>
+<div class="Rtable1"><table class="Rtable1">
+<thead>
+<tr>
+<th class="rowlabel firstrow lastrow"></th>
+<th class="firstrow lastrow"><span class="stratlabel">Control<br /><span class="stratn">(N=56)</span></span></th>
+<th class="firstrow lastrow"><span class="stratlabel">FGR<br /><span class="stratn">(N=20)</span></span></th>
+<th class="firstrow lastrow"><span class="stratlabel">HDP<br /><span class="stratn">(N=42)</span></span></th>
+<th class="firstrow lastrow"><span class="stratlabel">sPTB<br /><span class="stratn">(N=15)</span></span></th>
+<th class="firstrow lastrow"><span class="stratlabel">P value</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Birthweight (g) - Catagorical</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">&lt;2500</td>
+<td>1 (1.8%)</td>
+<td>11 (55.0%)</td>
+<td>9 (21.4%)</td>
+<td>9 (60.0%)</td>
+<td>&lt;0.001</td>
+</tr>
+<tr>
+<td class="rowlabel">2500–2999</td>
+<td>10 (17.9%)</td>
+<td>8 (40.0%)</td>
+<td>11 (26.2%)</td>
+<td>4 (26.7%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">3000–3499</td>
+<td>19 (33.9%)</td>
+<td>0 (0%)</td>
+<td>12 (28.6%)</td>
+<td>2 (13.3%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">≥3500</td>
+<td class="lastrow">26 (46.4%)</td>
+<td class="lastrow">1 (5.0%)</td>
+<td class="lastrow">10 (23.8%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Birthweight (g) - Continuous</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Median [Q1, Q3]</td>
+<td class="lastrow">3400 [3050, 3740]</td>
+<td class="lastrow">2470 [2290, 2590]</td>
+<td class="lastrow">3060 [2590, 3480]</td>
+<td class="lastrow">2340 [1610, 2730]</td>
+<td class="lastrow">&lt;0.001</td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Gestational age (weeks)</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">&lt;34</td>
+<td>0 (0%)</td>
+<td>0 (0%)</td>
+<td>6 (14.3%)</td>
+<td>6 (40.0%)</td>
+<td>&lt;0.001</td>
+</tr>
+<tr>
+<td class="rowlabel">34–36.9</td>
+<td>4 (7.1%)</td>
+<td>4 (20.0%)</td>
+<td>14 (33.3%)</td>
+<td>9 (60.0%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">37–39.9</td>
+<td>40 (71.4%)</td>
+<td>16 (80.0%)</td>
+<td>20 (47.6%)</td>
+<td>0 (0%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">≥40</td>
+<td class="lastrow">12 (21.4%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">2 (4.8%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Fetal Sex</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">Female</td>
+<td>21 (37.5%)</td>
+<td>9 (45.0%)</td>
+<td>19 (45.2%)</td>
+<td>6 (40.0%)</td>
+<td>0.867</td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Male</td>
+<td class="lastrow">35 (62.5%)</td>
+<td class="lastrow">11 (55.0%)</td>
+<td class="lastrow">23 (54.8%)</td>
+<td class="lastrow">9 (60.0%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Presence of Risk Factor</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">No</td>
+<td>40 (71.4%)</td>
+<td>11 (55.0%)</td>
+<td>17 (40.5%)</td>
+<td>10 (66.7%)</td>
+<td>0.019</td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Yes</td>
+<td class="lastrow">16 (28.6%)</td>
+<td class="lastrow">9 (45.0%)</td>
+<td class="lastrow">25 (59.5%)</td>
+<td class="lastrow">5 (33.3%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Maternal age (years)</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">18–24</td>
+<td>4 (7.1%)</td>
+<td>2 (10.0%)</td>
+<td>4 (9.5%)</td>
+<td>5 (33.3%)</td>
+<td>0.353</td>
+</tr>
+<tr>
+<td class="rowlabel">25–29</td>
+<td>13 (23.2%)</td>
+<td>6 (30.0%)</td>
+<td>13 (31.0%)</td>
+<td>2 (13.3%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">30–34</td>
+<td>23 (41.1%)</td>
+<td>8 (40.0%)</td>
+<td>16 (38.1%)</td>
+<td>8 (53.3%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">35–39</td>
+<td>11 (19.6%)</td>
+<td>3 (15.0%)</td>
+<td>8 (19.0%)</td>
+<td>0 (0%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">40+</td>
+<td>2 (3.6%)</td>
+<td>1 (5.0%)</td>
+<td>1 (2.4%)</td>
+<td>0 (0%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Missing</td>
+<td class="lastrow">3 (5.4%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Pregravid BMI</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">Underweight</td>
+<td>0 (0%)</td>
+<td>1 (5.0%)</td>
+<td>0 (0%)</td>
+<td>0 (0%)</td>
+<td>0.587</td>
+</tr>
+<tr>
+<td class="rowlabel">Normal</td>
+<td>21 (37.5%)</td>
+<td>5 (25.0%)</td>
+<td>12 (28.6%)</td>
+<td>5 (33.3%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">Overweight</td>
+<td>15 (26.8%)</td>
+<td>6 (30.0%)</td>
+<td>8 (19.0%)</td>
+<td>5 (33.3%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">Obese</td>
+<td>14 (25.0%)</td>
+<td>7 (35.0%)</td>
+<td>15 (35.7%)</td>
+<td>4 (26.7%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">Severely Obese</td>
+<td>6 (10.7%)</td>
+<td>1 (5.0%)</td>
+<td>6 (14.3%)</td>
+<td>1 (6.7%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Missing</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">1 (2.4%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Maternal Race</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">White</td>
+<td>49 (87.5%)</td>
+<td>16 (80.0%)</td>
+<td>33 (78.6%)</td>
+<td>11 (73.3%)</td>
+<td>0.525</td>
+</tr>
+<tr>
+<td class="rowlabel">Black</td>
+<td>4 (7.1%)</td>
+<td>3 (15.0%)</td>
+<td>8 (19.0%)</td>
+<td>3 (20.0%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">Asian</td>
+<td>0 (0%)</td>
+<td>0 (0%)</td>
+<td>1 (2.4%)</td>
+<td>0 (0%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Missing</td>
+<td class="lastrow">3 (5.4%)</td>
+<td class="lastrow">1 (5.0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">1 (6.7%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Maternal Ethnicity</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">Non-Hispanic</td>
+<td>49 (87.5%)</td>
+<td>20 (100%)</td>
+<td>40 (95.2%)</td>
+<td>13 (86.7%)</td>
+<td>0.236</td>
+</tr>
+<tr>
+<td class="rowlabel">Hispanic</td>
+<td>0 (0%)</td>
+<td>0 (0%)</td>
+<td>1 (2.4%)</td>
+<td>0 (0%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Missing</td>
+<td class="lastrow">7 (12.5%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">1 (2.4%)</td>
+<td class="lastrow">2 (13.3%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Smoking</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">Never</td>
+<td>45 (80.4%)</td>
+<td>12 (60.0%)</td>
+<td>32 (76.2%)</td>
+<td>10 (66.7%)</td>
+<td>NA</td>
+</tr>
+<tr>
+<td class="rowlabel">Quit</td>
+<td>9 (16.1%)</td>
+<td>5 (25.0%)</td>
+<td>7 (16.7%)</td>
+<td>2 (13.3%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">Yes</td>
+<td>2 (3.6%)</td>
+<td>3 (15.0%)</td>
+<td>3 (7.1%)</td>
+<td>3 (20.0%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Missing</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Gravida</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">Nulligravidity (0)</td>
+<td>0 (0%)</td>
+<td>0 (0%)</td>
+<td>0 (0%)</td>
+<td>0 (0%)</td>
+<td>NA</td>
+</tr>
+<tr>
+<td class="rowlabel">Low multigravidity (1–5)</td>
+<td>55 (98.2%)</td>
+<td>20 (100%)</td>
+<td>40 (95.2%)</td>
+<td>15 (100%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Grand multigravidity (≥6)</td>
+<td class="lastrow">1 (1.8%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">2 (4.8%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Parity</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">Nulliparity (0)</td>
+<td>22 (39.3%)</td>
+<td>5 (25.0%)</td>
+<td>15 (35.7%)</td>
+<td>7 (46.7%)</td>
+<td>0.779</td>
+</tr>
+<tr>
+<td class="rowlabel">Low multiparity (1–3)</td>
+<td>31 (55.4%)</td>
+<td>13 (65.0%)</td>
+<td>25 (59.5%)</td>
+<td>8 (53.3%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Grand multipara (≥4)</td>
+<td class="lastrow">3 (5.4%)</td>
+<td class="lastrow">2 (10.0%)</td>
+<td class="lastrow">2 (4.8%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Diabetes</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">No diabetes</td>
+<td>53 (94.6%)</td>
+<td>16 (80.0%)</td>
+<td>31 (73.8%)</td>
+<td>13 (86.7%)</td>
+<td>0.08</td>
+</tr>
+<tr>
+<td class="rowlabel">Gestational diabetes</td>
+<td>1 (1.8%)</td>
+<td>4 (20.0%)</td>
+<td>5 (11.9%)</td>
+<td>1 (6.7%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">Type I</td>
+<td>1 (1.8%)</td>
+<td>0 (0%)</td>
+<td>4 (9.5%)</td>
+<td>0 (0%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">Type II</td>
+<td>0 (0%)</td>
+<td>0 (0%)</td>
+<td>2 (4.8%)</td>
+<td>1 (6.7%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Missing</td>
+<td class="lastrow">1 (1.8%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Chronic Hypertension</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">No</td>
+<td>50 (89.3%)</td>
+<td>17 (85.0%)</td>
+<td>31 (73.8%)</td>
+<td>14 (93.3%)</td>
+<td>0.253</td>
+</tr>
+<tr>
+<td class="rowlabel">Yes</td>
+<td>5 (8.9%)</td>
+<td>3 (15.0%)</td>
+<td>11 (26.2%)</td>
+<td>1 (6.7%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Missing</td>
+<td class="lastrow">1 (1.8%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Labor Onset</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">Spontaneous</td>
+<td>20 (35.7%)</td>
+<td>6 (30.0%)</td>
+<td>8 (19.0%)</td>
+<td>12 (80.0%)</td>
+<td>&lt;0.001</td>
+</tr>
+<tr>
+<td class="rowlabel">Induced</td>
+<td>22 (39.3%)</td>
+<td>4 (20.0%)</td>
+<td>19 (45.2%)</td>
+<td>0 (0%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">PROM</td>
+<td>0 (0%)</td>
+<td>3 (15.0%)</td>
+<td>0 (0%)</td>
+<td>3 (20.0%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Missing</td>
+<td class="lastrow">14 (25.0%)</td>
+<td class="lastrow">7 (35.0%)</td>
+<td class="lastrow">15 (35.7%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Route of Delivery</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">Vaginal</td>
+<td>34 (60.7%)</td>
+<td>12 (60.0%)</td>
+<td>16 (38.1%)</td>
+<td>7 (46.7%)</td>
+<td>0.082</td>
+</tr>
+<tr>
+<td class="rowlabel">Cesarean</td>
+<td>16 (28.6%)</td>
+<td>8 (40.0%)</td>
+<td>23 (54.8%)</td>
+<td>5 (33.3%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Missing</td>
+<td class="lastrow">6 (10.7%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">3 (7.1%)</td>
+<td class="lastrow">3 (20.0%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">APGAR 1</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">0–3</td>
+<td>4 (7.1%)</td>
+<td>1 (5.0%)</td>
+<td>4 (9.5%)</td>
+<td>1 (6.7%)</td>
+<td>0.67</td>
+</tr>
+<tr>
+<td class="rowlabel">4–6</td>
+<td>3 (5.4%)</td>
+<td>3 (15.0%)</td>
+<td>4 (9.5%)</td>
+<td>3 (20.0%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">7–10</td>
+<td class="lastrow">49 (87.5%)</td>
+<td class="lastrow">16 (80.0%)</td>
+<td class="lastrow">34 (81.0%)</td>
+<td class="lastrow">11 (73.3%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">APGAR 5</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">0–3</td>
+<td>0 (0%)</td>
+<td>0 (0%)</td>
+<td>1 (2.4%)</td>
+<td>0 (0%)</td>
+<td>0.592</td>
+</tr>
+<tr>
+<td class="rowlabel">4–6</td>
+<td>2 (3.6%)</td>
+<td>2 (10.0%)</td>
+<td>4 (9.5%)</td>
+<td>2 (13.3%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">7–10</td>
+<td class="lastrow">54 (96.4%)</td>
+<td class="lastrow">18 (90.0%)</td>
+<td class="lastrow">37 (88.1%)</td>
+<td class="lastrow">13 (86.7%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Aspirin Use</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">&lt;14</td>
+<td>14 (25.0%)</td>
+<td>6 (30.0%)</td>
+<td>15 (35.7%)</td>
+<td>7 (46.7%)</td>
+<td>0.595</td>
+</tr>
+<tr>
+<td class="rowlabel">&lt;20</td>
+<td>9 (16.1%)</td>
+<td>1 (5.0%)</td>
+<td>6 (14.3%)</td>
+<td>1 (6.7%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">no</td>
+<td>33 (58.9%)</td>
+<td>12 (60.0%)</td>
+<td>19 (45.2%)</td>
+<td>7 (46.7%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">&lt;28</td>
+<td>0 (0%)</td>
+<td>1 (5.0%)</td>
+<td>1 (2.4%)</td>
+<td>0 (0%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">&gt;28</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">1 (2.4%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">ADI National Rank</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">Median [Q1, Q3]</td>
+<td>64.5 [47.0, 78.5]</td>
+<td>76.0 [60.0, 88.0]</td>
+<td>68.5 [51.8, 78.5]</td>
+<td>77.0 [57.0, 88.5]</td>
+<td>0.287</td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Missing</td>
+<td class="lastrow">4 (7.1%)</td>
+<td class="lastrow">1 (5.0%)</td>
+<td class="lastrow">2 (4.8%)</td>
+<td class="lastrow">1 (6.7%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Newborn Race</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">White</td>
+<td>36 (64.3%)</td>
+<td>15 (75.0%)</td>
+<td>26 (61.9%)</td>
+<td>10 (66.7%)</td>
+<td>NA</td>
+</tr>
+<tr>
+<td class="rowlabel">Black</td>
+<td>3 (5.4%)</td>
+<td>1 (5.0%)</td>
+<td>5 (11.9%)</td>
+<td>1 (6.7%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">Asian</td>
+<td>0 (0%)</td>
+<td>0 (0%)</td>
+<td>0 (0%)</td>
+<td>0 (0%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">American Indian</td>
+<td>1 (1.8%)</td>
+<td>0 (0%)</td>
+<td>1 (2.4%)</td>
+<td>0 (0%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">Other</td>
+<td>1 (1.8%)</td>
+<td>1 (5.0%)</td>
+<td>0 (0%)</td>
+<td>1 (6.7%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Missing</td>
+<td class="lastrow">15 (26.8%)</td>
+<td class="lastrow">3 (15.0%)</td>
+<td class="lastrow">10 (23.8%)</td>
+<td class="lastrow">3 (20.0%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">NICU Indication</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">No</td>
+<td>46 (82.1%)</td>
+<td>16 (80.0%)</td>
+<td>25 (59.5%)</td>
+<td>4 (26.7%)</td>
+<td>&lt;0.001</td>
+</tr>
+<tr>
+<td class="rowlabel">Yes</td>
+<td>7 (12.5%)</td>
+<td>4 (20.0%)</td>
+<td>17 (40.5%)</td>
+<td>11 (73.3%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Missing</td>
+<td class="lastrow">3 (5.4%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Newborn Length of Stay (days)- Catagorical</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">&lt;7 days</td>
+<td>52 (92.9%)</td>
+<td>17 (85.0%)</td>
+<td>31 (73.8%)</td>
+<td>7 (46.7%)</td>
+<td>&lt;0.001</td>
+</tr>
+<tr>
+<td class="rowlabel">≥7 days</td>
+<td>1 (1.8%)</td>
+<td>3 (15.0%)</td>
+<td>11 (26.2%)</td>
+<td>8 (53.3%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Missing</td>
+<td class="lastrow">3 (5.4%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Newborn Length of Stay (days) - Continuous</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">Median [Q1, Q3]</td>
+<td>2.17 [1.75, 2.71]</td>
+<td>2.23 [1.99, 3.01]</td>
+<td>2.69 [2.00, 7.24]</td>
+<td>7.83 [2.48, 24.7]</td>
+<td>&lt;0.001</td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Missing</td>
+<td class="lastrow">3 (5.4%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow"></td>
+</tr>
+<tr>
+<td class="rowlabel firstrow"><span class="varlabel">Hospital Insurance Grouping</span></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+<td class="firstrow"></td>
+</tr>
+<tr>
+<td class="rowlabel">Commercial</td>
+<td>39 (69.6%)</td>
+<td>14 (70.0%)</td>
+<td>29 (69.0%)</td>
+<td>12 (80.0%)</td>
+<td>0.85</td>
+</tr>
+<tr>
+<td class="rowlabel">Medicaid</td>
+<td>13 (23.2%)</td>
+<td>5 (25.0%)</td>
+<td>12 (28.6%)</td>
+<td>3 (20.0%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">Medicare</td>
+<td>1 (1.8%)</td>
+<td>0 (0%)</td>
+<td>0 (0%)</td>
+<td>0 (0%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel">Self Pay/ Other</td>
+<td>0 (0%)</td>
+<td>1 (5.0%)</td>
+<td>1 (2.4%)</td>
+<td>0 (0%)</td>
+<td></td>
+</tr>
+<tr>
+<td class="rowlabel lastrow">Missing</td>
+<td class="lastrow">3 (5.4%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow">0 (0%)</td>
+<td class="lastrow"></td>
+</tr>
+</tbody>
+</table>
+</div>
+</body>
+</html>
