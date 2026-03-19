@@ -11,6 +11,7 @@ import logging
 import sys
 
 TIMEPOINTS = ["A", "B", "C", "D", "E"]
+MAD_THRESHOLD = 3
 
 # Study Design:
 #   Cases: Pregnancy complications (n=77)
@@ -44,6 +45,27 @@ TIMEPOINTS = ["A", "B", "C", "D", "E"]
 #       Additional metadata = patient_ID, group (control/FGR/GHDP/sPTB), group_subtype, gestational_age, gestational_age_at_sample_collection
 # Output: mad_scores_matrix_<tissue>_<timepoint>_<data_type>.csv
 
+# Step 4: Restrict to tissue analytes with >=2 outlier timepoints
+# 4.1 For each individual patient x analyte combination
+#   Count how many timeoints showed that analyte as an outlier (elevated or decreased)
+#   Record the direction at each outlier timepoint
+# 4.2 Filter criteria
+#   Keep only analyte x patient combinations where:
+#       Number of outlier timepoints >= 2
+#       Direction is consistent (all elevated OR all decreased, not mixed)
+# 4.3 Create filtered dataset
+#   Table with columns:
+#       Patient_ID
+#       Analyte_ID
+#       Group
+#       Subgroup
+#       Total_Timepoints_Avaliable (2-5)
+#       Outlier_Timepoints_Count(2-5)
+#       Outlier_Direction(elevated/decreased)
+#       Outlier_Timepoints_List (e.g., ["T1", "T3", "T4"])
+#       MAD_Scores_List (list of MAD scores at outlier timepoints)
+#       Mean_MAD_Score (average across outlier timepoints)
+
 
 # calculate median and MAD 
 # return: dataframe with analyte_ID, tissue, datatype, timepoint, median, and MAD
@@ -70,40 +92,143 @@ def mergeBatches(batches, dir_input, t):
 
 # extract and format control reference values
 # return: dictionary with keys = timepoints and values = control reference median and MAD values
-def controlRefStats(dir_input, dir_output, datatype, tissue, batches):
+# output: control_reference_statistics_<tissue>_<timepoint>_<data_type>.csv
+def controlRefStats(samples, dir_output, datatype, tissue, batches):
     controlAll = {} # dict to return with keys = timepoints and values = control reference median and MAD values
     for t in TIMEPOINTS:
-        temp = mergeBatches(batches, dir_input, t)
-        temp = temp.loc[temp["group"] == "Control"].drop(columns="group")
-        controlAll[t] = getStats(temp, t, datatype, tissue)
+        controlAll[t] = getStats(samples[t], t, datatype, tissue)
         controlAll[t].to_csv(dir_output + "/control_reference_statistics_" + tissue + "_" + t + "_" + datatype + ".csv")
     return controlAll
 
 # calculate MAD scores based on timepoint
 def getMADscores(df, controlRef, t):
-    scores = pd.DataFrame(index=df.index)
+    scores_dict = {}
     for m in df.columns:
-        df = (df[m] - controlRef[t].loc[m, "med"]) / controlRef[t].loc[m, "mad"]
-        scores[m] = df
+        if controlRef[t].loc[m, "control_MAD"] == 0:
+            logging.info(m + " at timepoint " + t + " has zero_variance/a MAD value of 0 and has been removed from downstream analyses")
+        else:
+            try:
+                temp = (df[m] - controlRef[t].loc[m, "control_median"]) / controlRef[t].loc[m, "control_MAD"]
+                scores_dict[m] = temp
+            except:
+                logging.warning("A issue has occured when calculating MAD score of " + m + " at timepoint " + t + ": control_median = " + str(controlRef[t].loc[m, "control_median"]) + ", control_MAD = " + str(controlRef[t].loc[m, "control_MAD"]))
+    scores = pd.DataFrame(scores_dict, index=df.index)
     return scores
 
-# calculate MAD scores and return formattedscore matrix
-def MADscores(dir_input, controlRef, metadata, batches):
-    scoreMatrix = pd.DataFrame()
+# calculate MAD scores for all samples and analytes
+# return: dictionary where keys = timepoints and values = MAD score matrices with group, subgroup, gestational age, and gestational age at sample collection per sample
+# output: mad_scores_matrix_<tissue>_<timepoint>_<data_type>.csv
+def MADscores(samples, dir_output, controlRef, batches, tissue, datatype):
+    scoreMatrix = {}
+    for t in TIMEPOINTS:
+        scoreMatrix[t] = getMADscores(samples[t], controlRef, t)
+        scoreMatrix[t].to_csv(dir_output + "/mad_scores_matrix_" + tissue + "_" + t + "_" + datatype + ".csv")
+    return scoreMatrix
+
+# flag MAD score > 3 or < -3
+# return: dictionary of matrices by timepoint with 1 = elevated, -1 = decreased, 0 = outlier 
+# output: outlier_flags_matrix_<tissue>_<timepoint>_<data_type>.csv
+def flagOutliers(dir_output, scoreMatrix, tissue, datatype):
+    outliers = {}
+    for t in TIMEPOINTS:
+        outliers[t] = scoreMatrix[t].map(lambda x: 1 if x > MAD_THRESHOLD else (-1 if x < -MAD_THRESHOLD else 0))
+        outliers[t].to_csv(dir_output + "/outlier_flags_matrix_" + tissue + "_" + t + "_" + datatype + ".csv")
+    return outliers
+
+# remove metadata from dataframe and save in a separate dictionary
+# return: metadata dictionary of keys = timepoint, values = dataframe of sample ID, group, subgroup, gest age, and gest age at collection
+#         sample dictionary of keys = timepoint, values = dataframe of batch normalized and log2 transformed metabolite expression        
+def splitData(dir_input, batches):
+    allMeta = {}
+    allSamples = {}
     for t in TIMEPOINTS:
         temp = mergeBatches(batches, dir_input, t)
-        group = temp["group"]
-        temp = temp.drop(columns="group")
-        subscores = getMADscores(temp, controlRef, t)
+        meta = temp[["patient_ID","group", "subgroup", "gestational_age", "gestational_age_at_collection"]]
+        samples = temp.drop(columns=["patient_ID", "group", "subgroup", "gestational_age", "gestational_age_at_collection"])
+        allMeta[t] = meta
+        allSamples[t] = samples
+    return allMeta, allSamples
 
-        scoreMatrix = pd.concat([scoreMatrix, subscores])
-    return scoreMatrix
+# helper function for filterOutliers
+# return: dictionary of indices of each patient in each timepoint dataframe
+def t_to_p(outlierMatrix, patient_metadata):
+    temp = {t: {} for t in TIMEPOINTS}
+    for t in TIMEPOINTS:
+        for idx in outlierMatrix[t].index:
+            for p in patient_metadata.keys():
+                if p in idx:
+                    temp[t][p] = idx
+                    break # Assuming one match per patient per timepoint
+    return temp
+
+# Filter for patient x analyte combinations that have >= 2 outlier timepoints and all outliers are directionally consistent (all elevated OR decreased)
+# return: dataframe with rows = patient x analytes, columns = 
+#       patient 
+#       analyte 
+#       group
+#       subgroup
+#       total timepoints avaliable
+#       outlier timepoint count
+#       outlier direction
+#       outlier timepoints list
+#       mad scores list
+#       mean mad score
+# output: persistent_outliers_<tissue>_<data_type>.csv
+def filterOutliers(dir_output, outlierMatrix, scoreMatrix, meta, tissue, datatype):
+    results = []
+    unique_patients = pd.concat([meta[t] for t in TIMEPOINTS], ignore_index=True).drop_duplicates(subset=["patient_ID"])
+    patient_metadata = unique_patients.set_index("patient_ID")[["group", "subgroup"]].to_dict('index')
+    # Pre-compute index mappings to avoid O(N) string matching in the inner loop
+    # This creates a mapping of: timepoint -> {patient_id: exact_index_name}
+    t_to_p_index = t_to_p(outlierMatrix, patient_metadata)
+    for p, metadata in patient_metadata.items():
+        group = metadata["group"]
+        subgroup = metadata["subgroup"]
+        for m in outlierMatrix["A"].columns:
+            total_timepoints = 0
+            outlier_values = []
+            outlier_timepoints = []
+            outlier_mads = []
+            for t in TIMEPOINTS:
+                if p not in t_to_p_index[t]: # check if patient is in this timepoint
+                    continue
+                idx = t_to_p_index[t][p]
+                try:
+                    if abs(outlierMatrix[t].at[idx, m]) > 0:
+                        outlier_values.append(list(outlierMatrix[t].loc[[p in x for x in outlierMatrix[t].index], m])[0])
+                        outlier_timepoints.append(t)
+                        outlier_mads.append(list(scoreMatrix[t].loc[[p in x for x in scoreMatrix[t].index], m])[0])
+                    total_timepoints += 1
+                except:
+                    continue
+            total_outlier_timepoints = len(outlier_timepoints)
+            if total_outlier_timepoints >= 2:
+                if abs(sum(outlier_values)) == total_outlier_timepoints:
+                    direction = "elevated" if sum(outlier_values) > 0 else "decreased"
+                    results.append({
+                        "patient_ID": p,
+                        "analyte_ID": m,
+                        "group": group,
+                        "subgroup": subgroup,
+                        "total_timepoints": total_timepoints,
+                        "outlier_timepoint_count": total_outlier_timepoints,
+                        "outlier_direction": direction,
+                        "outlier_timepoints": outlier_timepoints,
+                        "outlier_mad_scores": outlier_mads,
+                        "mean_outlier_mad": sum(outlier_mads)/len(outlier_mads)
+                    })
+    persistent = pd.DataFrame(results)
+    persistent.to_csv(dir_output + "/persistent_outliers_" + tissue + "_" + datatype + ".csv")
+    return persistent
 
     
 # primary wrapper function for Outlier Analysis
-def OutlierAnalysis(dir_input, dir_output, datatype, tissue, metadata, batches):
-    controlRef = controlRefStats(dir_input, dir_output, datatype, tissue, batches)
-    scoreMatrix = MADscores(dir_input, controlRef, metadata, batches)
+def OutlierAnalysis(dir_input, dir_output, datatype, tissue, batches):
+    meta, samples = splitData(dir_input, batches)
+    controlRef = controlRefStats(samples, dir_output, datatype, tissue, batches)
+    scoreMatrix = MADscores(samples, dir_output, controlRef, batches, tissue, datatype)
+    outlierMatrix = flagOutliers(dir_output, scoreMatrix, tissue, datatype)
+    persistentMatrix = filterOutliers(dir_output, outlierMatrix, scoreMatrix, meta, tissue, datatype)
 
     return
 
@@ -111,9 +236,7 @@ def OutlierAnalysis(dir_input, dir_output, datatype, tissue, metadata, batches):
 def main():
     dir_input = sys.argv[1] # e.g. /Users/kaylaxu/Desktop/data/clean_data/MTBL_plasma
     dir_output = sys.argv[2] # e.g. /Users/kaylaxu/Desktop/data/MAD_analyses
-    meta_input = sys.argv[3] # e.g. /Users/kaylaxu/Desktop/data/raw_data/dp3 master table v2.xlsx
-    
-    metadata = pd.read_excel(meta_input, index_col=0)
+
     batches = pd.read_csv(dir_input + "/pos_batch.csv")["batch"].unique().tolist()
 
     if "MTBL" in dir_input:
@@ -133,7 +256,7 @@ def main():
     )
     logging.info("Initializing " + datatype + " MAD outlier analysis...")
 
-    OutlierAnalysis(dir_input, dir_output, datatype, tissue, metadata, batches)
+    OutlierAnalysis(dir_input, dir_output, datatype, tissue, batches)
 
     logging.info("DONE - " + datatype + " MAD outlier analysis complete!")
     #close log file

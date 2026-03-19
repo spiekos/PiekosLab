@@ -264,7 +264,6 @@ def normalization(exp_data, e, unique_batches, mode):
         for m in reps["112524"].columns:
             exp_data["Samples_112524_" + e][m] = exp_data["Samples_112524_" + e][m]*cf2[m]
 
-
 # average replicate expression values
 def merge_rep(exp_data, e, unique_batches, mode):
     samples = []
@@ -296,10 +295,9 @@ def merge_rep(exp_data, e, unique_batches, mode):
 
 # do log2 transformation on expression data
 def log2_transform(exp_data,e, unique_batches):
-    exp_data["Pooled_" + unique_batches[0] + "_" + e]= np.log2(exp_data["Pooled_" + unique_batches[0] + "_" + e])
-    exp_data["Pooled_" + unique_batches[1] + "_" + e] = np.log2(exp_data["Pooled_" + unique_batches[1] + "_" + e])
-    exp_data["Samples_" + unique_batches[0] + "_" + e]= np.log2(exp_data["Samples_" + unique_batches[0] + "_" + e])
-    exp_data["Samples_" + unique_batches[1] + "_" + e] = np.log2(exp_data["Samples_" + unique_batches[1] + "_" + e])
+    for b in unique_batches:
+        exp_data["Pooled_" + str(b) + "_" + e]= np.log2(exp_data["Pooled_" + str(b) + "_" + e])
+        exp_data["Samples_" + str(b) + "_" + e]= np.log2(exp_data["Samples_" + str(b) + "_" + e])
 
 # combine pos and neg expression in same file
     # if mtbl present in both, choose the one with the better signal intensity (area max)
@@ -335,6 +333,7 @@ def formatting(final, meta, mode, dir_input):
     for k in final.keys():
         if "Samples" in k:
             #final[k]["group"] = meta.loc[final[k].index,:]["group"]
+            patient = []
             group = []
             subgroup = []
             gest_age = []
@@ -348,6 +347,7 @@ def formatting(final, meta, mode, dir_input):
                 found = False
                 for key in keys_to_try:
                     try:
+                        patient.append(list(meta.loc[meta["Sample ID"] == key, :].index)[0])
                         group.append(list(meta.loc[meta["Sample ID"] == key, :]["group"])[0])
                         subgroup.append(list(meta.loc[meta["Sample ID"] == key, :]["subgroup"])[0])
                         gest_age.append(list(meta.loc[meta["Sample ID"] == key, :]["gest age del"])[0])
@@ -358,7 +358,7 @@ def formatting(final, meta, mode, dir_input):
                         continue # That key failed, try the next one in the list
                 if not found:
                     logging.error(f"Issue with indexing {id} in meta data.")
-            
+            final[k]["patient_ID"] = patient
             final[k]["group"] = group
             final[k]["subgroup"] = subgroup
             final[k]["gestational_age"] = gest_age
