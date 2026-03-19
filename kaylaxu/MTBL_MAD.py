@@ -9,6 +9,7 @@ import pandas as pd
 from scipy import stats
 from collections import Counter
 import logging
+import ast
 import sys
 
 TIMEPOINTS = ["A", "B", "C", "D", "E"]
@@ -268,12 +269,42 @@ def mostPrevalent(dir_output, persistentMatrix, meta, analytes, tissue):
 #       2. Filter to analytes affecting >= 5 patients
 #       3. Rank by average proportion of timepoints (descending)
 #       4. Select top 50 analytes
+#   Inlcude in output:
+#       Analyte_ID
+#       n_patients_affected
+#       mean_outlier_timepoints_per_patient_affected
+#       mean_proportion_timepoints (outlier timeopints / available timepoints)
+#       max_consecutive timepoints (longest stretch of consecutive outlier timepoints)
 #   Output: biomarker_most_persistent_<tissue>.csv
 def mostPersistent(dir_output, persistentMatrix, meta, analytes, tissue):
     results = []
     complicationOnly = persistentMatrix.loc[persistentMatrix["group"] != "Control",:]
     for m in analytes:
-        pass
+        mOnly = complicationOnly.loc[complicationOnly["analyte_ID"] == m,:]
+        if len(mOnly.index) < 5:
+            continue
+        meanOutlierTP = mOnly["outlier_timepoint_count"].sum() / len(mOnly.index)
+        meanTP = mOnly["total_timepoints"].sum() / len(mOnly.index)
+        proportion = meanOutlierTP / meanTP
+        maxConsecutive = ""
+        for p in mOnly["patient_ID"]:
+            raw = mOnly.loc[mOnly["patient_ID"] == p,:]["outlier_timepoints"].iloc[0]
+            outlierTP = ast.literal_eval(raw)
+            maxConsecutive = []
+            outlierTPstring = "".join(outlierTP)
+            mergedTP = "".join(TIMEPOINTS)
+            if outlierTPstring in mergedTP:
+                if len(outlierTPstring) > len(maxConsecutive):
+                    maxConsecutive = outlierTP
+        results.append({"analyte_ID": m,
+                        "n_patients_affected": len(mOnly.index),
+                        "mean_outlier_timepoints_per_patient_affected": meanOutlierTP,
+                        "mean_proportion_timepoints": proportion,
+                        "max_consecutive_timepoints": maxConsecutive})
+    persistent = pd.DataFrame(results).sort_values(by=["mean_proportion_timepoints"], ascending=False).iloc[0:50,:]
+    persistent.to_csv(dir_output + "/biomarker_most_persistent_" + tissue + ".csv")
+    return persistent
+
 
 # List 3: Early Warning
 #   Goal: Analytes elevated at earlist available timepoints
@@ -351,7 +382,7 @@ def identifyBiomarkers(dir_output, persistentMatrix, meta, outlierMatrix, tissue
     #specificMarkers = complicationSpecific(dir_output, persistentMatrix)
     #extremeMarkers = mostExtreme(dir_output, persistentMatrix)
     #return prevalentMarkers, persistentMarkers, earlyMarkers, specificMarkers, extremeMarkers
-    return prevalentMarkers
+    return prevalentMarkers, persistentMarkers
 
     
 # primary wrapper function for Outlier Analysis
@@ -368,7 +399,7 @@ def OutlierAnalysis(dir_input, dir_output, datatype, tissue, batches):
     persistentMatrix = pd.read_csv("/Users/kaylaxu/Desktop/data/MAD_analyses/persistent_outliers_plasma_MTBL.csv", index_col=0)
     # identify biomarkers
     #prevalentMarkers, persistentMarkers, earlyMarkers, specificMarkers, extremeMarkers = identifyBiomarkers(dir_output, persistentMatrix, meta, outlierMatrix, tissue)
-    prevalentMarkers = identifyBiomarkers(dir_output, persistentMatrix, meta, outlierMatrix, tissue)
+    prevalentMarkers, persistentMarkers = identifyBiomarkers(dir_output, persistentMatrix, meta, outlierMatrix, tissue)
 
 
     return
