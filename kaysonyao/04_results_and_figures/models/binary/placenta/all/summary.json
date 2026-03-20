@@ -1,6 +1,7 @@
 {
   "tissue": "placenta",
   "timepoint": "all",
+  "data_path": "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/proteomics/normalized_full_results/proteomics_placenta_cleaned_with_metadata.csv",
   "outcome": "Complication",
   "complications_pooled": [
     "HDP",

@@ -1,6 +1,7 @@
 {
   "tissue": "plasma",
   "timepoint": "D",
+  "data_path": "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/proteomics/normalized_sliced_by_suffix/proteomics_plasma_formatted_suffix_D.csv",
   "outcome": "Complication",
   "complications_pooled": [
     "HDP",

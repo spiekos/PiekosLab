@@ -1,40 +1,27 @@
 """
-Feature interpretation for the best binary classifier at each (tissue, timepoint).
+Feature interpretation (Gini / SHAP / LIME) for the best binary model per timepoint.
 
-Three methods applied to the best model selected by test PR-AUC:
+Features used: union of LASSO-selected features across ALL timepoints + placenta
+(superset), so each timepoint's model is re-fitted on the full shared feature set.
+This lets you compare the importance trajectory of any analyte across timepoints,
+even when it was only selected by LASSO at one of them.
 
-  1. Gini / coefficient importance  - model-native weights (coef_ or
-                                       feature_importances_), ranked by |value|.
-  2. SHAP (Shapley Additive Explanations)
-      - TreeExplainer  for RF / XGBoost (exact, no background required)
-      - LinearExplainer for LogisticRegression
-      - KernelExplainer for SVM
-       Background size: 100 samples first; upgraded to 1000 if no error.
-  3. LIME (Local Interpretable Model-agnostic Explanations)
-      - num_samples tuned via Spearman stability across [100, 500, 1000, 2000, 5000].
-      - Picks smallest num_samples with mean rho >= 0.95 vs the highest setting.
+Each output CSV is annotated with log2_fold_change and direction (up/down in
+complications vs controls) pulled from the differential analysis results.
 
-Loads pre-saved artifacts from binary_classifier.py - no model reconstruction:
-    {ModelName}.joblib      -> fitted model
-    scaler.joblib           -> fitted RobustScaler (train+val)
-    X_trainval_scaled.csv   -> scaled training+validation features
-    X_test_scaled.csv       -> scaled test features
-    y_test.csv              -> test labels
-    lasso_selected_features.csv -> feature names
-    all_results_summary.csv -> best model per (tissue, timepoint) by test PR-AUC
+Artifacts needed per timepoint (produced by binary_classifier.py):
+    summary.json                 -> data_path, complications_pooled
+    sample_splits.csv            -> exact train/val/test SampleIDs
+    tuned_hyperparams.json       -> best model hyperparameters
+    lasso_selected_features.csv  -> contributes to the cross-timepoint superset
 
-Usage
------
-    python 03_model_development/feature_interpretation.py
-
-    # Optional flags:
-    python 03_model_development/feature_interpretation.py \\
-       --binary-results-dir 04_results_and_figures/models/binary \\
-       --timepoints A B C     \\
-       --shap-bg-start 100    \\
-       --shap-bg-max   1000
+Usage:
+    python 03_model_development/feature_interpretation.py [--binary-results-dir DIR]
+        [--timepoints A B C] [--sig-analytes-dir DIR]
+        [--shap-bg-start 100] [--shap-bg-max 1000]
 """
 
+import json
 import os
 import sys
 import logging
@@ -48,17 +35,115 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from scipy.stats import spearmanr
+from sklearn.preprocessing import RobustScaler
 import shap
 from lime.lime_tabular import LimeTabularExplainer
 
 sys.path.insert(0, os.path.dirname(__file__))
-from utilities import TIMEPOINTS, RANDOM_STATE
+from utilities import (
+    TIMEPOINTS,
+    RANDOM_STATE,
+    load_data,
+    get_analyte_columns,
+    normalise_group_labels,
+    build_tuned_model_binary,
+)
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Superset helpers
+# ---------------------------------------------------------------------------
+
+def collect_superset_features(base_dir: str, timepoints: list) -> list:
+    """Union of LASSO-selected features across all plasma timepoints and placenta."""
+    union = set()
+    for tp in timepoints:
+        p = os.path.join(base_dir, "plasma", tp, "lasso_selected_features.csv")
+        if os.path.exists(p):
+            union.update(pd.read_csv(p)["feature"].tolist())
+    p = os.path.join(base_dir, "placenta", "all", "lasso_selected_features.csv")
+    if os.path.exists(p):
+        union.update(pd.read_csv(p)["feature"].tolist())
+    return sorted(union)
+
+
+def _build_superset_data(results_dir: str, data_csv: str,
+                         superset_features: list, complications: list):
+    """
+    Reload raw data, intersect with superset features, and reconstruct
+    the exact train+val / test split recorded in sample_splits.csv.
+
+    Returns (X_trainval, X_test, y_trainval, y_test, feat_cols).
+    """
+    df = load_data(data_csv)
+    df = normalise_group_labels(df)
+
+    keep = set(["Control"] + complications)
+    mask = df["Group"].isin(keep)
+    sub  = df.loc[mask, "Group"]
+    y_all = sub.isin(complications).astype(int)
+
+    available  = set(get_analyte_columns(df))
+    feat_cols  = [f for f in superset_features if f in available]
+    n_missing  = len(superset_features) - len(feat_cols)
+    if n_missing:
+        logger.warning("  %d / %d superset features absent from this dataset - using %d",
+                       n_missing, len(superset_features), len(feat_cols))
+
+    X_all = df.loc[y_all.index, feat_cols]
+
+    splits  = pd.read_csv(os.path.join(results_dir, "sample_splits.csv"))
+    tv_ids  = splits.loc[splits["split"].isin(["train", "val"]), "SampleID"].tolist()
+    te_ids  = splits.loc[splits["split"] == "test",              "SampleID"].tolist()
+
+    # Guard against samples that were in the split but might not be in this data slice
+    tv_ids = [i for i in tv_ids if i in X_all.index]
+    te_ids = [i for i in te_ids if i in X_all.index]
+
+    return (X_all.loc[tv_ids], X_all.loc[te_ids],
+            y_all.loc[tv_ids], y_all.loc[te_ids],
+            feat_cols)
+
+
+# ---------------------------------------------------------------------------
+# Fold-change annotation
+# ---------------------------------------------------------------------------
+
+_FC_COLS = ("log2_fold_change", "logFC", "log2FC", "log2FoldChange",
+            "log_fold_change", "fold_change")
+
+def load_fold_changes(diff_results_csv: str) -> dict:
+    """Return {analyte: log2_fc} from a differential-results CSV. Returns {} on failure."""
+    if not diff_results_csv or not os.path.exists(diff_results_csv):
+        return {}
+    df = pd.read_csv(diff_results_csv, index_col=0)
+    for col in _FC_COLS:
+        if col in df.columns:
+            return df[col].dropna().to_dict()
+    logger.warning("No fold-change column found in %s (tried: %s)",
+                   diff_results_csv, _FC_COLS)
+    return {}
+
+
+def annotate_with_fc(series: pd.Series, fold_changes: dict) -> pd.DataFrame:
+    """
+    Attach log2_fold_change and direction (up / down / unknown) to an
+    importance Series. 'up' means higher in complications than controls.
+    """
+    df = series.rename("importance").to_frame()
+    df["log2_fold_change"] = df.index.map(fold_changes)
+    df["direction"] = df["log2_fold_change"].apply(
+        lambda v: "up" if (pd.notna(v) and v > 0)
+                  else "down" if (pd.notna(v) and v < 0)
+                  else "unknown"
+    )
+    return df
+
 
 # ---------------------------------------------------------------------------
 # 1. Gini / coefficient importance
@@ -72,6 +157,7 @@ def compute_gini_importance(model, feature_names: list) -> pd.Series:
     else:
         return pd.Series(dtype=float)
     return pd.Series(vals, index=feature_names, name="importance")
+
 
 def plot_gini(importance: pd.Series, title: str, output_path: str, top_n: int = 30):
     idx  = importance.abs().nlargest(top_n).index
@@ -88,6 +174,7 @@ def plot_gini(importance: pd.Series, title: str, output_path: str, top_n: int = 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
+
 
 # ---------------------------------------------------------------------------
 # 2. SHAP
@@ -106,6 +193,7 @@ def _extract_shap_matrix(shap_result, n_features: int) -> np.ndarray:
     assert vals.shape[1] == n_features
     return vals
 
+
 def run_shap(
     model,
     model_name: str,
@@ -113,6 +201,7 @@ def run_shap(
     X_test_sc: np.ndarray,
     feature_names: list,
     output_dir: str,
+    fold_changes: dict,
     bg_start: int = 100,
     bg_max: int = 1000,
 ) -> pd.Series | None:
@@ -167,7 +256,8 @@ def run_shap(
 
     pd.DataFrame(shap_matrix, columns=feature_names).to_csv(
         os.path.join(output_dir, "shap_values.csv"), index=False)
-    mean_abs.to_csv(os.path.join(output_dir, "shap_mean_abs.csv"), header=True)
+    annotate_with_fc(mean_abs, fold_changes).to_csv(
+        os.path.join(output_dir, "shap_mean_abs.csv"), header=True)
 
     # Bar plot
     top = mean_abs.head(30)
@@ -191,6 +281,7 @@ def run_shap(
 
     return mean_abs
 
+
 # ---------------------------------------------------------------------------
 # 3. LIME - num_samples stability tuning
 # ---------------------------------------------------------------------------
@@ -205,6 +296,7 @@ def _lime_explain(lime_exp, predict_fn, inst: np.ndarray,
         if fname in feat_idx:
             vec[feat_idx[fname]] = w
     return vec
+
 
 def _lime_tune(lime_exp, predict_fn, X_test_sc: np.ndarray,
                feat_idx: dict, n_features: int,
@@ -233,10 +325,13 @@ def _lime_tune(lime_exp, predict_fn, X_test_sc: np.ndarray,
     logger.warning("  LIME: no candidate reached rho>=0.95 - using max=%d", ns_max)
     return ns_max, probe_idx, refs, rhos
 
+
 def _plot_stability_curve(candidates, rhos, chosen_ns, output_path):
     """Plot LIME stability curve from precomputed rhos (no LIME re-runs)."""
+    # rhos may be shorter than candidates when _lime_tune exits early on success
+    evaluated = sorted(candidates)[:len(rhos)]
     fig, ax = plt.subplots(figsize=(6, 4))
-    ax.plot(sorted(candidates), rhos, marker="o", color="#2ca02c")
+    ax.plot(evaluated, rhos, marker="o", color="#2ca02c")
     ax.axhline(0.95, color="gray", linestyle="--", lw=0.8, label="rho = 0.95")
     ax.axvline(chosen_ns, color="red", linestyle="--", lw=0.8,
                label=f"chosen = {chosen_ns}")
@@ -250,12 +345,14 @@ def _plot_stability_curve(candidates, rhos, chosen_ns, output_path):
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
+
 def run_lime(
     model,
     X_trainval_sc: np.ndarray,
     X_test_sc: np.ndarray,
     feature_names: list,
     output_dir: str,
+    fold_changes: dict,
     candidates: list | None = None,
 ) -> pd.Series | None:
     if candidates is None:
@@ -295,7 +392,8 @@ def run_lime(
 
     pd.DataFrame(weight_matrix, columns=feature_names).to_csv(
         os.path.join(output_dir, "lime_weights.csv"), index=False)
-    mean_abs.to_csv(os.path.join(output_dir, "lime_mean_abs.csv"), header=True)
+    annotate_with_fc(mean_abs, fold_changes).to_csv(
+        os.path.join(output_dir, "lime_mean_abs.csv"), header=True)
 
     top = mean_abs.head(30)
     fig, ax = plt.subplots(figsize=(8, max(4, len(top) * 0.30)))
@@ -311,6 +409,7 @@ def run_lime(
     _plot_stability_curve(candidates, rhos, tuned_ns,
                           output_path=os.path.join(output_dir, "lime_stability.png"))
     return mean_abs
+
 
 # ---------------------------------------------------------------------------
 # Combined panel plot
@@ -340,43 +439,61 @@ def plot_combined(gini, shap_vals, lime_vals, title, output_path, top_n=20):
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
+
 # ---------------------------------------------------------------------------
 # Per-(tissue, timepoint) driver
 # ---------------------------------------------------------------------------
 
 def interpret_one(tissue, timepoint, results_dir, output_dir,
-                  best_model_name, bg_start, bg_max):
+                  best_model_name, bg_start, bg_max,
+                  superset_features, data_csv, complications, fold_changes):
     tag = f"[{tissue.upper()} {timepoint}]"
-    logger.info("%s Best model: %s", tag, best_model_name)
+    logger.info("%s Best model: %s | superset features: %d",
+                tag, best_model_name, len(superset_features))
 
-    # load artifacts
-    def _load(fname):
-        p = os.path.join(results_dir, fname)
-        if not os.path.exists(p):
-            raise FileNotFoundError(p)
-        return p
+    if not data_csv or not os.path.exists(data_csv):
+        logger.error("%s data_csv not found (%s) - re-run binary_classifier.py.", tag, data_csv)
+        return
 
+    # Reconstruct superset data using the original split indices
     try:
-        model         = joblib.load(_load(f"{best_model_name}.joblib"))
-        feature_names = pd.read_csv(_load("lasso_selected_features.csv"))["feature"].tolist()
-        X_trainval_sc = pd.read_csv(_load("X_trainval_scaled.csv"), index_col=0).values
-        X_test_sc     = pd.read_csv(_load("X_test_scaled.csv"),     index_col=0).values
-        y_test        = pd.read_csv(_load("y_test.csv"), index_col=0).squeeze()
-    except FileNotFoundError as exc:
-        logger.warning("%s Missing artifact %s - skipping. Re-run binary_classifier.py first.", tag, exc)
+        X_tv_raw, X_te_raw, y_trainval, y_test, feat_cols = _build_superset_data(
+            results_dir, data_csv, superset_features, complications
+        )
+    except Exception as exc:
+        logger.error("%s Failed to build superset data - %s", tag, exc)
         return
 
     logger.info("%s  trainval=%d  test=%d  features=%d",
-                tag, len(X_trainval_sc), len(X_test_sc), len(feature_names))
+                tag, len(X_tv_raw), len(X_te_raw), len(feat_cols))
+
+    # Scale on superset trainval
+    scaler        = RobustScaler()
+    X_trainval_sc = scaler.fit_transform(X_tv_raw)
+    X_test_sc     = scaler.transform(X_te_raw)
+
+    # Rebuild and retrain best model on superset with its original tuned params
+    hp_path = os.path.join(results_dir, "tuned_hyperparams.json")
+    if not os.path.exists(hp_path):
+        logger.error("%s tuned_hyperparams.json missing - skipping.", tag)
+        return
+    with open(hp_path) as f:
+        hp = json.load(f)
+    params = hp["model_params"][best_model_name]
+    model  = build_tuned_model_binary(best_model_name, params, y_trainval, RANDOM_STATE)
+    model.fit(X_trainval_sc, y_trainval)
+    logger.info("%s  Model retrained on superset.", tag)
 
     os.makedirs(output_dir, exist_ok=True)
 
     # 1. Gini
     logger.info("%s  Gini ...", tag)
-    gini = compute_gini_importance(model, feature_names)
+    gini = compute_gini_importance(model, feat_cols)
     if not gini.empty:
-        gini.sort_values(key=lambda s: s.abs(), ascending=False).to_csv(
-            os.path.join(output_dir, "gini_importance.csv"), header=True)
+        annotate_with_fc(
+            gini.sort_values(key=lambda s: s.abs(), ascending=False),
+            fold_changes,
+        ).to_csv(os.path.join(output_dir, "gini_importance.csv"), header=True)
         plot_gini(gini,
                   title=f"Gini/Coef - {best_model_name} | {tissue} {timepoint}",
                   output_path=os.path.join(output_dir, "gini_importance.png"))
@@ -386,13 +503,14 @@ def interpret_one(tissue, timepoint, results_dir, output_dir,
     # 2. SHAP
     logger.info("%s  SHAP (bg_start=%d, bg_max=%d) ...", tag, bg_start, bg_max)
     shap_result = run_shap(model, best_model_name,
-                           X_trainval_sc, X_test_sc, feature_names,
-                           output_dir, bg_start=bg_start, bg_max=bg_max)
+                           X_trainval_sc, X_test_sc, feat_cols,
+                           output_dir, fold_changes,
+                           bg_start=bg_start, bg_max=bg_max)
 
     # 3. LIME
     logger.info("%s  LIME (stability tuning) ...", tag)
     lime_result = run_lime(model, X_trainval_sc, X_test_sc,
-                           feature_names, output_dir)
+                           feat_cols, output_dir, fold_changes)
 
     # Combined panel
     plot_combined(gini if not gini.empty else None, shap_result, lime_result,
@@ -400,6 +518,7 @@ def interpret_one(tissue, timepoint, results_dir, output_dir,
                   output_path=os.path.join(output_dir, "combined_importance.png"))
 
     logger.info("%s  Done -> %s", tag, output_dir)
+
 
 # ---------------------------------------------------------------------------
 # Main
@@ -414,16 +533,35 @@ def main():
         "--binary-results-dir",
         default=os.path.join(wkdir, "04_results_and_figures", "models", "binary"),
     )
-    p.add_argument("--timepoints",   nargs="+", default=TIMEPOINTS)
-    p.add_argument("--shap-bg-start", type=int, default=100)
-    p.add_argument("--shap-bg-max",   type=int, default=1000)
-    p.add_argument("--skip-plasma",   action="store_true")
-    p.add_argument("--skip-placenta", action="store_true")
+    p.add_argument("--timepoints",          nargs="+", default=TIMEPOINTS)
+    p.add_argument(
+        "--superset-timepoints",
+        nargs="+",
+        default=["A", "B", "C", "D"],
+        help=(
+            "Plasma timepoints whose LASSO-selected features contribute to the "
+            "cross-timepoint superset.  Placenta is always included.  Defaults to "
+            "A B C D (E excluded because its LASSO regularisation was too weak, "
+            "selecting ~1600 features)."
+        ),
+    )
+    p.add_argument("--shap-bg-start",  type=int, default=100)
+    p.add_argument("--shap-bg-max",    type=int, default=1000)
+    p.add_argument("--skip-plasma",    action="store_true")
+    p.add_argument("--skip-placenta",  action="store_true")
+    p.add_argument(
+        "--sig-analytes-dir",
+        default=os.path.join(wkdir, "04_results_and_figures", "differential_analysis"),
+        help=(
+            "Root directory of differential analysis outputs used to pull "
+            "fold-change values for output annotation. Pass '' to skip."
+        ),
+    )
     args = p.parse_args()
 
-    base = args.binary_results_dir
+    base     = args.binary_results_dir
+    sig_dir  = args.sig_analytes_dir if args.sig_analytes_dir else None
 
-    # Best model per (tissue, timepoint) by test PR-AUC
     summary_csv = os.path.join(base, "all_results_summary.csv")
     if not os.path.exists(summary_csv):
         logger.error("all_results_summary.csv not found at %s", summary_csv)
@@ -439,6 +577,37 @@ def main():
                          & (summary.model == m), "pr_auc"].values[0]
         logger.info("  %-10s %-5s -> %-20s (%.4f)", t, tp, m, pr)
 
+    # Build superset from selected timepoints only (plasma + placenta)
+    superset = collect_superset_features(base, args.superset_timepoints)
+    logger.info("Cross-timepoint superset (%s + placenta): %d features",
+                " ".join(args.superset_timepoints), len(superset))
+    if not superset:
+        logger.error("No lasso_selected_features.csv files found - run binary_classifier.py first.")
+        sys.exit(1)
+
+    def _summary_json(tissue, tp):
+        path = os.path.join(base, tissue, tp, "summary.json")
+        if not os.path.exists(path):
+            return {}
+        with open(path) as f:
+            return json.load(f)
+
+    def _fold_changes(tissue, tp):
+        if not sig_dir:
+            return {}
+        if tissue == "plasma":
+            diff_csv = os.path.join(sig_dir, "plasma", "cross_sectional", tp,
+                                    "Control_vs_Complication_differential_results.csv")
+        else:
+            diff_csv = os.path.join(sig_dir, "placenta", "cross_sectional",
+                                    "Control_vs_Complication_differential_results.csv")
+        fc = load_fold_changes(diff_csv)
+        if fc:
+            logger.info("  Fold changes loaded: %d analytes from %s", len(fc), diff_csv)
+        else:
+            logger.warning("  No fold changes available for %s %s", tissue, tp)
+        return fc
+
     if not args.skip_plasma:
         logger.info("=== PLASMA ===")
         for tp in args.timepoints:
@@ -446,6 +615,10 @@ def main():
             if bm is None:
                 logger.warning("Plasma %s not in summary - skipping.", tp)
                 continue
+            summ         = _summary_json("plasma", tp)
+            data_csv     = summ.get("data_path", "")
+            complications = summ.get("complications_pooled", ["HDP", "FGR", "sPTB"])
+            fold_changes  = _fold_changes("plasma", tp)
             interpret_one(
                 tissue="plasma", timepoint=tp,
                 results_dir=os.path.join(base, "plasma", tp),
@@ -453,6 +626,10 @@ def main():
                 best_model_name=bm,
                 bg_start=args.shap_bg_start,
                 bg_max=args.shap_bg_max,
+                superset_features=superset,
+                data_csv=data_csv,
+                complications=complications,
+                fold_changes=fold_changes,
             )
 
     if not args.skip_placenta:
@@ -461,6 +638,10 @@ def main():
         if bm is None:
             logger.warning("Placenta not in summary - skipping.")
         else:
+            summ         = _summary_json("placenta", "all")
+            data_csv     = summ.get("data_path", "")
+            complications = summ.get("complications_pooled", ["HDP", "FGR", "sPTB"])
+            fold_changes  = _fold_changes("placenta", "all")
             interpret_one(
                 tissue="placenta", timepoint="all",
                 results_dir=os.path.join(base, "placenta", "all"),
@@ -468,7 +649,12 @@ def main():
                 best_model_name=bm,
                 bg_start=args.shap_bg_start,
                 bg_max=args.shap_bg_max,
+                superset_features=superset,
+                data_csv=data_csv,
+                complications=complications,
+                fold_changes=fold_changes,
             )
+
 
 if __name__ == "__main__":
     main()

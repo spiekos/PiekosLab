@@ -134,6 +134,7 @@ def run_binary_pipeline(
     output_dir: str,
     n_trials: int = 50,
     sig_analytes: list | None = None,
+    data_path: str = "",
 ) -> dict | None:
     """
     Full binary classification pipeline for one (tissue, timepoint).
@@ -331,6 +332,7 @@ def run_binary_pipeline(
     summary = {
         "tissue":                tissue,
         "timepoint":             timepoint,
+        "data_path":             data_path,
         "outcome":               "Complication",
         "complications_pooled":  complications,
         "n_train":               int(len(y_train)),
@@ -392,7 +394,8 @@ def run_plasma(
 
         out_dir = os.path.join(output_root, "plasma", tp)
         result  = run_binary_pipeline(
-            df, "plasma", tp, complications, out_dir, n_trials, sig_analytes
+            df, "plasma", tp, complications, out_dir, n_trials, sig_analytes,
+            data_path=os.path.abspath(csv_path),
         )
         if result:
             summaries.append(result)
@@ -426,7 +429,8 @@ def run_placenta(
 
     out_dir = os.path.join(output_root, "placenta", "all")
     result  = run_binary_pipeline(
-        df, "placenta", "all", complications, out_dir, n_trials, sig_analytes
+        df, "placenta", "all", complications, out_dir, n_trials, sig_analytes,
+        data_path=os.path.abspath(placenta_csv),
     )
     return [result] if result else []
 

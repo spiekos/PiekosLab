@@ -1,0 +1,122 @@
+{
+  "tissue": "placenta",
+  "timepoint": "all",
+  "outcomes": [
+    "HDP",
+    "FGR",
+    "sPTB"
+  ],
+  "n_train": 79,
+  "n_val": 17,
+  "n_test": 18,
+  "n_features_pretlasso": 6,
+  "n_features_postlasso": 6,
+  "best_model_val": "XGBoost",
+  "best_val_macro_pr_auc": 0.6463347763347763,
+  "test_metrics": {
+    "LogisticRegression": {
+      "HDP": {
+        "pr_auc": 0.5441558441558442,
+        "roc_auc": 0.6461538461538462,
+        "accuracy": 0.5,
+        "precision": 0.25,
+        "recall": 0.4,
+        "f1": 0.3076923076923077
+      },
+      "FGR": {
+        "pr_auc": 0.2828282828282828,
+        "roc_auc": 0.4444444444444444,
+        "accuracy": 0.5555555555555556,
+        "precision": 0.14285714285714285,
+        "recall": 0.3333333333333333,
+        "f1": 0.2
+      },
+      "sPTB": {
+        "pr_auc": 0.14285714285714285,
+        "roc_auc": 0.6470588235294117,
+        "accuracy": 0.6111111111111112,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "RandomForest": {
+      "HDP": {
+        "pr_auc": 0.42094155844155845,
+        "roc_auc": 0.6153846153846154,
+        "accuracy": 0.6666666666666666,
+        "precision": 0.4,
+        "recall": 0.4,
+        "f1": 0.4
+      },
+      "FGR": {
+        "pr_auc": 0.23412698412698413,
+        "roc_auc": 0.48888888888888893,
+        "accuracy": 0.7777777777777778,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "sPTB": {
+        "pr_auc": 0.125,
+        "roc_auc": 0.5882352941176471,
+        "accuracy": 0.7777777777777778,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "XGBoost": {
+      "HDP": {
+        "pr_auc": 0.46724386724386724,
+        "roc_auc": 0.49230769230769234,
+        "accuracy": 0.6666666666666666,
+        "precision": 0.4,
+        "recall": 0.4,
+        "f1": 0.4
+      },
+      "FGR": {
+        "pr_auc": 0.21216931216931217,
+        "roc_auc": 0.5111111111111111,
+        "accuracy": 0.8333333333333334,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "sPTB": {
+        "pr_auc": 0.16666666666666666,
+        "roc_auc": 0.7058823529411764,
+        "accuracy": 0.9444444444444444,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "SVM": {
+      "HDP": {
+        "pr_auc": 0.29653679653679654,
+        "roc_auc": 0.49230769230769234,
+        "accuracy": 0.5555555555555556,
+        "precision": 0.3333333333333333,
+        "recall": 0.6,
+        "f1": 0.42857142857142855
+      },
+      "FGR": {
+        "pr_auc": 0.23054070112893643,
+        "roc_auc": 0.4444444444444444,
+        "accuracy": 0.5555555555555556,
+        "precision": 0.2222222222222222,
+        "recall": 0.6666666666666666,
+        "f1": 0.3333333333333333
+      },
+      "sPTB": {
+        "pr_auc": 0.125,
+        "roc_auc": 0.5882352941176471,
+        "accuracy": 0.6666666666666666,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    }
+  }
+}
