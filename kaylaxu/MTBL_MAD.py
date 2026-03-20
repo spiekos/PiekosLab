@@ -6,6 +6,7 @@
 # prioritizing these with presistent elevation across multiple timepoints for potential diagnostic biomarker development. 
 
 import pandas as pd
+import numpy as np
 from scipy import stats
 from collections import Counter
 import logging
@@ -240,8 +241,7 @@ def filterOutliers(dir_output, outlierMatrix, scoreMatrix, meta, tissue, datatyp
 def mostPrevalent(dir_output, persistentMatrix, meta, analytes, tissue):
     results = []
     complicationOnly = persistentMatrix.loc[persistentMatrix["group"] != "Control",:]
-    temp = pd.concat([meta[t] for t in TIMEPOINTS], ignore_index=True).drop_duplicates(subset=["patient_ID"])
-    totalComplications = len(temp.loc[temp["group"] != "Control",:].index)
+    totalComplications = len(meta.loc[meta["group"] != "Control",:].index)
     #for m in analytes:
     #    elevatedCounts = Counter(complicationOnly.loc[complicationOnly["analyte_ID"] == a,:]["group"])
     for m in analytes:
@@ -276,7 +276,7 @@ def mostPrevalent(dir_output, persistentMatrix, meta, analytes, tissue):
 #       mean_proportion_timepoints (outlier timeopints / available timepoints)
 #       max_consecutive timepoints (longest stretch of consecutive outlier timepoints)
 #   Output: biomarker_most_persistent_<tissue>.csv
-def mostPersistent(dir_output, persistentMatrix, meta, analytes, tissue):
+def mostPersistent(dir_output, persistentMatrix, analytes, tissue):
     results = []
     complicationOnly = persistentMatrix.loc[persistentMatrix["group"] != "Control",:]
     for m in analytes:
@@ -321,11 +321,36 @@ def mostPersistent(dir_output, persistentMatrix, meta, analytes, tissue):
 #       analyte_ID
 #       n_patients_elevated_at_earliest
 #       percent_elevated_at_earliest
-#       n_patient_elevated_first_two
-#       mean_MAD_score_early_timepoints
+#       n_patient_elevated_at_first_two
+#       percent_elevated_at_first_two
+#       mean_MAD_score_at_earliest
+#       mean_MAD_score_at_first_two
 #   Output: biomarker_early_warning_<tissue>.csv
-def earlyWarning():
-    pass
+def earlyWarning(dir_output, persistentMatrix, analytes, tissue):
+    # early_timepoints = A and B
+    results = []
+    complicationOnly = persistentMatrix.loc[persistentMatrix["group"] != "Control",:]
+    for m in analytes:
+        mOnly = complicationOnly.loc[complicationOnly["analyte_ID"] == m,:]
+        if len(mOnly.index) == 0:
+            continue
+        hasA = mOnly.loc[["A" in x for x in mOnly["outlier_timepoints"]],:]
+        hasB = mOnly.loc[["B" in x for x in mOnly["outlier_timepoints"]],:]       
+        early = hasA.merge(hasB, how="outer")
+        if len(early.index) < 10:
+            continue
+        both = hasA.merge(hasB, how="inner")
+        results.append({"analyte_ID": m,
+                        "n_patients_elevated_at_earliest": len(early.index),
+                        "percent_elevated_at_earliest": len(early["patient_ID"]) / len(mOnly["patient_ID"]),
+                        "n_patient_elevated_at_first_two": len(both["patient_ID"]),
+                        "percent_elevated_at_first_two": len(both["patient_ID"]) / len(mOnly["patient_ID"]),
+                        "mean_MAD_score_at_earliest": early["mean_outlier_mad"].sum() / len(early["patient_ID"]),
+                        "mean_MAD_score_at_first_two": 0 if len(both["patient_ID"]) == 0 else both["mean_outlier_mad"].sum() / len(both["patient_ID"])})
+    warning = pd.DataFrame(results).sort_values(by=['percent_elevated_at_earliest', 'percent_elevated_at_first_two'], ascending=False)
+    warning.to_csv(dir_output + "/biomarker_early_warning_" + tissue + ".csv")
+    return warning
+
 
 # List 4: Complication-Specific
 #   Goal: Analytes enriched in specific complication subtypes
@@ -338,7 +363,7 @@ def earlyWarning():
 #           If % in other complications = 0, set enrichment = InF (or a very large number like 999). If both numerator and denominator = 0, exclude analyte from this list
 #       3. Filter to analytes with:
 #           30% prevelence in at least one complication type
-#           enrichment ration >= 2 (at least x2 higher in one complication vs another)
+#           enrichment ratio >= 2 (at least x2 higher in one complication vs another)
 #       4. Rank by enrichment ratio (descending)
 #   Include in output:
 #       analyte_ID
@@ -348,11 +373,41 @@ def earlyWarning():
 #       enrichment_ratio
 #       n_patients_primary_complication
 #   Output: biomarker_complication_specific_<tissue>.csv
-def complicationSpecific():
-    pass
-
-
-
+def complicationSpecific(dir_output, persistentMatrix, meta, analytes, tissue):
+    results = []
+    complicationOnly = persistentMatrix.loc[persistentMatrix["group"] != "Control",:]
+    for m in analytes:
+        mOnly = complicationOnly.loc[complicationOnly["analyte_ID"] == m,:]
+        maxValue = 0
+        maxKey = ""
+        n_patients = 0
+        compPercent = {}
+        for condition in COMPLICATIONS:
+            total = len(mOnly.loc[mOnly["group"].str.upper() == condition.upper(),:]["patient_ID"]) 
+            percent = total / len(meta.loc[meta["group"].str.upper() == condition.upper(),:]["patient_ID"].unique())
+            if percent > maxValue:
+                maxValue = percent
+                maxKey = condition
+                n_patients = total
+            compPercent[condition] = percent
+        if maxValue < 0.3:
+            continue
+        enrichment = [float('inf') if x == 0 else maxValue/x for x in compPercent.values() if x != maxValue]
+        enrichment.sort(reverse=True)
+        if all(x < 2 for x in enrichment):
+            continue
+        otherKeys = list(compPercent.keys())
+        otherKeys.remove(maxKey)
+        results.append({"analyte_ID": m,
+                        "primary_complication_type": maxKey,
+                        "percent_in_primary_complication": maxValue,
+                        "percent_in_other_complications": [compPercent[k] for k in otherKeys],
+                        "enrichment_ratio": enrichment,
+                        "n_patients_primary_complications": n_patients})
+    specific = pd.DataFrame(results).sort_values(by="enrichment_ratio", ascending=False)
+    specific.to_csv(dir_output + "/biomarker_complication_specific_" + tissue + ".csv")
+    return specific
+        
 # List 5: Most Extreme
 #   Goal: Analytes with highest magnitude deviations
 #   Steps:
@@ -360,7 +415,7 @@ def complicationSpecific():
 #           Calculate median MAD score across all outlier instances
 #           Calculate 99th percentile MAD score
 #           Calculate max MAD score observed
-#       2. Filter to analytes affecting >= patients
+#       2. Filter to analytes affecting >=5 patients
 #       3. Rank by median MAD score (descending)
 #       4. Select top 50 analytes
 #   Include in output:
@@ -371,18 +426,38 @@ def complicationSpecific():
 #       max_MAD_score
 #       patient_with_max (patient_ID showing maximum deviation)
 #   Output: biomarker_most_extreme_<tissue>.csv
-def mostExtreme():
-    pass
+def mostExtreme(dir_output, persistentMatrix, analytes, tissue):
+    results = []
+    complicationOnly = persistentMatrix.loc[persistentMatrix["group"] != "Control",:]
+    for m in analytes:
+        mOnly = complicationOnly.loc[complicationOnly["analyte_ID"] == m,:]
+        if len(mOnly.index) < 5:
+            continue
+        all_mad_scores = list(mOnly["mean_outlier_mad"])
+        #for i in complicationOnly.index:
+        #    all_mad_scores.extend(ast.literal_eval(complicationOnly.loc[i,"outlier_mad_scores"]))
+        results.append({"analyte_ID": m,
+                        "n_patients_affected": len(mOnly.index),
+                        "median_MAD_score": np.median(all_mad_scores),
+                        "percentile_99_MAD_score": np.percentile(all_mad_scores, 99),
+                        "max_MAD_score": max(all_mad_scores),
+                        "patient_with_max":  mOnly.loc[mOnly["mean_outlier_mad"] == max(all_mad_scores),"patient_ID"].iloc[0]
+                        })
+    extreme = pd.DataFrame(results).sort_values(by="median_MAD_score").iloc[0:50,:]
+    extreme.to_csv(dir_output + "/biomarker_most_extreme_" + tissue + ".csv")
+    return extreme
 
 # helper function for running all biomarker identification functions
 def identifyBiomarkers(dir_output, persistentMatrix, meta, outlierMatrix, tissue):
-    prevalentMarkers = mostPrevalent(dir_output, persistentMatrix, meta, outlierMatrix["A"].columns, tissue)
-    persistentMarkers = mostPersistent(dir_output, persistentMatrix, meta, outlierMatrix["A"].columns, tissue)
-    #earlyMarkers = earlyWarning(dir_output, persistentMatrix)
-    #specificMarkers = complicationSpecific(dir_output, persistentMatrix)
-    #extremeMarkers = mostExtreme(dir_output, persistentMatrix)
-    #return prevalentMarkers, persistentMarkers, earlyMarkers, specificMarkers, extremeMarkers
-    return prevalentMarkers, persistentMarkers
+    # elevated only
+    elevatedOnly = persistentMatrix.loc[persistentMatrix["outlier_direction"] == "elevated",:]
+    mergedMeta = pd.concat([meta[t] for t in TIMEPOINTS], ignore_index=True).drop_duplicates(subset=["patient_ID"])
+    prevalentMarkers = mostPrevalent(dir_output, elevatedOnly, mergedMeta, outlierMatrix["A"].columns, tissue)
+    persistentMarkers = mostPersistent(dir_output, elevatedOnly, outlierMatrix["A"].columns, tissue)
+    earlyMarkers = earlyWarning(dir_output, elevatedOnly, outlierMatrix["A"].columns, tissue)
+    specificMarkers = complicationSpecific(dir_output, elevatedOnly, mergedMeta, outlierMatrix["A"].columns, tissue)
+    extremeMarkers = mostExtreme(dir_output, elevatedOnly, outlierMatrix["A"].columns, tissue)
+    return prevalentMarkers, persistentMarkers, earlyMarkers, specificMarkers, extremeMarkers
 
     
 # primary wrapper function for Outlier Analysis
@@ -398,8 +473,8 @@ def OutlierAnalysis(dir_input, dir_output, datatype, tissue, batches):
     #persistentMatrix = filterOutliers(dir_output, outlierMatrix, scoreMatrix, meta, tissue, datatype)
     persistentMatrix = pd.read_csv("/Users/kaylaxu/Desktop/data/MAD_analyses/persistent_outliers_plasma_MTBL.csv", index_col=0)
     # identify biomarkers
-    #prevalentMarkers, persistentMarkers, earlyMarkers, specificMarkers, extremeMarkers = identifyBiomarkers(dir_output, persistentMatrix, meta, outlierMatrix, tissue)
-    prevalentMarkers, persistentMarkers = identifyBiomarkers(dir_output, persistentMatrix, meta, outlierMatrix, tissue)
+    prevalentMarkers, persistentMarkers, earlyMarkers, specificMarkers, extremeMarkers = identifyBiomarkers(dir_output, persistentMatrix, meta, outlierMatrix, tissue)
+    
 
 
     return
