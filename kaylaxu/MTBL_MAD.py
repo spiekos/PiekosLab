@@ -102,13 +102,19 @@ def mergeBatches(batches, dir_input, t):
 
 # extract and format control reference values
 # return: dictionary with keys = timepoints and values = control reference median and MAD values
+#         list of all control IDs (including timepoint suffix)
 # output: control_reference_statistics_<tissue>_<timepoint>_<data_type>.csv
 def controlRefStats(samples, dir_output, datatype, tissue, batches):
     controlAll = {} # dict to return with keys = timepoints and values = control reference median and MAD values
+    control_IDs = []
     for t in TIMEPOINTS:
+        control_IDs.extend(list(samples[t].index))
         controlAll[t] = getStats(samples[t], t, datatype, tissue)
         controlAll[t].to_csv(dir_output + "/control_reference_statistics_" + tissue + "_" + t + "_" + datatype + ".csv")
-    return controlAll
+    with open(dir_output + '/control_IDs.txt', 'w') as f:
+        for line in control_IDs:
+            f.write(f"{line}\n")
+    return controlAll, control_IDs
 
 # calculate MAD scores based on timepoint
 def getMADscores(df, controlRef, t):
@@ -459,12 +465,35 @@ def identifyBiomarkers(dir_output, persistentMatrix, meta, outlierMatrix, tissue
     extremeMarkers = mostExtreme(dir_output, elevatedOnly, outlierMatrix["A"].columns, tissue)
     return prevalentMarkers, persistentMarkers, earlyMarkers, specificMarkers, extremeMarkers
 
+# generate crosswalk matrix
+# return: dataframe where rows = metabolites, columns = category of outlier, values = 1 if in category, 0 if not
+def crosswalkMatrix(dir_output, analytes, prevalent, persistent, early, specific, extreme, tissue):
+    df = pd.DataFrame(0, index=analytes, columns=["most_persistent", "most_prevalent", "early_warning", "complication_specific", "most_extreme", "super_candidate"])
+    for m in df.index:
+        if m in set(prevalent["analyte_ID"]):
+            df.loc[m, "most_prevalent"] = 1
+        if m in set(persistent["analyte_ID"]):
+            df.loc[m, "most_persistent"] = 1
+        if m in set(early["analyte_ID"]):
+            df.loc[m, "early_warning"] = 1
+        if m in set(specific["analyte_ID"]):
+            df.loc[m, "complication_specific"] = 1
+        if m in set(extreme["analyte_ID"]):
+            df.loc[m, "most_extreme"] = 1
+    keep = [x > 0 for x in (list(df.sum(axis=1)))]
+    df = df.loc[keep,:]
+    df["super_candidate"] = [x >= 3 for x in (list(df.sum(axis=1)))]
+    logging.info(str(df["super_candidate"].sum()) + " super candidate metabolites (in >=3 lists) identified.")
+    df.to_csv(dir_output + "/biomarker_summary_crosswalk_" + tissue + ".csv")
+    return df
+
+
     
 # primary wrapper function for Outlier Analysis
 def OutlierAnalysis(dir_input, dir_output, datatype, tissue, batches):
     meta, samples = splitData(dir_input, batches)
     logging.info("Calculating control reference statistics...")
-    controlRef = controlRefStats(samples, dir_output, datatype, tissue, batches)
+    controlRef, control_IDs = controlRefStats(samples, dir_output, datatype, tissue, batches)
     logging.info("Calculating sample MAD scores...")
     scoreMatrix = MADscores(samples, dir_output, controlRef, batches, tissue, datatype)
     logging.info("Flagging outliers by patient x analyte across timepoints...")
@@ -474,7 +503,8 @@ def OutlierAnalysis(dir_input, dir_output, datatype, tissue, batches):
     persistentMatrix = pd.read_csv("/Users/kaylaxu/Desktop/data/MAD_analyses/persistent_outliers_plasma_MTBL.csv", index_col=0)
     # identify biomarkers
     prevalentMarkers, persistentMarkers, earlyMarkers, specificMarkers, extremeMarkers = identifyBiomarkers(dir_output, persistentMatrix, meta, outlierMatrix, tissue)
-    
+    # get crosswalk matrix
+    crosswalk = crosswalkMatrix(dir_output, outlierMatrix["A"].columns, prevalentMarkers, persistentMarkers, earlyMarkers, specificMarkers, extremeMarkers, tissue)
 
 
     return
