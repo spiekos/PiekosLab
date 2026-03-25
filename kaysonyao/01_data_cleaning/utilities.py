@@ -91,8 +91,12 @@ def load_metadata_with_batch(
         sheet_name = "n=133 placenta"
         if sample_id_col is None:
             sample_id_col = "ID"
+    elif meta_type == "metabolomics":
+        sheet_name = "n=133 metabolomics"
+        if sample_id_col is None:
+            sample_id_col = "Sample ID"
     else:
-        raise ValueError(f"meta_type must be 'proteomics' or 'placenta', got '{meta_type}'")
+        raise ValueError(f"meta_type must be 'proteomics', 'placenta' or 'metabolomics', got '{meta_type}'")
 
     meta = pd.read_excel(metadata_path, sheet_name=sheet_name)
 

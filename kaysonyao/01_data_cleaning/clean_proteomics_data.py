@@ -77,9 +77,9 @@ def process_all_files(
         file_paths: List of paths to Olink CSV files
         output_csv: Path to save final cleaned matrix
         metadata_path: Path to metadata Excel file
-        meta_type: 'proteomics' or 'placenta' - which sheet to use
+        meta_type: 'proteomics', 'metabolomics' or 'placenta' - which sheet to use
     """
-    run_label = "plasma" if meta_type == "proteomics" else "placenta"
+    run_label = "plasma" if meta_type == "proteomics" else ('metabolomics' if meta_type == "metabolomics" else "placenta")
     logger.info("%s: start", run_label)
 
     # 1) Load metadata

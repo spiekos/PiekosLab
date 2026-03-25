@@ -1,0 +1,63 @@
+2026-03-24 23:31:48,480 [INFO] ======================================================================
+2026-03-24 23:31:48,480 [INFO] Superset Enrichment Analysis
+2026-03-24 23:31:48,480 [INFO] Date/time  : 2026-03-24 23:31:48
+2026-03-24 23:31:48,481 [INFO] Timepoints : A B C D
+2026-03-24 23:31:48,481 [INFO] Databases  : GO_Biological_Process_2025, GO_Molecular_Function_2025, GO_Cellular_Component_2025, KEGG_2026, Reactome_Pathways_2024
+2026-03-24 23:31:48,481 [INFO] FDR thresh : 0.05 (Enrichr adjusted p-value)
+2026-03-24 23:31:48,481 [INFO] ======================================================================
+2026-03-24 23:31:48,483 [INFO] Gene set plasma_A             : 2 proteins
+2026-03-24 23:31:48,483 [INFO] Gene set plasma_B             : 3 proteins
+2026-03-24 23:31:48,483 [INFO] Gene set plasma_C             : 114 proteins
+2026-03-24 23:31:48,483 [INFO] Gene set plasma_D             : 7 proteins
+2026-03-24 23:31:48,483 [INFO] Gene set placenta             : 6 proteins
+2026-03-24 23:31:48,483 [INFO] Gene set superset             : 131 proteins
+2026-03-24 23:31:48,483 [INFO] ------------------------------------------------------------
+2026-03-24 23:31:48,483 [INFO] [plasma_A] Submitting 2 genes to Enrichr …
+2026-03-24 23:31:50,194 [INFO]   [plasma_A] GO_Biological_Process_2025 → 42 terms, 39 significant (adj-p < 0.05)
+2026-03-24 23:31:51,803 [INFO]   [plasma_A] GO_Molecular_Function_2025 → 11 terms, 10 significant (adj-p < 0.05)
+2026-03-24 23:31:53,419 [INFO]   [plasma_A] GO_Cellular_Component_2025 → 9 terms, 8 significant (adj-p < 0.05)
+2026-03-24 23:31:55,031 [WARNING]   [plasma_A] KEGG_2026 — no results returned.
+2026-03-24 23:31:56,622 [INFO]   [plasma_A] Reactome_Pathways_2024 → 5 terms, 0 significant (adj-p < 0.05)
+2026-03-24 23:31:57,282 [INFO] [plasma_A] Dot-plot saved → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/models/binary/superset_enrichment/summary/plasma_A_enrichment_dotplot.png
+2026-03-24 23:31:57,282 [INFO] ------------------------------------------------------------
+2026-03-24 23:31:57,282 [INFO] [plasma_B] Submitting 3 genes to Enrichr …
+2026-03-24 23:31:58,992 [INFO]   [plasma_B] GO_Biological_Process_2025 → 8 terms, 8 significant (adj-p < 0.05)
+2026-03-24 23:32:00,605 [INFO]   [plasma_B] GO_Molecular_Function_2025 → 6 terms, 3 significant (adj-p < 0.05)
+2026-03-24 23:32:02,223 [WARNING]   [plasma_B] GO_Cellular_Component_2025 — no results returned.
+2026-03-24 23:32:03,832 [INFO]   [plasma_B] KEGG_2026 → 5 terms, 5 significant (adj-p < 0.05)
+2026-03-24 23:32:05,442 [INFO]   [plasma_B] Reactome_Pathways_2024 → 7 terms, 7 significant (adj-p < 0.05)
+2026-03-24 23:32:06,070 [INFO] [plasma_B] Dot-plot saved → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/models/binary/superset_enrichment/summary/plasma_B_enrichment_dotplot.png
+2026-03-24 23:32:06,070 [INFO] ------------------------------------------------------------
+2026-03-24 23:32:06,070 [INFO] [plasma_C] Submitting 114 genes to Enrichr …
+2026-03-24 23:32:08,010 [INFO]   [plasma_C] GO_Biological_Process_2025 → 1131 terms, 6 significant (adj-p < 0.05)
+2026-03-24 23:32:09,663 [INFO]   [plasma_C] GO_Molecular_Function_2025 → 180 terms, 0 significant (adj-p < 0.05)
+2026-03-24 23:32:11,306 [INFO]   [plasma_C] GO_Cellular_Component_2025 → 131 terms, 13 significant (adj-p < 0.05)
+2026-03-24 23:32:12,940 [INFO]   [plasma_C] KEGG_2026 → 191 terms, 0 significant (adj-p < 0.05)
+2026-03-24 23:32:14,610 [INFO]   [plasma_C] Reactome_Pathways_2024 → 650 terms, 3 significant (adj-p < 0.05)
+2026-03-24 23:32:15,136 [INFO] [plasma_C] Dot-plot saved → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/models/binary/superset_enrichment/summary/plasma_C_enrichment_dotplot.png
+2026-03-24 23:32:15,136 [INFO] ------------------------------------------------------------
+2026-03-24 23:32:15,136 [INFO] [plasma_D] Submitting 7 genes to Enrichr …
+2026-03-24 23:32:16,885 [INFO]   [plasma_D] GO_Biological_Process_2025 → 93 terms, 34 significant (adj-p < 0.05)
+2026-03-24 23:32:18,505 [INFO]   [plasma_D] GO_Molecular_Function_2025 → 18 terms, 3 significant (adj-p < 0.05)
+2026-03-24 23:32:20,113 [INFO]   [plasma_D] GO_Cellular_Component_2025 → 22 terms, 0 significant (adj-p < 0.05)
+2026-03-24 23:32:21,723 [INFO]   [plasma_D] KEGG_2026 → 18 terms, 2 significant (adj-p < 0.05)
+2026-03-24 23:32:23,324 [INFO]   [plasma_D] Reactome_Pathways_2024 → 38 terms, 20 significant (adj-p < 0.05)
+2026-03-24 23:32:23,971 [INFO] [plasma_D] Dot-plot saved → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/models/binary/superset_enrichment/summary/plasma_D_enrichment_dotplot.png
+2026-03-24 23:32:23,971 [INFO] ------------------------------------------------------------
+2026-03-24 23:32:23,972 [INFO] [placenta] Submitting 6 genes to Enrichr …
+2026-03-24 23:32:25,682 [INFO]   [placenta] GO_Biological_Process_2025 → 51 terms, 40 significant (adj-p < 0.05)
+2026-03-24 23:32:27,296 [INFO]   [placenta] GO_Molecular_Function_2025 → 14 terms, 3 significant (adj-p < 0.05)
+2026-03-24 23:32:28,908 [INFO]   [placenta] GO_Cellular_Component_2025 → 9 terms, 0 significant (adj-p < 0.05)
+2026-03-24 23:32:30,520 [INFO]   [placenta] KEGG_2026 → 11 terms, 7 significant (adj-p < 0.05)
+2026-03-24 23:32:32,131 [INFO]   [placenta] Reactome_Pathways_2024 → 33 terms, 11 significant (adj-p < 0.05)
+2026-03-24 23:32:32,779 [INFO] [placenta] Dot-plot saved → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/models/binary/superset_enrichment/summary/placenta_enrichment_dotplot.png
+2026-03-24 23:32:32,779 [INFO] ------------------------------------------------------------
+2026-03-24 23:32:32,780 [INFO] [superset] Submitting 131 genes to Enrichr …
+2026-03-24 23:32:34,694 [INFO]   [superset] GO_Biological_Process_2025 → 1212 terms, 2 significant (adj-p < 0.05)
+2026-03-24 23:32:36,355 [INFO]   [superset] GO_Molecular_Function_2025 → 188 terms, 7 significant (adj-p < 0.05)
+2026-03-24 23:32:37,988 [INFO]   [superset] GO_Cellular_Component_2025 → 135 terms, 16 significant (adj-p < 0.05)
+2026-03-24 23:32:39,629 [INFO]   [superset] KEGG_2026 → 201 terms, 0 significant (adj-p < 0.05)
+2026-03-24 23:32:41,354 [INFO]   [superset] Reactome_Pathways_2024 → 676 terms, 1 significant (adj-p < 0.05)
+2026-03-24 23:32:41,984 [INFO] [superset] Dot-plot saved → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/models/binary/superset_enrichment/summary/superset_enrichment_dotplot.png
+2026-03-24 23:32:41,985 [INFO] ======================================================================
+2026-03-24 23:32:41,985 [INFO] Enrichment analysis complete. Output: /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/models/binary/superset_enrichment
