@@ -1,0 +1,22 @@
+2026-03-25 15:03:06,118 [INFO] ======================================================================
+2026-03-25 15:03:06,119 [INFO] Intraomics Differential Analysis Log
+2026-03-25 15:03:06,119 [INFO] Date/time    : 2026-03-25 15:03:06
+2026-03-25 15:03:06,119 [INFO] Python       : 3.12.12
+2026-03-25 15:03:06,119 [INFO] scipy        : 1.17.0
+2026-03-25 15:03:06,119 [INFO] statsmodels  : 0.14.6
+2026-03-25 15:03:06,119 [INFO] pandas       : 3.0.0
+2026-03-25 15:03:06,119 [INFO] numpy        : 2.4.2
+2026-03-25 15:03:06,119 [INFO] ----------------------------------------------------------------------
+2026-03-25 15:03:06,119 [INFO] Parameters:
+2026-03-25 15:03:06,119 [INFO]   MIN_N             = 5  (min non-missing observations per group)
+2026-03-25 15:03:06,119 [INFO]   FDR_THRESHOLD     = 0.05
+2026-03-25 15:03:06,119 [INFO]   LOG2_FC_THRESHOLD = 0.5850  (log2(1.5); both CS and longitudinal)
+2026-03-25 15:03:06,119 [INFO]   FDR method        = Benjamini-Hochberg
+2026-03-25 15:03:06,119 [INFO]   CS test           = Mann-Whitney U (two-sided)
+2026-03-25 15:03:06,119 [INFO]   Long test         = Wilcoxon signed-rank (two-sided, zero_method='wilcox')
+2026-03-25 15:03:06,119 [INFO] ======================================================================
+2026-03-25 15:03:06,152 [INFO] Loaded 106 samples × 2039 analytes from data/cleaned/metabolomics/normalized_full_results/metabolomics_placenta_cleaned_with_metadata.csv
+2026-03-25 15:03:06,153 [INFO] Cross-sectional: Control vs 3 complication group(s) → 3 comparison(s)
+2026-03-25 15:03:06,801 [INFO]   Control_vs_FGR → 2039 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
+2026-03-25 15:03:07,449 [INFO]   Control_vs_HDP → 2039 tested, 0 excluded (n < 5), 1 significant (q < 0.05)
+2026-03-25 15:03:08,049 [INFO]   Control_vs_sPTB → 2039 tested, 0 excluded (n < 5), 0 significant (q < 0.05)

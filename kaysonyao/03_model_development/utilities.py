@@ -214,14 +214,13 @@ def lasso_feature_selection_binary(
 
     enet = LogisticRegressionCV(
         l1_ratios=(0.1, 0.5, 0.7, 0.9, 1.0),
-        solver="saga",                           # required for elastic-net in sklearn >= 1.8
+        solver="saga",
         cv=cv_actual,
         class_weight="balanced",
         random_state=random_state,
         max_iter=20000,
         tol=1e-3,
         n_jobs=-1,
-        use_legacy_attributes=False,
     )
     enet.fit(X_scaled, y_train)
 

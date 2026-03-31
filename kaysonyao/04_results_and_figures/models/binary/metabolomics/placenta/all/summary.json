@@ -1,0 +1,64 @@
+{
+  "tissue": "placenta",
+  "timepoint": "all",
+  "data_path": "/sessions/zealous-sleepy-curie/mnt/kaysonyao/data/cleaned/metabolomics/normalized_full_results/metabolomics_placenta_cleaned_with_metadata.csv",
+  "outcome": "Complication",
+  "complications_pooled": [
+    "HDP",
+    "FGR",
+    "sPTB"
+  ],
+  "n_train": 74,
+  "n_val": 16,
+  "n_test": 16,
+  "class_dist_train": {
+    "control": 34,
+    "complication": 40
+  },
+  "class_dist_val": {
+    "control": 7,
+    "complication": 9
+  },
+  "class_dist_test": {
+    "control": 8,
+    "complication": 8
+  },
+  "n_features_pretlasso": 2039,
+  "n_features_postlasso": 2039,
+  "best_model_val": "XGBoost",
+  "best_val_pr_auc": 0.8496913580246914,
+  "test_metrics": {
+    "LogisticRegression": {
+      "pr_auc": 0.7910256410256411,
+      "roc_auc": 0.65625,
+      "accuracy": 0.6875,
+      "precision": 0.7142857142857143,
+      "recall": 0.625,
+      "f1": 0.6666666666666666
+    },
+    "RandomForest": {
+      "pr_auc": 0.7583333333333333,
+      "roc_auc": 0.6875,
+      "accuracy": 0.625,
+      "precision": 0.625,
+      "recall": 0.625,
+      "f1": 0.625
+    },
+    "XGBoost": {
+      "pr_auc": 0.7607600732600732,
+      "roc_auc": 0.703125,
+      "accuracy": 0.75,
+      "precision": 0.75,
+      "recall": 0.75,
+      "f1": 0.75
+    },
+    "SVM": {
+      "pr_auc": 0.7152777777777777,
+      "roc_auc": 0.578125,
+      "accuracy": 0.625,
+      "precision": 0.6666666666666666,
+      "recall": 0.5,
+      "f1": 0.5714285714285714
+    }
+  }
+}

@@ -7,7 +7,7 @@ Differential analysis restricted to the LASSO-selected superset proteins.
 The superset is the union of proteins selected by LASSO in each binary classifier
 model (default: plasma A, B, C, D + placenta).  Plasma E is excluded from superset
 construction by default because its LASSO regularisation collapsed (C≈57), selecting
-~1600 proteins vs 2–114 for other timepoints.
+~1600 proteins vs 2-114 for other timepoints.
 
 Analysis mirrors identify_differential_analytes.py but operates only on the
 superset proteins rather than all measured analytes.

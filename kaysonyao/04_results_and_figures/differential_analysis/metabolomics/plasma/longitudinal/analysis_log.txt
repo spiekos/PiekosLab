@@ -1,0 +1,23 @@
+2026-03-30 14:08:06,123 [INFO] ======================================================================
+2026-03-30 14:08:06,123 [INFO] Intraomics Differential Analysis Log
+2026-03-30 14:08:06,123 [INFO] Date/time    : 2026-03-30 14:08:06
+2026-03-30 14:08:06,123 [INFO] Python       : 3.12.12
+2026-03-30 14:08:06,123 [INFO] scipy        : 1.17.0
+2026-03-30 14:08:06,123 [INFO] statsmodels  : 0.14.6
+2026-03-30 14:08:06,123 [INFO] pandas       : 3.0.0
+2026-03-30 14:08:06,123 [INFO] numpy        : 2.4.2
+2026-03-30 14:08:06,123 [INFO] ----------------------------------------------------------------------
+2026-03-30 14:08:06,123 [INFO] Parameters:
+2026-03-30 14:08:06,123 [INFO]   MIN_N             = 5  (min non-missing observations per group)
+2026-03-30 14:08:06,123 [INFO]   FDR_THRESHOLD     = 0.05
+2026-03-30 14:08:06,123 [INFO]   LOG2_FC_THRESHOLD = 0.5850  (log2(1.5); both CS and longitudinal)
+2026-03-30 14:08:06,123 [INFO]   FDR method        = Benjamini-Hochberg
+2026-03-30 14:08:06,123 [INFO]   CS test           = Mann-Whitney U (two-sided)
+2026-03-30 14:08:06,123 [INFO]   Long test         = Wilcoxon signed-rank (two-sided, zero_method='wilcox')
+2026-03-30 14:08:06,123 [INFO] ======================================================================
+2026-03-30 14:08:06,275 [INFO] Loaded 5 timepoints, 1889 analytes
+2026-03-30 14:08:06,348 [INFO] Longitudinal [sPTB]: 5 timepoints → 4 adjacent delta comparisons
+2026-03-30 14:08:06,861 [INFO]   B−A → 1889 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
+2026-03-30 14:08:08,013 [INFO]   C−B → 1889 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
+2026-03-30 14:08:08,516 [INFO]   D−C → 1889 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
+2026-03-30 14:08:08,517 [WARNING]   E−D [sPTB]: 0 paired subjects — skipping (no result file written).

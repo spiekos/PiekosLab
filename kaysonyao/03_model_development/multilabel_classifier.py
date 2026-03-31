@@ -387,12 +387,13 @@ def run_plasma(
     outcomes: list,
     n_trials: int,
     sig_analytes_dir: str | None = None,
+    file_prefix: str = "proteomics",
 ) -> list:
     summaries = []
     for tp in timepoints:
         csv_path = os.path.join(
             plasma_dir,
-            f"proteomics_plasma_formatted_suffix_{tp}.csv",
+            f"{file_prefix}_plasma_formatted_suffix_{tp}.csv",
         )
         if not os.path.exists(csv_path):
             logger.warning("Plasma timepoint %s CSV not found: %s - skipping.", tp, csv_path)
@@ -524,12 +525,19 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--skip-plasma",   action="store_true", help="Skip plasma analysis.")
     p.add_argument("--skip-placenta", action="store_true", help="Skip placenta analysis.")
+    p.add_argument(
+        "--file-prefix",
+        default="proteomics",
+        help="Filename prefix for plasma CSVs (default: proteomics). "
+             "Use 'metabolomics' when running on metabolomics data.",
+    )
     return p
 
 def main() -> None:
     args = _build_parser().parse_args()
     logger.info("Outcomes modelled jointly: %s", args.outcomes)
     logger.info("Optuna trials per model:   %d", args.n_trials)
+    logger.info("File prefix: %s", args.file_prefix)
     sig_dir = args.sig_analytes_dir if args.sig_analytes_dir else None
     if sig_dir:
         logger.info("Significant analytes dir: %s", sig_dir)
@@ -546,6 +554,7 @@ def main() -> None:
             args.outcomes,
             args.n_trials,
             sig_analytes_dir=sig_dir,
+            file_prefix=args.file_prefix,
         )
 
     if not args.skip_placenta:

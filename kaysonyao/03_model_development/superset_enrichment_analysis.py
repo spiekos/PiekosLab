@@ -4,20 +4,6 @@ superset_enrichment_analysis.py
 Over-representation analysis (ORA) via the Enrichr REST API on the
 LASSO-selected proteins identified as important by the binary models.
 
-Gene sets analysed
-------------------
-  • Per-timepoint  : proteins LASSO-selected at each plasma timepoint (A–D)
-  • Placenta        : proteins LASSO-selected in the placenta model
-  • Superset        : union of all the above (default: A+B+C+D+placenta)
-
-Databases queried (Enrichr)
----------------------------
-  GO_Biological_Process_2023
-  GO_Molecular_Function_2023
-  GO_Cellular_Component_2023
-  KEGG_2021_Human
-  Reactome_2022
-
 Outputs (under --output-dir)
 -----------------------------
   enrichment/
@@ -27,7 +13,7 @@ Outputs (under --output-dir)
       {label}_top_terms.png          (top-10 terms per database, dot-plot)
   analysis_log.txt
 
-Requires: requests, pandas, matplotlib, scipy (standard env; no gseapy needed)
+Requires: requests, pandas, matplotlib, scipy
 
 Usage
 -----

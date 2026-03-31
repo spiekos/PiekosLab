@@ -1,0 +1,64 @@
+{
+  "tissue": "plasma",
+  "timepoint": "C",
+  "data_path": "/sessions/zealous-sleepy-curie/mnt/kaysonyao/data/cleaned/metabolomics/normalized_sliced_by_suffix/metabolomics_plasma_formatted_suffix_C.csv",
+  "outcome": "Complication",
+  "complications_pooled": [
+    "HDP",
+    "FGR",
+    "sPTB"
+  ],
+  "n_train": 88,
+  "n_val": 19,
+  "n_test": 19,
+  "class_dist_train": {
+    "control": 39,
+    "complication": 49
+  },
+  "class_dist_val": {
+    "control": 8,
+    "complication": 11
+  },
+  "class_dist_test": {
+    "control": 9,
+    "complication": 10
+  },
+  "n_features_pretlasso": 1887,
+  "n_features_postlasso": 1887,
+  "best_model_val": "XGBoost",
+  "best_val_pr_auc": 0.8945821854912763,
+  "test_metrics": {
+    "LogisticRegression": {
+      "pr_auc": 0.6577075620457973,
+      "roc_auc": 0.5,
+      "accuracy": 0.47368421052631576,
+      "precision": 0.5,
+      "recall": 0.6,
+      "f1": 0.5454545454545454
+    },
+    "RandomForest": {
+      "pr_auc": 0.654330065359477,
+      "roc_auc": 0.5666666666666667,
+      "accuracy": 0.47368421052631576,
+      "precision": 0.5,
+      "recall": 0.7,
+      "f1": 0.5833333333333334
+    },
+    "XGBoost": {
+      "pr_auc": 0.6180198456514245,
+      "roc_auc": 0.48888888888888893,
+      "accuracy": 0.5263157894736842,
+      "precision": 0.5454545454545454,
+      "recall": 0.6,
+      "f1": 0.5714285714285714
+    },
+    "SVM": {
+      "pr_auc": 0.7912679425837319,
+      "roc_auc": 0.6777777777777779,
+      "accuracy": 0.6842105263157895,
+      "precision": 0.8333333333333334,
+      "recall": 0.5,
+      "f1": 0.625
+    }
+  }
+}

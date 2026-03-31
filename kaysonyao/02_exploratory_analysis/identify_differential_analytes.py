@@ -3,22 +3,28 @@ Intraomics differential analysis: cross-sectional and longitudinal.
 
 Cross-sectional:
     Mann-Whitney U test + Benjamini-Hochberg FDR (q < 0.05).
-    Always compares Control vs each complication group (FGR, HDP, sPTB).
+    Always compares Control vs Complication (FGR/HDP/sPTB pooled).
     Min n=5 non-missing observations per group per analyte.
 
 Longitudinal:
-    Mann-Whitney U comparing Control deltas vs Complication deltas at each
-    adjacent timepoint step (B-A, C-B, D-C, E-D). One comparison per
-    Control vs FGR/HDP/sPTB pair per step. Min n=5 in each group per analyte.
+    Wilcoxon signed-rank on within-subject deltas at each adjacent timepoint
+    step (B-A, C-B, D-C, E-D). Runs per individual group (Control, FGR, HDP,
+    sPTB) and a pooled Complication group.
 
 Usage:
-    # Cross-sectional
+    # Proteomics (default — no args)
+    python identify_differential_analytes.py
+
+    # Metabolomics
+    python identify_differential_analytes.py --omics-type metabolomics
+
+    # CLI cross-sectional
     python identify_differential_analytes.py \
         --mode cross_sectional \
         --input cleaned.csv \
         --output-dir results
 
-    # Longitudinal
+    # CLI longitudinal
     python identify_differential_analytes.py \
         --mode longitudinal \
         --timepoint-files t1.csv t2.csv t3.csv \
@@ -59,10 +65,17 @@ def _build_parser() -> argparse.ArgumentParser:
         description="Intraomics differential analysis (cross-sectional and longitudinal)."
     )
     p.add_argument(
+        "--omics-type",
+        choices=["proteomics", "metabolomics"],
+        default="proteomics",
+        help="Omics type for default-mode pipeline (default: proteomics). "
+             "Pass 'metabolomics' to run the identical pipeline on metabolomics paths.",
+    )
+    p.add_argument(
         "--mode",
         choices=["cross_sectional", "longitudinal", "both"],
-        default="cross_sectional",
-        help="Analysis mode (default: cross_sectional).",
+        default=None,
+        help="Analysis mode. If omitted, runs the full default pipeline for --omics-type.",
     )
     p.add_argument(
         "--input",
@@ -106,12 +119,13 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main():
-    if len(sys.argv) == 1:
-        _run_default_mode()
-        return
-
     parser = _build_parser()
     args   = parser.parse_args()
+
+    # If no --mode given, run the full default pipeline for the chosen omics type
+    if args.mode is None:
+        _run_default_mode(args.omics_type)
+        return
 
     cross_dir = os.path.join(args.output_dir, "cross_sectional")
     long_dir  = os.path.join(args.output_dir, "longitudinal")
@@ -171,17 +185,26 @@ if __name__ == "__main__":
         format="%(asctime)s [%(levelname)s] %(message)s",
     )
 
-    def _run_default_mode() -> None:
-        wkdir               = os.getcwd()
+    def _run_default_mode(omics_type: str = "proteomics") -> None:
+        wkdir = os.getcwd()
+
+        # Resolve paths based on omics type
+        prefix = omics_type  # "proteomics" or "metabolomics"
         cleaned_dir_placenta = os.path.join(
-            wkdir, "data", "cleaned", "proteomics", "normalized_full_results"
+            wkdir, "data", "cleaned", prefix, "normalized_full_results"
         )
-        cleaned_dir_plasma  = os.path.join(
-            wkdir, "data", "cleaned", "proteomics", "normalized_sliced_by_suffix"
+        cleaned_dir_plasma = os.path.join(
+            wkdir, "data", "cleaned", prefix, "normalized_sliced_by_suffix"
         )
-        output_dir = os.path.join(wkdir, "04_results_and_figures", "differential_analysis")
+        output_dir = os.path.join(
+            wkdir, "04_results_and_figures", "differential_analysis",
+            *([] if omics_type == "proteomics" else [omics_type]),
+        )
+        plasma_file_pattern   = f"{prefix}_plasma_formatted_suffix_{{tp}}.csv"
+        placenta_file         = f"{prefix}_placenta_cleaned_with_metadata.csv"
 
         _start_analysis_log(output_dir)
+        logger.info("Running default pipeline for omics_type=%s", omics_type)
 
         # Helper: relabel FGR/HDP/sPTB → "Complication" (leaves Control unchanged)
         def _merge_to_complication(df: pd.DataFrame, group_col: str = "Group") -> pd.DataFrame:
@@ -192,9 +215,7 @@ if __name__ == "__main__":
             return df
 
         # ── Sample count report ───────────────────────────────────────────
-        placenta_csv = os.path.join(
-            cleaned_dir_placenta, "proteomics_placenta_cleaned_with_metadata.csv"
-        )
+        placenta_csv = os.path.join(cleaned_dir_placenta, placenta_file)
         write_sample_count_report(output_dir, cleaned_dir_plasma, placenta_csv)
 
         # ── Cross-sectional: placenta ─────────────────────────────────────
@@ -216,11 +237,9 @@ if __name__ == "__main__":
             logger.warning("Input not found, skipping cross-sectional: %s", placenta_csv)
 
         # ── Cross-sectional: plasma per timepoint ─────────────────────────
-        # E is included because postnatal EE samples are merged into E,
-        # giving complication groups representation at this timepoint.
         for tp in ["A", "B", "C", "D", "E"]:
             tp_csv = os.path.join(
-                cleaned_dir_plasma, f"proteomics_plasma_formatted_suffix_{tp}.csv"
+                cleaned_dir_plasma, plasma_file_pattern.format(tp=tp)
             )
             if not os.path.exists(tp_csv):
                 logger.warning(
@@ -245,8 +264,9 @@ if __name__ == "__main__":
         # Within-group Wilcoxon signed-rank for Control, FGR, HDP, sPTB
         # (individual disease deltas), plus a pooled "Complication" run.
         timepoint_files = {
-            tp: os.path.join(cleaned_dir_plasma, f"proteomics_plasma_formatted_suffix_{tp}.csv")
+            tp: os.path.join(cleaned_dir_plasma, plasma_file_pattern.format(tp=tp))
             for tp in ["A", "B", "C", "D", "E"]
+            if os.path.exists(os.path.join(cleaned_dir_plasma, plasma_file_pattern.format(tp=tp)))
         }
         tp_dfs = {k: normalise_group_labels(load_data(v)) for k, v in timepoint_files.items()}
         analyte_cols = get_analyte_columns(next(iter(tp_dfs.values())))
