@@ -1,6 +1,6 @@
 # 02 Exploratory Analysis
 
-Differential analysis and visualization pipeline for DP3 proteomics (plasma and placenta).
+Differential analysis and visualization pipeline for DP3 multi-omics data (proteomics and metabolomics).
 All scripts are run from the **project root** (the directory containing the `data/` folder).
 
 ---
@@ -48,11 +48,14 @@ Runs cross-sectional and/or longitudinal differential analysis on cleaned proteo
 **Usage:**
 
 ```bash
-# Default (no args): Control vs Complication (pooled) for all plasma timepoints + placenta
-# (cross-sectional) and within-group longitudinal for Control/FGR/HDP/sPTB + Complication
+# Default (no args): proteomics — Control vs Complication (pooled) for all plasma timepoints
+# + placenta (cross-sectional) and within-group longitudinal for Control/FGR/HDP/sPTB + Complication
 python 02_exploratory_analysis/identify_differential_analytes.py
 
-# Cross-sectional on a single cleaned CSV (pre-merge complications manually, or pass merged CSV)
+# Metabolomics default mode (same pipeline, different data paths and output directory)
+python 02_exploratory_analysis/identify_differential_analytes.py --omics-type metabolomics
+
+# Cross-sectional on a single cleaned CSV
 python 02_exploratory_analysis/identify_differential_analytes.py \
     --mode cross_sectional \
     --input data/cleaned/proteomics/normalized_sliced_by_suffix/proteomics_plasma_formatted_suffix_C.csv \
@@ -71,7 +74,8 @@ python 02_exploratory_analysis/identify_differential_analytes.py \
 
 | Flag | Default | Description |
 |---|---|---|
-| `--mode` | `cross_sectional` | `cross_sectional`, `longitudinal`, or `both` |
+| `--omics-type` | `proteomics` | `proteomics` or `metabolomics`. Determines input data paths and output directory. Only used in default (no-`--mode`) invocation. |
+| `--mode` | *(none)* | `cross_sectional`, `longitudinal`, or `both`. Omit to run the full default pipeline for the selected omics type. |
 | `--input` | — | Cleaned wide-format CSV (required for CS mode) |
 | `--group-col` | `Group` | Column name containing group labels |
 | `--output-dir` | `results` | Root output directory |
@@ -79,6 +83,8 @@ python 02_exploratory_analysis/identify_differential_analytes.py \
 | `--timepoint-labels` | `T1 T2 …` | Labels matching each timepoint file (longitudinal) |
 | `--group` | — | Complication group for longitudinal analysis (e.g. `FGR`, `HDP`, `sPTB`). Always compared against Control. |
 | `--subject-col` | `SubjectID` | Column used to pair participants across timepoints |
+
+**Note on `--mode` default change:** Prior to March 2026, `--mode` defaulted to `cross_sectional`. It now defaults to `None`; omitting `--mode` triggers the full default pipeline (both cross-sectional and longitudinal for all relevant datasets). Passing `--mode cross_sectional` explicitly still works as before.
 
 ---
 
@@ -94,13 +100,15 @@ Generates z-score heatmaps from differential analysis results.
 - **Outputs:** `Control_vs_Complication/Control_vs_Complication_heatmap.pdf`, `…_heatmap.png` (300 dpi), `…_heatmap_data.csv`.
 
 #### Longitudinal heatmap (`plot_longitudinal_heatmap`)
-- **Rows:** significant analytes in ≥ 1 adjacent step for the specified group, up to `MAX_ANALYTES`.
+- **Rows:** analytes significant (q < 0.05 AND |median_delta| ≥ log2(1.5)) in ≥ 1 adjacent step for the specified group, up to `MAX_ANALYTES`.
 - **Columns:** adjacent delta comparisons in fixed chronological order (B−A, C−B, D−C, E−D); not clustered.
-- **Values:** `median_delta`, row-wise z-scored across comparisons, clipped ±2.0.
+- **Values:** `median_delta` for the specified group (median of within-subject paired differences: value_later − value_earlier, in log2 space), row-wise z-scored across comparisons, clipped ±2.0.
+- **Significance criterion:** Wilcoxon signed-rank test on within-subject deltas vs zero (FDR-BH corrected), applied independently per group per comparison. This tests *"did this analyte change within this group?"*, **not** *"did this group change differently from Control?"*.
 - **Row clustering:** Ward linkage, Euclidean distance.
 - **Cell annotations:** significant cells marked with a dot (•); non-significant cells dimmed.
 - **Outputs:** `<group>_longitudinal_heatmap.pdf`, `…_heatmap.png` (300 dpi), `…_heatmap_data.csv`.
 - Default mode generates heatmaps for Control, FGR, HDP, sPTB, and pooled Complication.
+- **Important:** each group's heatmap is independent. To visualise differential change between groups (e.g. HDP vs Control), a separate analysis subtracting Control `median_delta` from the complication `median_delta` would be needed.
 
 **Usage:**
 
@@ -241,7 +249,7 @@ All outputs are written under `04_results_and_figures/`, organized by pipeline s
 │
 ├── differential_analysis/          ← identify_differential_analytes.py
 │   ├── sample_counts_per_group_timepoint.csv
-│   ├── plasma/
+│   ├── plasma/                      (proteomics)
 │   │   ├── cross_sectional/
 │   │   │   ├── A/
 │   │   │   │   ├── Control_vs_Complication_differential_results.csv
@@ -254,13 +262,26 @@ All outputs are written under `04_results_and_figures/`, organized by pipeline s
 │   │       ├── sPTB_B_minus_A_longitudinal_results.csv
 │   │       ├── Complication_B_minus_A_longitudinal_results.csv
 │   │       └── … (one file per group × adjacent timepoint pair)
-│   └── placenta/
-│       └── cross_sectional/
-│           ├── Control_vs_Complication_differential_results.csv
-│           └── Control_vs_Complication_significant_analytes.csv
+│   ├── placenta/                    (proteomics)
+│   │   └── cross_sectional/
+│   │       ├── Control_vs_Complication_differential_results.csv
+│   │       └── Control_vs_Complication_significant_analytes.csv
+│   └── metabolomics/               ← --omics-type metabolomics
+│       ├── plasma/
+│       │   ├── cross_sectional/    (A–E; all yield 0 significant analytes)
+│       │   │   └── A/ … E/
+│       │   │       ├── Control_vs_Complication_differential_results.csv
+│       │   │       └── Control_vs_Complication_significant_analytes.csv
+│       │   └── longitudinal/
+│       │       ├── Control_B_minus_A_longitudinal_results.csv
+│       │       └── … (one file per group × adjacent timepoint pair)
+│       └── placenta/
+│           └── cross_sectional/
+│               ├── Control_vs_Complication_differential_results.csv
+│               └── Control_vs_Complication_significant_analytes.csv
 │
 ├── heatmaps/                        ← generate_differential_cluster_heatmap_limited_group.py
-│   ├── plasma/
+│   ├── plasma/                      (proteomics)
 │   │   ├── cross_sectional/
 │   │   │   ├── A/
 │   │   │   │   └── Control_vs_Complication/
@@ -274,12 +295,19 @@ All outputs are written under `04_results_and_figures/`, organized by pipeline s
 │   │       ├── HDP_longitudinal_heatmap.pdf
 │   │       ├── sPTB_longitudinal_heatmap.pdf
 │   │       └── Complication_longitudinal_heatmap.pdf
-│   └── placenta/
-│       └── cross_sectional/
-│           └── Control_vs_Complication/
-│               ├── Control_vs_Complication_heatmap.pdf
-│               ├── Control_vs_Complication_heatmap.png
-│               └── Control_vs_Complication_heatmap_data.csv
+│   ├── placenta/                    (proteomics)
+│   │   └── cross_sectional/
+│   │       └── Control_vs_Complication/
+│   │           ├── Control_vs_Complication_heatmap.pdf
+│   │           ├── Control_vs_Complication_heatmap.png
+│   │           └── Control_vs_Complication_heatmap_data.csv
+│   └── metabolomics/
+│       └── plasma/
+│           └── longitudinal/        (no CS heatmaps — 0 significant analytes)
+│               ├── Control_longitudinal_heatmap.pdf / .png / _data.csv
+│               ├── HDP_longitudinal_heatmap.pdf / .png / _data.csv
+│               └── Complication_longitudinal_heatmap.pdf / .png / _data.csv
+│               (FGR and sPTB skipped — fewer than MIN_SIG_ANALYTES = 5)
 │
 └── enrichment/                      ← prepare_enrichr_input.py
     ├── plasma/

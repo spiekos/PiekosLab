@@ -9,16 +9,25 @@ Cross-sectional heatmap:
     Values = z-score of per-analyte abundance across all samples, clipped ±2.5.
     Row clustering: Ward linkage, Euclidean distance.
 
-Longitudinal heatmap (cross-group):
-    Rows = analytes where Control vs Complication delta is significant (q < 0.05)
-           in >= 1 adjacent comparison; capped at 500, ranked by number of
-           significant comparisons.
+Longitudinal heatmap (within-group):
+    Rows = analytes significant (q < 0.05 AND |median_delta| >= log2(1.5)) within
+           the specified group in >= 1 adjacent comparison; capped at 500, ranked
+           by number of significant comparisons.
     Columns = delta comparisons in fixed chronological order (B-A, C-B, D-C, E-D);
               not clustered.
-    Values = fold_change (median_delta_complication - median_delta_control),
-             row-wise z-scored across comparisons, clipped ±2.0.
+    Values = median_delta for the specified group (median of within-subject paired
+             differences: value_later - value_earlier, in log2 space), row-wise
+             z-scored across the four comparisons, clipped ±2.0.
+    Significance criterion = Wilcoxon signed-rank test on within-subject deltas
+             vs zero (FDR-BH corrected), independently per group per comparison.
+             This tests "did this metabolite change within this group?", NOT
+             "did this group change differently from Control?".
     Row clustering: Ward linkage, Euclidean distance.
     Significant cells marked with a dot; non-significant cells dimmed.
+
+    NOTE: Each group's heatmap is independent. To visualise differential change
+    between groups (e.g. HDP vs Control), a separate analysis subtracting
+    Control median_delta from the complication median_delta would be needed.
 
 Usage:
     # Cross-sectional
