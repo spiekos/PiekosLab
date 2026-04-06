@@ -329,7 +329,7 @@ def combine_pos_neg(mode, batch, exp_data, pos_comp, neg_comp):
 #    pass
 
 # final formatting of expression files
-def formatting(final, meta, mode, dir_input):
+def formatting(final, meta, mode, dir_input, preNorm = False):
     for k in final.keys():
         if "Samples" in k:
             #final[k]["group"] = meta.loc[final[k].index,:]["group"]
@@ -371,11 +371,20 @@ def formatting(final, meta, mode, dir_input):
                             temp = pd.concat([temp, final[k].loc[id,:]], axis=1)
                     if not temp.empty:
                         temp = temp.transpose()
-                        temp.to_csv(dir_input + "/" + k + "_" + t + ".csv")
+                        if preNorm:
+                            temp.to_csv(dir_input + "/" + k + "_" + t + "_preNorm.csv")
+                        else:
+                            temp.to_csv(dir_input + "/" + k + "_" + t + ".csv")
+            else:
+                if preNorm:
+                    final[k].to_csv(dir_input + "/" + k + "_preNorm.csv")
+                else:
+                    final[k].to_csv(dir_input + "/" + k + ".csv")
+        else:
+            if preNorm:
+                final[k].to_csv(dir_input + "/" + k + "_preNorm.csv")
             else:
                 final[k].to_csv(dir_input + "/" + k + ".csv")
-        else:
-            final[k].to_csv(dir_input + "/" + k + ".csv")
     
 # do all cleaning steps split by charge
 def cleanHelper(exp_data, e, dir_input, unique_batches, mode):
@@ -386,12 +395,14 @@ def cleanHelper(exp_data, e, dir_input, unique_batches, mode):
         #Have not added by group check yet, mtbl doesn't have any missing mtbl expression anyway
     logging.info("Generating unnormalized PCA plot...")
     generate_pca(exp_data, "Unnormalized_MTBL_Expression", e, dir_input) # generate unnormalized PCA
+    preNorm = {k: v for k, v in exp_data.items() if e in k}
     normalization(exp_data, e, unique_batches, mode) # batch normalization using replicates
     logging.info("Generating batch unnormalized PCA plot")
     generate_pca(exp_data, "Batch_Normalized_MTBL_Expression", e, dir_input) # generate normalized PCA
     merge_rep(exp_data, e, unique_batches, mode) # average replicates expression 
     logging.info("Applying log2 transformation...")
     log2_transform(exp_data, e, unique_batches) # log2 transform all data
+    return preNorm
 
 # function for data cleaning
 def clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp, dir_input, meta):
@@ -414,8 +425,10 @@ def clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp, dir_input,
     split_exp(neg_exp, neg_batch, "NEG", exp_data, unique_batches)
 
     # do cleaning steps split by charge
-    cleanHelper(exp_data, "POS", dir_input, unique_batches, mode)
-    cleanHelper(exp_data, "NEG", dir_input, unique_batches, mode)
+    preNorm_POS = cleanHelper(exp_data, "POS", dir_input, unique_batches, mode)
+    preNorm_NEG = cleanHelper(exp_data, "NEG", dir_input, unique_batches, mode)
+
+    preNorm = preNorm_NEG | preNorm_POS
 
     # remove duplicate metabolite entries based on computed quality scores
     logging.info("Removing multiplet parent metabolites by quality score...")
@@ -424,23 +437,29 @@ def clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp, dir_input,
     for x in exp_data.keys():
         if "POS" in x:
             exp_data[x] = remove_duplicates(exp_data[x], pos_comp)
+            preNorm_POS[x] = remove_duplicates(preNorm_POS[x], pos_comp)
         else:
             exp_data[x] = remove_duplicates(exp_data[x], neg_comp)
+            preNorm_NEG[x] = remove_duplicates(preNorm_NEG[x], neg_comp)
 
     # combine the pos and neg compounds
     logging.info("Combining POS and NEG polarity into shared file...")
     final = {}
+    preNorm_final = {}
     b = list(set(pos_batch["batch"]))
     s = ["Pooled", "Samples"]
     for i in b:
         for j in s:
             temp = combine_pos_neg(str(j), str(i), exp_data, pos_comp, neg_comp) # combine compounds in both pos and neg
             final[str(j) + "_" + str(i)] = temp
+            temp = combine_pos_neg(str(j), str(i), preNorm, pos_comp, neg_comp)
+            preNorm_final[str(j) + "_" + str(i)] = temp
 
      # 1/2 minium imputation of missing, no mtbl are missing
     #min_imputation()
     logging.info("Exporting csv files...")
     formatting(final, meta, mode, dir_input) # add group columns, split files by timepoint
+    formatting(preNorm_final, meta, mode, dir_input, preNorm=True)
 
         
 

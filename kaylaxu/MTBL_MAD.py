@@ -518,8 +518,10 @@ def main():
 
     if "MTBL" in dir_input:
         datatype = "MTBL"
-    else:
+    elif "LIPD" in dir_input:
         datatype = "LIPD"
+    elif "Protein" in dir_input:
+        datatype = "Protein"
     if "plasma" in dir_input:
         tissue = "plasma"
     else:
@@ -543,3 +545,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
