@@ -47,6 +47,8 @@ from utilities import (
     run_longitudinal,
     write_sample_count_report,
     _start_analysis_log,
+    plot_cross_sectional_boxplots,
+    plot_longitudinal_boxplots,
 )
 
 logging.basicConfig(
@@ -66,10 +68,10 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--omics-type",
-        choices=["proteomics", "metabolomics"],
+        choices=["proteomics", "metabolomics", "metabolomics_combat", "lipids"],
         default="proteomics",
         help="Omics type for default-mode pipeline (default: proteomics). "
-             "Pass 'metabolomics' to run the identical pipeline on metabolomics paths.",
+             "Pass 'metabolomics', 'metabolomics_combat', or 'lipids' to run the identical pipeline on those paths.",
     )
     p.add_argument(
         "--mode",
@@ -188,13 +190,23 @@ if __name__ == "__main__":
     def _run_default_mode(omics_type: str = "proteomics") -> None:
         wkdir = os.getcwd()
 
-        # Resolve paths based on omics type
-        prefix = omics_type  # "proteomics" or "metabolomics"
+        # metabolomics_combat: data lives under metabolomics_combat/ but
+        # files are named with the "metabolomics" prefix.
+        if omics_type == "metabolomics_combat":
+            data_subdir  = "metabolomics_combat"
+            file_prefix  = "metabolomics"
+            has_placenta = False          # only plasma was run through ComBat pipeline
+        else:
+            data_subdir  = omics_type
+            file_prefix  = omics_type
+            has_placenta = omics_type not in ("lipids",)
+
+        prefix = file_prefix   # used for file-name patterns
         cleaned_dir_placenta = os.path.join(
-            wkdir, "data", "cleaned", prefix, "normalized_full_results"
+            wkdir, "data", "cleaned", data_subdir, "normalized_full_results"
         )
         cleaned_dir_plasma = os.path.join(
-            wkdir, "data", "cleaned", prefix, "normalized_sliced_by_suffix"
+            wkdir, "data", "cleaned", data_subdir, "normalized_sliced_by_suffix"
         )
         output_dir = os.path.join(
             wkdir, "04_results_and_figures", "differential_analysis",
@@ -216,25 +228,30 @@ if __name__ == "__main__":
 
         # ── Sample count report ───────────────────────────────────────────
         placenta_csv = os.path.join(cleaned_dir_placenta, placenta_file)
-        write_sample_count_report(output_dir, cleaned_dir_plasma, placenta_csv)
+        write_sample_count_report(
+            output_dir, cleaned_dir_plasma,
+            placenta_csv if has_placenta else None,
+            file_prefix=prefix,
+        )
 
-        # ── Cross-sectional: placenta ─────────────────────────────────────
-        if os.path.exists(placenta_csv):
-            df           = normalise_group_labels(load_data(placenta_csv))
-            df           = _merge_to_complication(df)
-            analyte_cols = get_analyte_columns(df)
-            logger.info(
-                "Cross-sectional [placenta]: %d samples x %d analytes (Control vs Complication)",
-                df.shape[0], len(analyte_cols),
-            )
-            run_cross_sectional(
-                df,
-                analyte_cols,
-                group_col="Group",
-                output_dir=os.path.join(output_dir, "placenta", "cross_sectional"),
-            )
-        else:
-            logger.warning("Input not found, skipping cross-sectional: %s", placenta_csv)
+        # ── Cross-sectional: placenta (skipped for lipids) ────────────────
+        if has_placenta:
+            if os.path.exists(placenta_csv):
+                df           = normalise_group_labels(load_data(placenta_csv))
+                df           = _merge_to_complication(df)
+                analyte_cols = get_analyte_columns(df)
+                logger.info(
+                    "Cross-sectional [placenta]: %d samples x %d analytes (Control vs Complication)",
+                    df.shape[0], len(analyte_cols),
+                )
+                run_cross_sectional(
+                    df,
+                    analyte_cols,
+                    group_col="Group",
+                    output_dir=os.path.join(output_dir, "placenta", "cross_sectional"),
+                )
+            else:
+                logger.warning("Input not found, skipping cross-sectional: %s", placenta_csv)
 
         # ── Cross-sectional: plasma per timepoint ─────────────────────────
         for tp in ["A", "B", "C", "D", "E"]:
@@ -259,6 +276,26 @@ if __name__ == "__main__":
                 group_col="Group",
                 output_dir=os.path.join(output_dir, "plasma", "cross_sectional", tp),
             )
+
+        # ── Cross-sectional boxplots: plasma ─────────────────────────────
+        # One PNG per significant analyte: green=Control, red=Complication,
+        # annotated with log2FC distance between medians.
+        tp_dfs_cs = {
+            tp: normalise_group_labels(_merge_to_complication(load_data(
+                os.path.join(cleaned_dir_plasma, plasma_file_pattern.format(tp=tp))
+            )))
+            for tp in ["A", "B", "C", "D", "E"]
+            if os.path.exists(os.path.join(cleaned_dir_plasma, plasma_file_pattern.format(tp=tp)))
+        }
+        plot_cross_sectional_boxplots(
+            tp_dfs           = tp_dfs_cs,
+            cross_results_root = os.path.join(output_dir, "plasma", "cross_sectional"),
+            output_dir       = os.path.join(output_dir, "plasma", "cross_sectional_boxplots"),
+            group_col        = "Group",
+            ctrl_group       = "Control",
+            compl_sources    = ["Complication"],
+            top_n            = 50,
+        )
 
         # ── Longitudinal: plasma ──────────────────────────────────────────
         # Within-group Wilcoxon signed-rank for Control, FGR, HDP, sPTB
@@ -291,6 +328,18 @@ if __name__ == "__main__":
             group_col="Group",
             subject_col="SubjectID",
             output_dir=long_dir,
+        )
+
+        # ── Longitudinal boxplots ─────────────────────────────────────────
+        plot_longitudinal_boxplots(
+            tp_dfs           = tp_dfs_merged,
+            long_results_dir = long_dir,
+            output_dir       = os.path.join(output_dir, "plasma", "longitudinal_boxplots"),
+            group_col        = "Group",
+            subject_col      = "SubjectID",
+            ctrl_group       = "Control",
+            compl_sources    = ["Complication"],
+            top_n            = 50,
         )
 
         logger.info("Differential analysis complete.")

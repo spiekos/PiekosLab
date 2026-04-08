@@ -75,6 +75,13 @@ def _build_parser() -> argparse.ArgumentParser:
         description="Differential analysis heatmap visualization."
     )
     p.add_argument(
+        "--omics-type",
+        choices=["proteomics", "metabolomics", "metabolomics_combat", "lipids"],
+        default=None,
+        help="Run the full default pipeline for this omics type. "
+             "When provided, --results-dir and --output-dir are inferred automatically.",
+    )
+    p.add_argument(
         "--mode",
         choices=["cross_sectional", "longitudinal", "both"],
         default="cross_sectional",
@@ -86,12 +93,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--results-dir",
-        required=True,
+        default=None,
         help="Directory containing differential results CSVs.",
     )
     p.add_argument(
         "--output-dir",
-        required=True,
+        default=None,
         help="Directory to save heatmap outputs.",
     )
     p.add_argument(
@@ -120,6 +127,16 @@ def main():
     parser = _build_parser()
     args   = parser.parse_args()
 
+    # --omics-type triggers the full default-pipeline for that omics type
+    if args.omics_type is not None:
+        _run_default_mode_for_omics(args.omics_type)
+        return
+
+    if not args.results_dir:
+        parser.error("--results-dir is required when --omics-type is not provided.")
+    if not args.output_dir:
+        parser.error("--output-dir is required when --omics-type is not provided.")
+
     if args.mode in ("cross_sectional", "both"):
         if not args.input:
             parser.error("--input is required for cross_sectional mode.")
@@ -142,8 +159,107 @@ def main():
 
 
 # ---------------------------------------------------------------------------
-# Default (no-arg) mode
+# Default (no-arg) mode  +  omics-type pipeline runner
 # ---------------------------------------------------------------------------
+
+def _run_default_mode_for_omics(omics_type: str) -> None:
+    """Run the full heatmap pipeline for a given omics type (non-proteomics)."""
+    wkdir = os.getcwd()
+
+    if omics_type == "metabolomics_combat":
+        data_subdir  = "metabolomics_combat"
+        file_prefix  = "metabolomics"
+        has_placenta = False
+    elif omics_type == "lipids":
+        data_subdir  = "lipids"
+        file_prefix  = "lipids"
+        has_placenta = False
+    else:
+        data_subdir  = omics_type
+        file_prefix  = omics_type
+        has_placenta = True
+
+    cleaned_dir_plasma = os.path.join(
+        wkdir, "data", "cleaned", data_subdir, "normalized_sliced_by_suffix"
+    )
+    cleaned_dir_placenta = os.path.join(
+        wkdir, "data", "cleaned", data_subdir, "normalized_full_results"
+    )
+    diff_dir    = os.path.join(
+        wkdir, "04_results_and_figures", "differential_analysis", omics_type
+    )
+    heatmap_dir = os.path.join(
+        wkdir, "04_results_and_figures", "heatmaps", omics_type
+    )
+
+    _CS_PAIRS      = [("Control", "Complication")]
+    _COMPL_SOURCES = ["FGR", "HDP", "sPTB"]
+
+    # ── Cross-sectional: placenta (if applicable) ─────────────────────────
+    if has_placenta:
+        placenta_csv  = os.path.join(
+            cleaned_dir_placenta, f"{file_prefix}_placenta_cleaned_with_metadata.csv"
+        )
+        cross_results  = os.path.join(diff_dir,    "placenta", "cross_sectional")
+        cross_heatmaps = os.path.join(heatmap_dir, "placenta", "cross_sectional")
+        if os.path.exists(placenta_csv) and os.path.isdir(cross_results):
+            logger.info("Generating placenta cross-sectional heatmap …")
+            for g1, g2 in _CS_PAIRS:
+                plot_pairwise_cross_sectional_heatmap(
+                    g1=g1, g2=g2,
+                    data_path=placenta_csv,
+                    results_dir=cross_results,
+                    output_dir=cross_heatmaps,
+                    group_col="Group",
+                    g2_source_groups=_COMPL_SOURCES,
+                )
+        else:
+            logger.warning(
+                "Skipping placenta cross-sectional heatmap: CSV or results dir not found.\n"
+                "  CSV:     %s\n  Results: %s", placenta_csv, cross_results,
+            )
+
+    # ── Cross-sectional: plasma per timepoint ─────────────────────────────
+    for tp in ["A", "B", "C", "D", "E"]:
+        tp_csv      = os.path.join(
+            cleaned_dir_plasma, f"{file_prefix}_plasma_formatted_suffix_{tp}.csv"
+        )
+        tp_results  = os.path.join(diff_dir,    "plasma", "cross_sectional", tp)
+        tp_heatmaps = os.path.join(heatmap_dir, "plasma", "cross_sectional", tp)
+        if os.path.exists(tp_csv) and os.path.isdir(tp_results):
+            logger.info("Generating plasma [%s] cross-sectional heatmap …", tp)
+            for g1, g2 in _CS_PAIRS:
+                plot_pairwise_cross_sectional_heatmap(
+                    g1=g1, g2=g2,
+                    data_path=tp_csv,
+                    results_dir=tp_results,
+                    output_dir=tp_heatmaps,
+                    group_col="Group",
+                    g2_source_groups=_COMPL_SOURCES,
+                )
+        else:
+            logger.warning(
+                "Skipping plasma cross-sectional heatmap [%s]: CSV or results dir not found.\n"
+                "  CSV:     %s\n  Results: %s", tp, tp_csv, tp_results,
+            )
+
+    # ── Longitudinal: individual groups + pooled Complication ─────────────
+    long_results  = os.path.join(diff_dir,    "plasma", "longitudinal")
+    long_heatmaps = os.path.join(heatmap_dir, "plasma", "longitudinal")
+    if os.path.isdir(long_results):
+        for group in ["Control", "FGR", "HDP", "sPTB", "Complication"]:
+            plot_longitudinal_heatmap(
+                results_dir=long_results,
+                output_dir=long_heatmaps,
+                group=group,
+            )
+    else:
+        logger.warning(
+            "Skipping longitudinal heatmaps: results dir not found: %s", long_results,
+        )
+
+    logger.info("Heatmap generation complete for omics_type=%s.", omics_type)
+
 
 if __name__ == "__main__":
     logging.basicConfig(

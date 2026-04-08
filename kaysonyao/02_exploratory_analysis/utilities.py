@@ -13,6 +13,7 @@ import glob
 import logging
 import os
 import platform
+import re
 
 # Third-party
 import numpy as np
@@ -371,19 +372,26 @@ def run_longitudinal(
 def write_sample_count_report(
     output_dir: str,
     cleaned_dir_plasma: str,
-    placenta_csv: str,
+    placenta_csv: str | None,
+    file_prefix: str = "proteomics",
 ) -> None:
     """Write a sample count table: n per (sample_type, Group, timepoint).
 
-    Reads per-timepoint plasma files (A–E) and the placenta cleaned CSV.
+    Reads per-timepoint plasma files (A–E) and optionally the placenta cleaned CSV.
     Saves sample_counts_per_group_timepoint.csv and logs the pivot table.
+
+    Args:
+        output_dir:        Directory where the report CSV is saved.
+        cleaned_dir_plasma: Directory containing per-timepoint plasma CSVs.
+        placenta_csv:      Path to placenta cleaned CSV, or None to skip placenta.
+        file_prefix:       Prefix used in plasma filenames (e.g. "proteomics", "lipids").
     """
     os.makedirs(output_dir, exist_ok=True)
     rows = []
 
     for tp in _TIMEPOINT_ORDER:
         tp_csv = os.path.join(
-            cleaned_dir_plasma, f"proteomics_plasma_formatted_suffix_{tp}.csv"
+            cleaned_dir_plasma, f"{file_prefix}_plasma_formatted_suffix_{tp}.csv"
         )
         if not os.path.exists(tp_csv):
             continue
@@ -393,7 +401,7 @@ def write_sample_count_report(
         for grp, n in df["Group"].value_counts().items():
             rows.append({"sample_type": "plasma", "timepoint": tp, "Group": grp, "n": int(n)})
 
-    if os.path.exists(placenta_csv):
+    if placenta_csv is not None and os.path.exists(placenta_csv):
         df_p = normalise_group_labels(load_data(placenta_csv))
         if "Group" in df_p.columns:
             for grp, n in df_p["Group"].value_counts().items():
@@ -862,4 +870,449 @@ def plot_longitudinal_heatmap(
     print(f"Saved longitudinal heatmap: {n_total} analytes ({n_sig} significant) "
           f"× {n_comps} comparisons → {output_dir}/")
 
+
+# ---------------------------------------------------------------------------
+# Cross-sectional boxplots  (Control=green, Complication=red, distance=log2FC)
+# ---------------------------------------------------------------------------
+
+def plot_cross_sectional_boxplots(
+    tp_dfs: dict,
+    cross_results_root: str,
+    output_dir: str,
+    group_col: str = "Group",
+    ctrl_group: str = "Control",
+    compl_sources: list | None = None,
+    top_n: int = 50,
+) -> None:
+    """
+    For each significant analyte (across all cross-sectional timepoints), generate
+    a side-by-side boxplot figure showing:
+      • Green boxes  = Control distribution at each timepoint
+      • Red boxes    = Complication distribution at each timepoint
+      • Double-headed arrow + log2FC label = distance between medians
+
+    Parameters
+    ----------
+    tp_dfs           : dict  {tp_label -> cleaned DataFrame with Group column}
+    cross_results_root: str  root dir; expects sub-dirs per timepoint containing
+                             Control_vs_Complication_differential_results.csv
+    output_dir       : str  where to save PNGs
+    group_col        : str  column with group labels
+    ctrl_group       : str  label for the control group
+    compl_sources    : list labels to pool as Complication (default: all non-control)
+    top_n            : int  max analytes to plot (ranked by min q-value)
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as mpatches
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    timepoints = [tp for tp in _TIMEPOINT_ORDER if tp in tp_dfs]
+    if not timepoints:
+        logger.warning("plot_cross_sectional_boxplots: no timepoints found.")
+        return
+
+    # ── Collect significant analytes and their results across timepoints ───
+    # results[tp][analyte] = {"q_value": float, "log2fc": float}
+    results_by_tp: dict[str, pd.DataFrame] = {}
+    for tp in timepoints:
+        res_path = os.path.join(
+            cross_results_root, tp, "Control_vs_Complication_differential_results.csv"
+        )
+        if os.path.exists(res_path):
+            res = pd.read_csv(res_path, index_col=0)
+            results_by_tp[tp] = res
+        else:
+            results_by_tp[tp] = pd.DataFrame()
+
+    # Union of significant analytes across all timepoints
+    sig_analytes: list[str] = []
+    for tp, res in results_by_tp.items():
+        if res.empty or "significant" not in res.columns:
+            continue
+        sig_analytes.extend(res.index[res["significant"] == True].tolist())
+    sig_analytes = list(dict.fromkeys(sig_analytes))
+
+    # Rank by minimum q-value across all timepoints (all analytes, not just significant)
+    all_analytes: list[str] = []
+    for res in results_by_tp.values():
+        if not res.empty:
+            all_analytes.extend(res.index.tolist())
+    all_analytes = list(dict.fromkeys(all_analytes))
+
+    min_q = pd.Series(1.0, index=all_analytes)
+    for tp, res in results_by_tp.items():
+        if res.empty or "q_value" not in res.columns:
+            continue
+        overlap = res.index.intersection(min_q.index)
+        min_q.loc[overlap] = pd.concat(
+            [min_q.loc[overlap], res.loc[overlap, "q_value"]], axis=1
+        ).min(axis=1)
+
+    if sig_analytes:
+        # Prefer significant analytes first, then fill up to top_n with next-best by q
+        ranked_sig   = min_q.loc[sig_analytes].sort_values().head(top_n).index.tolist()
+        remaining_n  = top_n - len(ranked_sig)
+        if remaining_n > 0:
+            non_sig = [a for a in min_q.sort_values().index if a not in ranked_sig]
+            ranked  = ranked_sig + non_sig[:remaining_n]
+        else:
+            ranked = ranked_sig
+        logger.info(
+            "Generating cross-sectional boxplots: %d significant + %d top by q-value → %s",
+            len(ranked_sig), len(ranked) - len(ranked_sig), output_dir,
+        )
+    else:
+        # No significant analytes — fall back to top 25 by q-value
+        ranked = min_q.sort_values().head(25).index.tolist()
+        logger.info(
+            "No significant cross-sectional analytes — plotting top 25 by q-value → %s",
+            output_dir,
+        )
+
+    # ── Plot one figure per analyte ────────────────────────────────────────
+    _CTRL_BOX  = "#4caf50"   # green
+    _COMPL_BOX = "#f44336"   # red
+    _DIST_CLR  = "#1565c0"   # dark blue for distance annotation
+
+    n_tp  = len(timepoints)
+    width = max(4, 2 * n_tp)
+
+    for analyte in ranked:
+        fig, ax = plt.subplots(figsize=(width, 4.5))
+
+        ctrl_data  : list[list] = []
+        compl_data : list[list] = []
+        tp_labels  : list[str]  = []
+        log2fcs    : list[float | None] = []
+        q_values   : list[float | None] = []
+
+        for tp in timepoints:
+            df = tp_dfs[tp]
+            if analyte not in df.columns:
+                continue
+
+            groups = df[group_col].astype(str).str.strip()
+            if compl_sources:
+                compl_mask = groups.isin(compl_sources)
+            else:
+                compl_mask = groups != ctrl_group
+            ctrl_mask = groups == ctrl_group
+
+            ctrl_vals  = df.loc[ctrl_mask,  analyte].dropna().tolist()
+            compl_vals = df.loc[compl_mask, analyte].dropna().tolist()
+
+            if not ctrl_vals and not compl_vals:
+                continue
+
+            ctrl_data.append(ctrl_vals)
+            compl_data.append(compl_vals)
+            tp_labels.append(tp)
+
+            res = results_by_tp.get(tp, pd.DataFrame())
+            if not res.empty and analyte in res.index:
+                # fold_change column stores log2FC (median difference in log2 space)
+                fc  = res.loc[analyte, "fold_change"] if "fold_change" in res.columns else None
+                qv  = res.loc[analyte, "q_value"]     if "q_value"     in res.columns else None
+                log2fcs.append(float(fc) if fc is not None and pd.notna(fc) else None)
+                q_values.append(float(qv) if qv is not None and pd.notna(qv) else None)
+            else:
+                log2fcs.append(None)
+                q_values.append(None)
+
+        if not tp_labels:
+            plt.close(fig)
+            continue
+
+        n_shown = len(tp_labels)
+        xs_ctrl  = [i * 3      for i in range(n_shown)]   # positions for ctrl boxes
+        xs_compl = [i * 3 + 1  for i in range(n_shown)]   # positions for compl boxes
+
+        # Draw boxplots
+        bp_ctrl = ax.boxplot(
+            ctrl_data, positions=xs_ctrl, widths=0.7,
+            patch_artist=True, notch=False,
+            boxprops=dict(facecolor=_CTRL_BOX, alpha=0.7, linewidth=1.2),
+            medianprops=dict(color="black", linewidth=2),
+            whiskerprops=dict(linewidth=1.2),
+            capprops=dict(linewidth=1.2),
+            flierprops=dict(marker="o", markersize=3, alpha=0.5),
+        )
+        bp_compl = ax.boxplot(
+            compl_data, positions=xs_compl, widths=0.7,
+            patch_artist=True, notch=False,
+            boxprops=dict(facecolor=_COMPL_BOX, alpha=0.7, linewidth=1.2),
+            medianprops=dict(color="black", linewidth=2),
+            whiskerprops=dict(linewidth=1.2),
+            capprops=dict(linewidth=1.2),
+            flierprops=dict(marker="o", markersize=3, alpha=0.5),
+        )
+
+        # Draw distance arrows between medians
+        all_vals = [v for lst in ctrl_data + compl_data for v in lst]
+        y_range  = max(all_vals) - min(all_vals) if all_vals else 1
+        arrow_offset = y_range * 0.08
+
+        for i, (xc, xk, fc, qv) in enumerate(
+            zip(xs_ctrl, xs_compl, log2fcs, q_values)
+        ):
+            if fc is None:
+                continue
+            ctrl_med  = float(np.median(ctrl_data[i]))
+            compl_med = float(np.median(compl_data[i]))
+            y_lo = min(ctrl_med, compl_med)
+            y_hi = max(ctrl_med, compl_med)
+            x_mid = (xc + xk) / 2
+
+            # Double-headed arrow
+            ax.annotate(
+                "", xy=(x_mid, y_hi), xytext=(x_mid, y_lo),
+                arrowprops=dict(
+                    arrowstyle="<->", color=_DIST_CLR, lw=1.5,
+                ),
+            )
+
+            # log2FC label
+            sig_star = ""
+            if qv is not None and pd.notna(qv):
+                if   qv < 0.001: sig_star = "***"
+                elif qv < 0.01:  sig_star = "**"
+                elif qv < 0.05:  sig_star = "*"
+            label = f"Δ={fc:+.2f}{sig_star}"
+            ax.text(
+                x_mid + 0.25, (y_lo + y_hi) / 2, label,
+                ha="left", va="center", fontsize=7.5, color=_DIST_CLR, fontweight="bold",
+            )
+
+        # X-axis ticks at midpoint between ctrl and compl boxes
+        tick_pos    = [(xc + xk) / 2 for xc, xk in zip(xs_ctrl, xs_compl)]
+        ax.set_xticks(tick_pos)
+        ax.set_xticklabels([f"T{tp}" for tp in tp_labels], fontsize=11)
+        ax.set_ylabel("Abundance (log₂)", fontsize=10)
+        ax.set_title(analyte, fontsize=11, fontweight="bold")
+
+        # Legend
+        ctrl_patch  = mpatches.Patch(facecolor=_CTRL_BOX,  alpha=0.8, label="Control")
+        compl_patch = mpatches.Patch(facecolor=_COMPL_BOX, alpha=0.8, label="Complication")
+        ax.legend(handles=[ctrl_patch, compl_patch], fontsize=9, loc="best")
+
+        ax.grid(axis="y", linestyle="--", alpha=0.4)
+        fig.tight_layout()
+
+        safe_name = re.sub(r"[^\w\-]", "_", analyte)
+        out_path  = os.path.join(output_dir, f"{safe_name}_boxplot.png")
+        fig.savefig(out_path, dpi=_PNG_DPI, bbox_inches="tight")
+        plt.close(fig)
+
+    logger.info("Boxplots saved → %s", output_dir)
+
+
+# ---------------------------------------------------------------------------
+# Longitudinal boxplots  (Control deltas=green, Complication deltas=red)
+# ---------------------------------------------------------------------------
+
+def plot_longitudinal_boxplots(
+    tp_dfs: dict,
+    long_results_dir: str,
+    output_dir: str,
+    group_col: str = "Group",
+    subject_col: str = "SubjectID",
+    ctrl_group: str = "Control",
+    compl_sources: list | None = None,
+    top_n: int = 50,
+) -> None:
+    """
+    For each significant analyte in the longitudinal analysis, generate a
+    side-by-side boxplot of within-subject delta distributions:
+      * Green boxes = Control delta at each adjacent timepoint transition
+      * Red boxes   = Complication delta at each adjacent timepoint transition
+      * Double-headed arrow + delta-median label = distance between group medians
+
+    Significant analytes: flagged in Complication longitudinal results
+    (q < 0.05 AND |median_delta| >= log2(1.5)) at >= 1 transition.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as mpatches
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    timepoints  = [tp for tp in _TIMEPOINT_ORDER if tp in tp_dfs]
+    transitions = [(timepoints[i], timepoints[i + 1]) for i in range(len(timepoints) - 1)]
+    if not transitions:
+        logger.warning("plot_longitudinal_boxplots: fewer than 2 timepoints -- skipping.")
+        return
+
+    def _load_long_results(group_name: str) -> dict:
+        out = {}
+        for ta, tb in transitions:
+            key  = f"{tb}_minus_{ta}"
+            path = os.path.join(long_results_dir, f"{group_name}_{key}_longitudinal_results.csv")
+            if os.path.exists(path):
+                out[key] = pd.read_csv(path, index_col=0)
+        return out
+
+    compl_results = _load_long_results("Complication")
+    if not compl_results:
+        logger.info("plot_longitudinal_boxplots: no Complication results found -- skipping.")
+        return
+
+    sig_analytes: list = []
+    for res in compl_results.values():
+        if not res.empty and "significant" in res.columns:
+            sig_analytes.extend(res.index[res["significant"] == True].tolist())
+    sig_analytes = list(dict.fromkeys(sig_analytes))
+
+    if not sig_analytes:
+        logger.info("plot_longitudinal_boxplots: no significant analytes -- skipping.")
+        return
+
+    min_q = pd.Series(1.0, index=sig_analytes)
+    for res in compl_results.values():
+        if "q_value" not in res.columns:
+            continue
+        for a in sig_analytes:
+            if a in res.index:
+                q = float(res.loc[a, "q_value"])
+                if pd.notna(q) and q < min_q[a]:
+                    min_q[a] = q
+    ranked = min_q.sort_values().head(top_n).index.tolist()
+
+    logger.info("Generating longitudinal boxplots for %d analyte(s) -> %s", len(ranked), output_dir)
+
+    if compl_sources:
+        compl_groups = compl_sources
+    else:
+        all_groups: set = set()
+        for df in tp_dfs.values():
+            if group_col in df.columns:
+                all_groups.update(df[group_col].dropna().unique())
+        compl_groups = [g for g in all_groups if g != ctrl_group]
+
+    def _subject_df(df: pd.DataFrame, groups: list) -> pd.DataFrame:
+        if group_col in df.columns:
+            df = df.loc[df[group_col].isin(groups)].copy()
+        if subject_col in df.columns:
+            return df.set_index(subject_col)
+        return df
+
+    analyte_cols_global = [
+        c for c in next(iter(tp_dfs.values())).columns
+        if c not in _METADATA_COLS and c != group_col and c != subject_col
+    ]
+
+    ctrl_deltas:  dict = {}
+    compl_deltas: dict = {}
+    for ta, tb in transitions:
+        key    = f"{tb}_minus_{ta}"
+        df_a_c = _subject_df(tp_dfs[ta], [ctrl_group])
+        df_b_c = _subject_df(tp_dfs[tb], [ctrl_group])
+        df_a_k = _subject_df(tp_dfs[ta], compl_groups)
+        df_b_k = _subject_df(tp_dfs[tb], compl_groups)
+
+        sc = df_a_c.index.intersection(df_b_c.index)
+        sk = df_a_k.index.intersection(df_b_k.index)
+
+        ctrl_deltas[key]  = (
+            df_b_c.loc[sc, analyte_cols_global] - df_a_c.loc[sc, analyte_cols_global]
+        ) if len(sc) >= 2 else pd.DataFrame()
+        compl_deltas[key] = (
+            df_b_k.loc[sk, analyte_cols_global] - df_a_k.loc[sk, analyte_cols_global]
+        ) if len(sk) >= 2 else pd.DataFrame()
+
+    _CTRL_BOX  = "#4caf50"
+    _COMPL_BOX = "#f44336"
+    _DIST_CLR  = "#1565c0"
+    trans_labels = [f"{tb}-{ta}" for ta, tb in transitions]
+    width = max(5, 2.2 * len(transitions))
+
+    for analyte in ranked:
+        fig, ax = plt.subplots(figsize=(width, 4.5))
+
+        shown_ctrl:   list = []
+        shown_compl:  list = []
+        shown_labels: list = []
+        shown_q:      list = []
+
+        for (ta, tb), tlabel in zip(transitions, trans_labels):
+            key = f"{tb}_minus_{ta}"
+            cd  = ctrl_deltas.get(key,  pd.DataFrame())
+            kd  = compl_deltas.get(key, pd.DataFrame())
+            cv  = cd[analyte].dropna().tolist() if analyte in cd.columns else []
+            kv  = kd[analyte].dropna().tolist() if analyte in kd.columns else []
+            if not cv and not kv:
+                continue
+            shown_ctrl.append(cv)
+            shown_compl.append(kv)
+            shown_labels.append(tlabel)
+            res = compl_results.get(key, pd.DataFrame())
+            if not res.empty and analyte in res.index and "q_value" in res.columns:
+                shown_q.append(float(res.loc[analyte, "q_value"]))
+            else:
+                shown_q.append(None)
+
+        if not shown_labels:
+            plt.close(fig)
+            continue
+
+        xs_ctrl  = [i * 3      for i in range(len(shown_labels))]
+        xs_compl = [i * 3 + 1  for i in range(len(shown_labels))]
+        bp_kw = dict(
+            patch_artist=True, notch=False,
+            medianprops=dict(color="black", linewidth=2),
+            whiskerprops=dict(linewidth=1.2),
+            capprops=dict(linewidth=1.2),
+            flierprops=dict(marker="o", markersize=3, alpha=0.5),
+        )
+        if any(shown_ctrl):
+            ax.boxplot(shown_ctrl,  positions=xs_ctrl,  widths=0.7,
+                       boxprops=dict(facecolor=_CTRL_BOX,  alpha=0.7, linewidth=1.2), **bp_kw)
+        if any(shown_compl):
+            ax.boxplot(shown_compl, positions=xs_compl, widths=0.7,
+                       boxprops=dict(facecolor=_COMPL_BOX, alpha=0.7, linewidth=1.2), **bp_kw)
+
+        for i, (xc, xk, qv, cv, kv) in enumerate(
+            zip(xs_ctrl, xs_compl, shown_q, shown_ctrl, shown_compl)
+        ):
+            if not cv or not kv:
+                continue
+            ctrl_med  = float(np.median(cv))
+            compl_med = float(np.median(kv))
+            delta_med = compl_med - ctrl_med
+            y_lo = min(ctrl_med, compl_med)
+            y_hi = max(ctrl_med, compl_med)
+            x_mid = (xc + xk) / 2
+            if abs(y_hi - y_lo) > 1e-6:
+                ax.annotate("", xy=(x_mid, y_hi), xytext=(x_mid, y_lo),
+                            arrowprops=dict(arrowstyle="<->", color=_DIST_CLR, lw=1.5))
+            sig_star = ""
+            if qv is not None and pd.notna(qv):
+                if   qv < 0.001: sig_star = "***"
+                elif qv < 0.01:  sig_star = "**"
+                elif qv < 0.05:  sig_star = "*"
+            y_text = (y_lo + y_hi) / 2 if abs(y_hi - y_lo) > 1e-6 else y_lo
+            ax.text(x_mid + 0.25, y_text, f"D={delta_med:+.2f}{sig_star}",
+                    ha="left", va="center", fontsize=7.5, color=_DIST_CLR, fontweight="bold")
+
+        ax.axhline(0, color="grey", linestyle="--", linewidth=0.8, alpha=0.6)
+        tick_pos = [(xc + xk) / 2 for xc, xk in zip(xs_ctrl, xs_compl)]
+        ax.set_xticks(tick_pos)
+        ax.set_xticklabels(shown_labels, fontsize=11)
+        ax.set_ylabel("Delta Abundance (log2, later - earlier)", fontsize=9)
+        ax.set_title(analyte, fontsize=11, fontweight="bold")
+        ctrl_patch  = mpatches.Patch(facecolor=_CTRL_BOX,  alpha=0.8, label="Control delta")
+        compl_patch = mpatches.Patch(facecolor=_COMPL_BOX, alpha=0.8, label="Complication delta")
+        ax.legend(handles=[ctrl_patch, compl_patch], fontsize=9, loc="best")
+        ax.grid(axis="y", linestyle="--", alpha=0.4)
+        fig.tight_layout()
+
+        safe_name = re.sub(r"[^\w\-]", "_", analyte)
+        fig.savefig(os.path.join(output_dir, f"{safe_name}_longitudinal_boxplot.png"),
+                    dpi=_PNG_DPI, bbox_inches="tight")
+        plt.close(fig)
+
+    logger.info("Longitudinal boxplots saved -> %s", output_dir)
 

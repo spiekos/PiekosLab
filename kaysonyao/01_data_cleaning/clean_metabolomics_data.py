@@ -64,7 +64,8 @@ def _load_samples(data_dir: str) -> pd.DataFrame:
     reconstructed as patient_ID + timepoint to correctly handle subjects
     whose SubjectID ends in 'E' (e.g. DP3-0165E at timepoint A → DP3-0165EA).
 
-    Duplicate SampleIDs across batches are resolved by keeping the first occurrence.
+    Duplicate SampleIDs across batches are resolved by averaging numeric
+    analyte columns; non-numeric metadata columns use the first occurrence.
     """
     frames = []
     for fname in sorted(os.listdir(data_dir)):
@@ -84,9 +85,28 @@ def _load_samples(data_dir: str) -> pd.DataFrame:
 
     combined = pd.concat(frames)
     n_dups = combined.index.duplicated().sum()
+
     if n_dups:
-        logger.info("Dropped %d duplicate SampleID(s) — kept first occurrence.", n_dups)
-    return combined[~combined.index.duplicated(keep="first")]
+        # Separate non-numeric metadata columns from analyte columns so we can
+        # average the numeric values while taking first-occurrence for strings.
+        meta_cols_present = [c for c in combined.columns if c in _DATA_META_COLS]
+        analyte_cols = [c for c in combined.columns if c not in _DATA_META_COLS]
+
+        averaged = combined[analyte_cols].groupby(level=0).mean()
+
+        if meta_cols_present:
+            meta_first = combined[meta_cols_present].groupby(level=0).first()
+            result = averaged.join(meta_first)
+        else:
+            result = averaged
+
+        logger.info(
+            "Averaged %d duplicate SampleID row(s) → %d unique SampleIDs.",
+            n_dups, len(result),
+        )
+        return result
+
+    return combined
 
 
 def _load_metadata(

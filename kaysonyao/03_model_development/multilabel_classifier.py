@@ -208,8 +208,11 @@ def run_multilabel_pipeline(
     # 4. Multi-task LASSO feature selection
     selected_features = lasso_feature_selection_multilabel(X_train, Y_train)
     if len(selected_features) == 0:
-        logger.warning("%s Multi-task LASSO selected 0 features - skipping.", tag)
-        return None
+        logger.warning(
+            "%s Multi-task LASSO selected 0 features - falling back to all %d features.",
+            tag, X_train.shape[1],
+        )
+        selected_features = list(X_train.columns)
 
     pd.Series(selected_features, name="feature").to_csv(
         os.path.join(output_dir, "lasso_selected_features.csv"), index=False

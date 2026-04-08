@@ -1,0 +1,24 @@
+2026-04-03 23:28:03,850 [INFO] ======================================================================
+2026-04-03 23:28:03,850 [INFO] Intraomics Differential Analysis Log
+2026-04-03 23:28:03,850 [INFO] Date/time    : 2026-04-03 23:28:03
+2026-04-03 23:28:03,850 [INFO] Python       : 3.10.12
+2026-04-03 23:28:03,851 [INFO] scipy        : 1.15.3
+2026-04-03 23:28:03,851 [INFO] statsmodels  : 0.14.6
+2026-04-03 23:28:03,851 [INFO] pandas       : 2.3.3
+2026-04-03 23:28:03,851 [INFO] numpy        : 2.2.6
+2026-04-03 23:28:03,851 [INFO] ----------------------------------------------------------------------
+2026-04-03 23:28:03,851 [INFO] Parameters:
+2026-04-03 23:28:03,851 [INFO]   MIN_N             = 5  (min non-missing observations per group)
+2026-04-03 23:28:03,851 [INFO]   FDR_THRESHOLD     = 0.05
+2026-04-03 23:28:03,851 [INFO]   LOG2_FC_THRESHOLD = 0.5850  (log2(1.5); both CS and longitudinal)
+2026-04-03 23:28:03,852 [INFO]   FDR method        = Benjamini-Hochberg
+2026-04-03 23:28:03,852 [INFO]   CS test           = Mann-Whitney U (two-sided)
+2026-04-03 23:28:03,852 [INFO]   Long test         = Wilcoxon signed-rank (two-sided, zero_method='wilcox')
+2026-04-03 23:28:03,852 [INFO] ======================================================================
+2026-04-03 23:28:03,852 [INFO] Running default pipeline for omics_type=metabolomics_combat
+2026-04-03 23:28:03,852 [WARNING] Sample count report: no data found.
+2026-04-03 23:28:03,852 [WARNING] Plasma timepoint A not found, skipping cross-sectional: /sessions/zealous-sleepy-curie/mnt/kaysonyao/02_exploratory_analysis/data/cleaned/metabolomics_combat/normalized_sliced_by_suffix/metabolomics_plasma_formatted_suffix_A.csv
+2026-04-03 23:28:03,853 [WARNING] Plasma timepoint B not found, skipping cross-sectional: /sessions/zealous-sleepy-curie/mnt/kaysonyao/02_exploratory_analysis/data/cleaned/metabolomics_combat/normalized_sliced_by_suffix/metabolomics_plasma_formatted_suffix_B.csv
+2026-04-03 23:28:03,853 [WARNING] Plasma timepoint C not found, skipping cross-sectional: /sessions/zealous-sleepy-curie/mnt/kaysonyao/02_exploratory_analysis/data/cleaned/metabolomics_combat/normalized_sliced_by_suffix/metabolomics_plasma_formatted_suffix_C.csv
+2026-04-03 23:28:03,853 [WARNING] Plasma timepoint D not found, skipping cross-sectional: /sessions/zealous-sleepy-curie/mnt/kaysonyao/02_exploratory_analysis/data/cleaned/metabolomics_combat/normalized_sliced_by_suffix/metabolomics_plasma_formatted_suffix_D.csv
+2026-04-03 23:28:03,853 [WARNING] Plasma timepoint E not found, skipping cross-sectional: /sessions/zealous-sleepy-curie/mnt/kaysonyao/02_exploratory_analysis/data/cleaned/metabolomics_combat/normalized_sliced_by_suffix/metabolomics_plasma_formatted_suffix_E.csv

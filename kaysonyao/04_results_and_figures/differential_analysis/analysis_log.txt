@@ -1,21 +1,22 @@
-2026-03-06 15:07:48,467 [INFO] ======================================================================
-2026-03-06 15:07:48,467 [INFO] Intraomics Differential Analysis Log
-2026-03-06 15:07:48,467 [INFO] Date/time    : 2026-03-06 15:07:48
-2026-03-06 15:07:48,467 [INFO] Python       : 3.12.12
-2026-03-06 15:07:48,467 [INFO] scipy        : 1.17.0
-2026-03-06 15:07:48,467 [INFO] statsmodels  : 0.14.6
-2026-03-06 15:07:48,467 [INFO] pandas       : 3.0.0
-2026-03-06 15:07:48,467 [INFO] numpy        : 2.4.2
-2026-03-06 15:07:48,467 [INFO] ----------------------------------------------------------------------
-2026-03-06 15:07:48,467 [INFO] Parameters:
-2026-03-06 15:07:48,467 [INFO]   MIN_N             = 5  (min non-missing observations per group)
-2026-03-06 15:07:48,467 [INFO]   FDR_THRESHOLD     = 0.05
-2026-03-06 15:07:48,467 [INFO]   LOG2_FC_THRESHOLD = 0.5850  (log2(1.5); both CS and longitudinal)
-2026-03-06 15:07:48,467 [INFO]   FDR method        = Benjamini-Hochberg
-2026-03-06 15:07:48,467 [INFO]   CS test           = Mann-Whitney U (two-sided)
-2026-03-06 15:07:48,467 [INFO]   Long test         = Wilcoxon signed-rank (two-sided, zero_method='wilcox')
-2026-03-06 15:07:48,467 [INFO] ======================================================================
-2026-03-06 15:07:48,809 [INFO] Sample counts per group × timepoint:
+2026-04-06 14:26:32,821 [INFO] ======================================================================
+2026-04-06 14:26:32,821 [INFO] Intraomics Differential Analysis Log
+2026-04-06 14:26:32,821 [INFO] Date/time    : 2026-04-06 14:26:32
+2026-04-06 14:26:32,821 [INFO] Python       : 3.12.12
+2026-04-06 14:26:32,821 [INFO] scipy        : 1.17.0
+2026-04-06 14:26:32,822 [INFO] statsmodels  : 0.14.6
+2026-04-06 14:26:32,822 [INFO] pandas       : 3.0.0
+2026-04-06 14:26:32,822 [INFO] numpy        : 2.4.2
+2026-04-06 14:26:32,822 [INFO] ----------------------------------------------------------------------
+2026-04-06 14:26:32,822 [INFO] Parameters:
+2026-04-06 14:26:32,822 [INFO]   MIN_N             = 5  (min non-missing observations per group)
+2026-04-06 14:26:32,822 [INFO]   FDR_THRESHOLD     = 0.05
+2026-04-06 14:26:32,822 [INFO]   LOG2_FC_THRESHOLD = 0.5850  (log2(1.5); both CS and longitudinal)
+2026-04-06 14:26:32,822 [INFO]   FDR method        = Benjamini-Hochberg
+2026-04-06 14:26:32,822 [INFO]   CS test           = Mann-Whitney U (two-sided)
+2026-04-06 14:26:32,822 [INFO]   Long test         = Wilcoxon signed-rank (two-sided, zero_method='wilcox')
+2026-04-06 14:26:32,822 [INFO] ======================================================================
+2026-04-06 14:26:32,822 [INFO] Running default pipeline for omics_type=proteomics
+2026-04-06 14:26:33,120 [INFO] Sample counts per group × timepoint:
 sample_type placenta plasma                
 timepoint          —      A   B   C   D   E
 Group                                      
@@ -23,48 +24,52 @@ Control           54     56  56  56  56  11
 FGR               15     20  20  20  18   6
 HDP               33     42  42  39  28  10
 sPTB              12     15  15  13   7   0
-2026-03-06 15:07:48,809 [INFO] Sample count report saved: /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/sample_counts_per_group_timepoint.csv
-2026-03-06 15:07:48,862 [INFO] Cross-sectional [placenta]: 114 samples x 2789 analytes (Control vs Complication)
-2026-03-06 15:07:48,862 [INFO] Cross-sectional: Control vs 1 complication group(s) → 1 comparison(s)
-2026-03-06 15:07:49,761 [INFO]   Control_vs_Complication → 2789 tested, 0 excluded (n < 5), 1 significant (q < 0.05)
-2026-03-06 15:07:49,819 [INFO] Cross-sectional [plasma A]: 133 samples x 2815 analytes (Control vs Complication)
-2026-03-06 15:07:49,820 [INFO] Cross-sectional: Control vs 1 complication group(s) → 1 comparison(s)
-2026-03-06 15:07:50,688 [INFO]   Control_vs_Complication → 2815 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
-2026-03-06 15:07:50,768 [INFO] Cross-sectional [plasma B]: 133 samples x 2815 analytes (Control vs Complication)
-2026-03-06 15:07:50,768 [INFO] Cross-sectional: Control vs 1 complication group(s) → 1 comparison(s)
-2026-03-06 15:07:51,653 [INFO]   Control_vs_Complication → 2815 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
-2026-03-06 15:07:51,712 [INFO] Cross-sectional [plasma C]: 128 samples x 2815 analytes (Control vs Complication)
-2026-03-06 15:07:51,712 [INFO] Cross-sectional: Control vs 1 complication group(s) → 1 comparison(s)
-2026-03-06 15:07:52,605 [INFO]   Control_vs_Complication → 2815 tested, 0 excluded (n < 5), 149 significant (q < 0.05)
-2026-03-06 15:07:52,674 [INFO] Cross-sectional [plasma D]: 109 samples x 2815 analytes (Control vs Complication)
-2026-03-06 15:07:52,675 [INFO] Cross-sectional: Control vs 1 complication group(s) → 1 comparison(s)
-2026-03-06 15:07:53,539 [INFO]   Control_vs_Complication → 2815 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
-2026-03-06 15:07:53,574 [INFO] Cross-sectional [plasma E]: 27 samples x 2815 analytes (Control vs Complication)
-2026-03-06 15:07:53,575 [INFO] Cross-sectional: Control vs 1 complication group(s) → 1 comparison(s)
-2026-03-06 15:07:54,431 [INFO]   Control_vs_Complication → 2815 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
-2026-03-06 15:07:54,791 [INFO] Longitudinal [Control]: 5 timepoints → 4 adjacent delta comparisons
-2026-03-06 15:07:55,380 [INFO]   B−A → 2815 tested, 0 excluded (n < 5), 60 significant (q < 0.05)
-2026-03-06 15:07:55,947 [INFO]   C−B → 2815 tested, 0 excluded (n < 5), 62 significant (q < 0.05)
-2026-03-06 15:07:56,517 [INFO]   D−C → 2815 tested, 0 excluded (n < 5), 115 significant (q < 0.05)
-2026-03-06 15:08:05,474 [INFO]   E−D → 2815 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
-2026-03-06 15:08:05,602 [INFO] Longitudinal [FGR]: 5 timepoints → 4 adjacent delta comparisons
-2026-03-06 15:08:06,437 [INFO]   B−A → 2815 tested, 0 excluded (n < 5), 76 significant (q < 0.05)
-2026-03-06 15:08:07,285 [INFO]   C−B → 2815 tested, 0 excluded (n < 5), 48 significant (q < 0.05)
-2026-03-06 15:08:08,134 [INFO]   D−C → 2815 tested, 0 excluded (n < 5), 38 significant (q < 0.05)
-2026-03-06 15:08:09,168 [INFO]   E−D → 2815 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
-2026-03-06 15:08:09,312 [INFO] Longitudinal [HDP]: 5 timepoints → 4 adjacent delta comparisons
-2026-03-06 15:08:10,241 [INFO]   B−A → 2815 tested, 0 excluded (n < 5), 66 significant (q < 0.05)
-2026-03-06 15:08:11,146 [INFO]   C−B → 2815 tested, 0 excluded (n < 5), 94 significant (q < 0.05)
-2026-03-06 15:08:11,999 [INFO]   D−C → 2815 tested, 0 excluded (n < 5), 87 significant (q < 0.05)
-2026-03-06 15:08:16,675 [INFO]   E−D → 2815 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
-2026-03-06 15:08:16,801 [INFO] Longitudinal [sPTB]: 5 timepoints → 4 adjacent delta comparisons
-2026-03-06 15:08:17,602 [INFO]   B−A → 2815 tested, 0 excluded (n < 5), 56 significant (q < 0.05)
-2026-03-06 15:09:04,657 [INFO]   C−B → 2815 tested, 0 excluded (n < 5), 60 significant (q < 0.05)
-2026-03-06 15:09:06,166 [INFO]   D−C → 2815 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
-2026-03-06 15:09:06,168 [WARNING]   E−D [sPTB]: 0 paired subjects — skipping (no result file written).
-2026-03-06 15:09:06,239 [INFO] Longitudinal [Complication]: 5 timepoints → 4 adjacent delta comparisons
-2026-03-06 15:09:06,810 [INFO]   B−A → 2815 tested, 0 excluded (n < 5), 69 significant (q < 0.05)
-2026-03-06 15:09:07,374 [INFO]   C−B → 2815 tested, 0 excluded (n < 5), 67 significant (q < 0.05)
-2026-03-06 15:09:07,932 [INFO]   D−C → 2815 tested, 0 excluded (n < 5), 58 significant (q < 0.05)
-2026-03-06 15:09:08,731 [INFO]   E−D → 2815 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
-2026-03-06 15:09:08,732 [INFO] Differential analysis complete.
+2026-04-06 14:26:33,120 [INFO] Sample count report saved: /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/sample_counts_per_group_timepoint.csv
+2026-04-06 14:26:33,174 [INFO] Cross-sectional [placenta]: 114 samples x 2789 analytes (Control vs Complication)
+2026-04-06 14:26:33,174 [INFO] Cross-sectional: Control vs 1 complication group(s) → 1 comparison(s)
+2026-04-06 14:26:34,038 [INFO]   Control_vs_Complication → 2789 tested, 0 excluded (n < 5), 1 significant (q < 0.05)
+2026-04-06 14:26:34,095 [INFO] Cross-sectional [plasma A]: 133 samples x 2815 analytes (Control vs Complication)
+2026-04-06 14:26:34,095 [INFO] Cross-sectional: Control vs 1 complication group(s) → 1 comparison(s)
+2026-04-06 14:26:34,907 [INFO]   Control_vs_Complication → 2815 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
+2026-04-06 14:26:34,984 [INFO] Cross-sectional [plasma B]: 133 samples x 2815 analytes (Control vs Complication)
+2026-04-06 14:26:34,984 [INFO] Cross-sectional: Control vs 1 complication group(s) → 1 comparison(s)
+2026-04-06 14:26:35,817 [INFO]   Control_vs_Complication → 2815 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
+2026-04-06 14:26:35,885 [INFO] Cross-sectional [plasma C]: 128 samples x 2815 analytes (Control vs Complication)
+2026-04-06 14:26:35,886 [INFO] Cross-sectional: Control vs 1 complication group(s) → 1 comparison(s)
+2026-04-06 14:26:36,800 [INFO]   Control_vs_Complication → 2815 tested, 0 excluded (n < 5), 149 significant (q < 0.05)
+2026-04-06 14:26:36,873 [INFO] Cross-sectional [plasma D]: 109 samples x 2815 analytes (Control vs Complication)
+2026-04-06 14:26:36,873 [INFO] Cross-sectional: Control vs 1 complication group(s) → 1 comparison(s)
+2026-04-06 14:26:37,692 [INFO]   Control_vs_Complication → 2815 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
+2026-04-06 14:26:37,725 [INFO] Cross-sectional [plasma E]: 27 samples x 2815 analytes (Control vs Complication)
+2026-04-06 14:26:37,725 [INFO] Cross-sectional: Control vs 1 complication group(s) → 1 comparison(s)
+2026-04-06 14:26:38,528 [INFO]   Control_vs_Complication → 2815 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
+2026-04-06 14:26:38,824 [INFO] Generating cross-sectional boxplots: 50 significant + 0 top by q-value → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/plasma/cross_sectional_boxplots
+2026-04-06 14:26:47,934 [INFO] Boxplots saved → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/plasma/cross_sectional_boxplots
+2026-04-06 14:26:48,273 [INFO] Longitudinal [Control]: 5 timepoints → 4 adjacent delta comparisons
+2026-04-06 14:26:48,835 [INFO]   B−A → 2815 tested, 0 excluded (n < 5), 60 significant (q < 0.05)
+2026-04-06 14:26:49,375 [INFO]   C−B → 2815 tested, 0 excluded (n < 5), 62 significant (q < 0.05)
+2026-04-06 14:26:49,916 [INFO]   D−C → 2815 tested, 0 excluded (n < 5), 115 significant (q < 0.05)
+2026-04-06 14:26:58,583 [INFO]   E−D → 2815 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
+2026-04-06 14:26:58,682 [INFO] Longitudinal [FGR]: 5 timepoints → 4 adjacent delta comparisons
+2026-04-06 14:26:59,457 [INFO]   B−A → 2815 tested, 0 excluded (n < 5), 76 significant (q < 0.05)
+2026-04-06 14:27:00,243 [INFO]   C−B → 2815 tested, 0 excluded (n < 5), 48 significant (q < 0.05)
+2026-04-06 14:27:01,037 [INFO]   D−C → 2815 tested, 0 excluded (n < 5), 38 significant (q < 0.05)
+2026-04-06 14:27:02,063 [INFO]   E−D → 2815 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
+2026-04-06 14:27:02,162 [INFO] Longitudinal [HDP]: 5 timepoints → 4 adjacent delta comparisons
+2026-04-06 14:27:03,055 [INFO]   B−A → 2815 tested, 0 excluded (n < 5), 66 significant (q < 0.05)
+2026-04-06 14:27:03,930 [INFO]   C−B → 2815 tested, 0 excluded (n < 5), 94 significant (q < 0.05)
+2026-04-06 14:27:04,753 [INFO]   D−C → 2815 tested, 0 excluded (n < 5), 87 significant (q < 0.05)
+2026-04-06 14:27:09,202 [INFO]   E−D → 2815 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
+2026-04-06 14:27:09,327 [INFO] Longitudinal [sPTB]: 5 timepoints → 4 adjacent delta comparisons
+2026-04-06 14:27:10,177 [INFO]   B−A → 2815 tested, 0 excluded (n < 5), 56 significant (q < 0.05)
+2026-04-06 14:27:54,600 [INFO]   C−B → 2815 tested, 0 excluded (n < 5), 60 significant (q < 0.05)
+2026-04-06 14:27:56,062 [INFO]   D−C → 2815 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
+2026-04-06 14:27:56,064 [WARNING]   E−D [sPTB]: 0 paired subjects — skipping (no result file written).
+2026-04-06 14:27:56,130 [INFO] Longitudinal [Complication]: 5 timepoints → 4 adjacent delta comparisons
+2026-04-06 14:27:56,689 [INFO]   B−A → 2815 tested, 0 excluded (n < 5), 69 significant (q < 0.05)
+2026-04-06 14:27:57,244 [INFO]   C−B → 2815 tested, 0 excluded (n < 5), 67 significant (q < 0.05)
+2026-04-06 14:27:57,826 [INFO]   D−C → 2815 tested, 0 excluded (n < 5), 58 significant (q < 0.05)
+2026-04-06 14:27:58,607 [INFO]   E−D → 2815 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
+2026-04-06 14:27:58,621 [INFO] Generating longitudinal boxplots for 50 analyte(s) -> /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/plasma/longitudinal_boxplots
+2026-04-06 14:28:06,836 [INFO] Longitudinal boxplots saved -> /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/plasma/longitudinal_boxplots
+2026-04-06 14:28:06,841 [INFO] Differential analysis complete.

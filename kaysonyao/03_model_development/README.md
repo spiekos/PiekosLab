@@ -11,6 +11,7 @@ Machine learning classification pipeline for DP3 multi-omics data. Predicts preg
 | `multilabel_classifier.py` | Joint multi-label classifier (HDP + FGR + sPTB simultaneously) per tissue and timepoint |
 | `superset_enrichment_analysis.py` | Enrichr pathway enrichment on the union of LASSO-selected proteomics features across all significant timepoints |
 | `metabolomics_enrichment_analysis.py` | KEGG REST API pathway enrichment (ORA) on significant metabolomics analytes from differential analysis |
+| `superset_differential_analysis.py`| Same differential analysis pipeline can be conducted again on the superset if necessary|
 
 ## Pipeline overview
 

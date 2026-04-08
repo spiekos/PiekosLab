@@ -1,0 +1,17 @@
+2026-04-03 23:36:22,080 [INFO] ======================================================================
+2026-04-03 23:36:22,080 [INFO] Metabolomics KEGG Pathway Enrichment
+2026-04-03 23:36:22,081 [INFO] Date/time : 2026-04-03 23:36:22
+2026-04-03 23:36:22,081 [INFO] ======================================================================
+2026-04-03 23:36:22,147 [INFO] Set Complication_B_minus_A           : 5 analytes → 0 identified
+2026-04-03 23:36:22,148 [INFO] Set Complication_C_minus_B           : 3 analytes → 0 identified
+2026-04-03 23:36:22,148 [INFO] Set Complication_D_minus_C           : 17 analytes → 0 identified
+2026-04-03 23:36:22,148 [INFO] Set Control_B_minus_A                : 4 analytes → 0 identified
+2026-04-03 23:36:22,148 [INFO] Set Control_C_minus_B                : 3 analytes → 0 identified
+2026-04-03 23:36:22,148 [INFO] Set Control_D_minus_C                : 2 analytes → 0 identified
+2026-04-03 23:36:22,149 [INFO] Set HDP_B_minus_A                    : 4 analytes → 0 identified
+2026-04-03 23:36:22,149 [INFO] Set HDP_C_minus_B                    : 2 analytes → 0 identified
+2026-04-03 23:36:22,149 [INFO] Set HDP_D_minus_C                    : 29 analytes → 0 identified
+2026-04-03 23:36:22,149 [INFO] Set superset                         : 49 analytes → 0 identified
+2026-04-03 23:36:22,149 [INFO] Mapping 0 unique identified compound names to KEGG …
+2026-04-03 23:36:22,150 [INFO] KEGG mapping: 0 / 0 names resolved
+2026-04-03 23:36:22,150 [ERROR] No compounds mapped to KEGG — cannot run ORA.

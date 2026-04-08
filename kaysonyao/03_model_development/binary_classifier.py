@@ -211,8 +211,11 @@ def run_binary_pipeline(
     # 4. LASSO feature selection on training set
     selected_features = lasso_feature_selection_binary(X_train, y_train)
     if len(selected_features) == 0:
-        logger.warning("%s LASSO selected 0 features - skipping.", tag)
-        return None
+        logger.warning(
+            "%s LASSO selected 0 features - falling back to all %d features.",
+            tag, X_train.shape[1],
+        )
+        selected_features = list(X_train.columns)
 
     pd.Series(selected_features, name="feature").to_csv(
         os.path.join(output_dir, "lasso_selected_features.csv"), index=False
