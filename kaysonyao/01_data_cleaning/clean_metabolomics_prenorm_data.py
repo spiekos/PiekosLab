@@ -43,8 +43,8 @@ Pipeline
   2.  Construct canonical SampleID:
         - patient_ID ending in E (postpartum-only subject) → SampleID = patient_ID
         - otherwise → SampleID = patient_ID + filename_timepoint
-  3.  Combine across files; average analyte values for duplicate SampleIDs
-      (cross-batch technical replicates); keep first occurrence for metadata.
+  3.  Combine across files; retain duplicate SampleIDs (cross-batch reference
+      samples) so ComBat can use them as anchors. Average them after ComBat.
   4.  Log2(x + 1) transform all analyte columns.
   5.  Build per-sample batch labels (instrument batch date string).
   6.  Filter samples missing group or batch labels.
@@ -205,34 +205,31 @@ def _load_prenorm_samples(data_dir: str) -> tuple[pd.DataFrame, pd.Series]:
     if not analyte_frames:
         raise RuntimeError(f"No Samples_*_preNorm.csv files found in {data_dir}")
 
-    # --- Combine and resolve duplicates ---
+    # --- Combine (do NOT average duplicates yet — keep them for ComBat reference) ---
     combined_analytes = pd.concat(analyte_frames)
     combined_meta     = pd.concat(meta_frames) if meta_frames else pd.DataFrame()
 
-    # Batch label: for duplicated SampleIDs, keep the batch of the first occurrence
-    batch_series = (
-        pd.DataFrame(batch_records, columns=["SampleID", "Batch"])
-        .drop_duplicates(subset="SampleID", keep="first")
-        .set_index("SampleID")["Batch"]
+    # Build a per-row batch Series aligned positionally with combined_analytes.
+    # batch_records has one entry per row in the same order as analyte_frames.
+    batch_per_row = pd.Series(
+        [b for _, b in batch_records],
+        index=combined_analytes.index,  # may contain duplicate SampleID values
+        name="Batch",
     )
 
     n_dup_rows = combined_analytes.index.duplicated().sum()
     if n_dup_rows:
         logger.info(
-            "%d duplicate SampleID row(s) found — averaging analyte values.",
+            "%d row(s) share a SampleID across batches — will keep for ComBat, "
+            "average after correction.",
             n_dup_rows,
         )
-        combined_analytes = combined_analytes.groupby(level=0).mean()
-        if not combined_meta.empty:
-            combined_meta = combined_meta.groupby(level=0).first()
-    else:
-        combined_analytes = combined_analytes[~combined_analytes.index.duplicated(keep="first")]
 
     logger.info(
-        "Combined matrix: %d samples × %d analytes",
+        "Combined matrix (pre-dedup): %d rows × %d analytes",
         combined_analytes.shape[0], combined_analytes.shape[1],
     )
-    return combined_analytes, batch_series, combined_meta
+    return combined_analytes, batch_per_row, combined_meta
 
 
 # ---------------------------------------------------------------------------
@@ -338,9 +335,34 @@ def build_cleaned_matrix(
     os.makedirs(output_full_dir,   exist_ok=True)
     os.makedirs(output_sliced_dir, exist_ok=True)
 
-    # --- Step 1-3: Load pre-normalized files, build SampleIDs, average duplicates ---
+    # --- Steps 1-3: Load pre-normalised files, build SampleIDs ---
+    # Duplicates (same SampleID appearing in multiple batches) are retained here
+    # so ComBat can use them as cross-batch reference anchors.
     logger.info("Loading pre-normalised sample files from %s …", data_dir)
-    raw_analytes, batch_series, embedded_meta = _load_prenorm_samples(data_dir)
+    raw_analytes, batch_per_row, embedded_meta = _load_prenorm_samples(data_dir)
+
+    # If any SampleID appears in more than one batch, assign temporary unique keys
+    # of the form "DP3-0071A__51223" so ComBat receives a full-rank matrix.
+    dup_mask = raw_analytes.index.duplicated(keep=False)
+    if dup_mask.any():
+        original_sid_per_row = pd.Series(
+            list(raw_analytes.index), index=raw_analytes.index, dtype=str
+        )
+        temp_keys = [
+            f"{sid}__{b}"
+            for sid, b in zip(raw_analytes.index, batch_per_row)
+        ]
+        raw_analytes.index  = temp_keys
+        batch_per_row.index = temp_keys
+        original_sid_per_row.index = temp_keys
+        if not embedded_meta.empty:
+            embedded_meta.index = temp_keys
+        logger.info(
+            "Assigned temporary unique keys for %d cross-batch duplicate row(s).",
+            dup_mask.sum(),
+        )
+    else:
+        original_sid_per_row = None
 
     # --- Step 4: Log2(x + 1) transform ---
     logger.info("Applying log2(x + 1) transformation …")
@@ -359,7 +381,7 @@ def build_cleaned_matrix(
         logger.warning("No 'group' column found in pre-norm files — group will be NaN.")
         groups = pd.Series(np.nan, index=df_log2.index, name="group")
 
-    batch_labels = batch_series.reindex(df_log2.index)
+    batch_labels = batch_per_row.reindex(df_log2.index)
 
     # Metadata matching diagnostics
     n_matched = groups.notna().sum()
@@ -409,6 +431,21 @@ def build_cleaned_matrix(
         group_labels=groups,
         out_dir=output_full_dir,
     )
+
+    # --- Step 9b: Average cross-batch duplicates post-ComBat ---
+    if original_sid_per_row is not None:
+        orig = original_sid_per_row.reindex(X_norm.index)
+        n_before = len(X_norm)
+        X_norm        = X_norm.groupby(orig).mean()
+        groups        = groups.groupby(orig).first()
+        batch_labels  = batch_labels.groupby(orig).first()
+        groups_binary = groups_binary.groupby(orig).first()
+        if not embedded_meta.empty:
+            embedded_meta = embedded_meta.groupby(orig).first()
+        logger.info(
+            "Post-ComBat averaging: %d rows → %d unique SampleIDs.",
+            n_before, len(X_norm),
+        )
 
     # --- Step 10: Missingness filter (≥20%) + Fisher/BH report ---
     logger.info(

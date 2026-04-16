@@ -404,42 +404,36 @@ def _read_processed_sheet(wb, sheet_name: str, polarity_prefix: str,
         col_to_sid[col_idx] = canon
         col_to_date[col_idx] = _date_batch_of(str(fname))
 
-    # --- Identify and filter cross-batch re-injection columns ---
-    # For each canonical SampleID, find which date batches its columns come from.
-    # If more than one date batch is present AND we have primary-batch info,
-    # drop columns whose date batch != primary batch.
-    if sid_primary_date:
-        from collections import defaultdict as _dd
-        sid_col_dates: dict[str, set] = _dd(set)
-        for col_idx, canon in col_to_sid.items():
-            db = col_to_date.get(col_idx)
-            if db:
-                sid_col_dates[canon].add(db)
+    # --- Assign accumulator keys: canon_sid__date_batch ---
+    # Cross-batch re-injection columns (same SampleID in multiple date batches) are
+    # kept as separate accumulator entries so ComBat can use them as reference anchors.
+    # Same-batch multi-injection replicates (EA/EB/EC/ED) share the same key and are
+    # averaged together before ComBat, as they are within-batch technical replicates.
+    # Format: "DP3-0008C__051223" and "DP3-0008C__110123" for cross-batch duplicates.
+    col_to_acckey: dict[int, str] = {}
+    for col_idx, canon in col_to_sid.items():
+        date_batch = col_to_date.get(col_idx)
+        if date_batch:
+            col_to_acckey[col_idx] = f"{canon}__{date_batch}"
+        else:
+            col_to_acckey[col_idx] = canon  # fallback: no batch date in filename
 
-        n_cross_batch_dropped = 0
-        cols_to_drop: set[int] = set()
-        for col_idx, canon in col_to_sid.items():
-            if len(sid_col_dates.get(canon, set())) < 2:
-                continue  # only one date batch → no cross-batch issue
-            primary = sid_primary_date.get(canon)
-            col_date = col_to_date.get(col_idx)
-            if primary and col_date and col_date != primary:
-                cols_to_drop.add(col_idx)
-                n_cross_batch_dropped += 1
+    n_cross_batch = sum(
+        1 for canon in set(col_to_sid.values())
+        if len({col_to_date.get(ci) for ci, c in col_to_sid.items() if c == canon} - {None}) > 1
+    )
+    if n_cross_batch:
+        logger.info(
+            "[%s] %d SampleID(s) span multiple date batches — "
+            "keeping all for ComBat reference, will average after correction.",
+            sheet_name, n_cross_batch,
+        )
 
-        if n_cross_batch_dropped:
-            logger.info(
-                "[%s] Discarded %d cross-batch re-injection column(s) "
-                "(keeping primary-batch columns only).",
-                sheet_name, n_cross_batch_dropped,
-            )
-            for col_idx in cols_to_drop:
-                del col_to_sid[col_idx]
-
-    patient_cols = sorted(col_to_sid.keys())
+    patient_cols = sorted(col_to_acckey.keys())
     logger.info(
-        "[%s] Patient columns: %d → %d canonical SampleIDs",
-        sheet_name, len(patient_cols), len(set(col_to_sid.values())),
+        "[%s] Patient columns: %d → %d accumulator keys (%d canonical SampleIDs)",
+        sheet_name, len(patient_cols),
+        len(set(col_to_acckey.values())), len(set(col_to_sid.values())),
     )
 
     # --- Accumulate peak area data ---
@@ -472,10 +466,10 @@ def _read_processed_sheet(wb, sheet_name: str, polarity_prefix: str,
         n_kept += 1
 
         for col_idx in patient_cols:
-            canon_sid = col_to_sid[col_idx]
+            acc_key = col_to_acckey[col_idx]
             area = row[col_idx]
             if area is not None and isinstance(area, (int, float)):
-                accumulator[canon_sid][feature_name].append(float(area))
+                accumulator[acc_key][feature_name].append(float(area))
 
     logger.info(
         "[%s] Rows — kept: %d | ISTD dropped: %d | QC-rejected dropped: %d",
@@ -509,7 +503,8 @@ def _read_processed_sheet(wb, sheet_name: str, polarity_prefix: str,
     df = pd.DataFrame(data_dict, index=index)
     df.index.name = "SampleID"
     logger.info(
-        "[%s] Output matrix: %d samples × %d features (before log2)",
+        "[%s] Output matrix: %d rows × %d features (before log2; "
+        "cross-batch duplicates kept as separate rows)",
         sheet_name, df.shape[0], df.shape[1],
     )
     return df
@@ -641,12 +636,30 @@ def build_cleaned_matrix(
     # --- Step 6: Use already-loaded metadata ---
     meta_df = meta_df_early
 
-    # Helper: strip timepoint suffix to get bare subject ID
+    # Helper: strip batch suffix and timepoint to get bare subject ID.
+    # Handles both plain "DP3-0071A" and temp-keyed "DP3-0071A__051223" forms.
     def _subject_of(sid: str) -> str | None:
-        m = re.match(r"^(DP3-\d{4})[A-E]$", sid)
+        sid_clean = sid.split("__")[0]  # strip "__batchdate" if present
+        m = re.match(r"^(DP3-\d{4})[A-E]$", sid_clean)
         return m.group(1) if m else None
 
-    # Build per-sample group and batch Series (subject-level → sample-level)
+    # Build original SampleID → temp-key mapping for post-ComBat averaging.
+    # If a row index contains "__", it is a cross-batch duplicate temp key.
+    has_temp_keys = any("__" in sid for sid in df_log2.index)
+    if has_temp_keys:
+        original_sid_per_row = pd.Series(
+            {sid: sid.split("__")[0] for sid in df_log2.index},
+            name="OriginalSID",
+        )
+        n_dup = (original_sid_per_row.duplicated(keep=False)).sum()
+        logger.info(
+            "Cross-batch duplicate rows detected: %d rows will be averaged "
+            "post-ComBat to yield unique SampleIDs.", n_dup,
+        )
+    else:
+        original_sid_per_row = None
+
+    # Per-sample group labels (from metadata, using original SampleID)
     groups = pd.Series(
         {sid: (meta_df.loc[_subject_of(sid), "Group"]
                if _subject_of(sid) and _subject_of(sid) in meta_df.index
@@ -654,11 +667,23 @@ def build_cleaned_matrix(
          for sid in df_log2.index},
         name="Group",
     )
+
+    # ComBat batch labels: use the date-batch encoded in the temp key (most accurate).
+    # For rows without a temp key, fall back to metadata batch converted to date string.
+    _OMICS_TO_DATE_INV = {"051223": "051223", "110123": "110123", "041625": "041625"}
+    def _combat_batch(sid: str) -> str | None:
+        if "__" in sid:
+            return sid.split("__")[1]  # date batch from temp key
+        # Fallback: derive from metadata omics set number
+        subj = _subject_of(sid)
+        if subj and subj in meta_df.index:
+            batch_num = meta_df.loc[subj, "Batch"]
+            if pd.notna(batch_num):
+                return {1: "051223", 2: "110123", 3: "041625"}.get(int(batch_num))
+        return None
+
     batch_labels = pd.Series(
-        {sid: (meta_df.loc[_subject_of(sid), "Batch"]
-               if _subject_of(sid) and _subject_of(sid) in meta_df.index
-               else None)
-         for sid in df_log2.index},
+        {sid: _combat_batch(sid) for sid in df_log2.index},
         name="Batch",
     )
 
@@ -718,6 +743,19 @@ def build_cleaned_matrix(
         group_labels=groups,
         out_dir=output_full_dir,
     )
+
+    # --- Step 8c: Average cross-batch duplicates post-ComBat ---
+    if original_sid_per_row is not None:
+        orig = original_sid_per_row.reindex(X_norm.index)
+        n_before = len(X_norm)
+        X_norm        = X_norm.groupby(orig).mean()
+        groups        = groups.groupby(orig).first()
+        batch_labels  = batch_labels.groupby(orig).first()
+        groups_binary = groups_binary.groupby(orig).first()
+        logger.info(
+            "Post-ComBat averaging: %d rows → %d unique SampleIDs.",
+            n_before, len(X_norm),
+        )
 
     # --- Step 9: Missingness filter (≥20% → drop) + Fisher/BH report ---
     logger.info(

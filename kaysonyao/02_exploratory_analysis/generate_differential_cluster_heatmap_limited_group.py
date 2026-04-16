@@ -164,9 +164,18 @@ def main():
 
 def _run_default_mode_for_omics(omics_type: str) -> None:
     """Run the full heatmap pipeline for a given omics type (non-proteomics)."""
-    wkdir = os.getcwd()
+    wkdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-    if omics_type == "metabolomics_combat":
+    if omics_type == "proteomics":
+        data_subdir  = "proteomics"
+        file_prefix  = "proteomics"
+        has_placenta = True
+        # Historical proteomics outputs live directly under
+        # 04_results_and_figures/differential_analysis/{plasma,placenta}
+        # and 04_results_and_figures/heatmaps/{plasma,placenta}.
+        diff_dir = os.path.join(wkdir, "04_results_and_figures", "differential_analysis")
+        heatmap_dir = os.path.join(wkdir, "04_results_and_figures", "heatmaps")
+    elif omics_type == "metabolomics_combat":
         data_subdir  = "metabolomics_combat"
         file_prefix  = "metabolomics"
         has_placenta = False
@@ -185,12 +194,13 @@ def _run_default_mode_for_omics(omics_type: str) -> None:
     cleaned_dir_placenta = os.path.join(
         wkdir, "data", "cleaned", data_subdir, "normalized_full_results"
     )
-    diff_dir    = os.path.join(
-        wkdir, "04_results_and_figures", "differential_analysis", omics_type
-    )
-    heatmap_dir = os.path.join(
-        wkdir, "04_results_and_figures", "heatmaps", omics_type
-    )
+    if omics_type != "proteomics":
+        diff_dir = os.path.join(
+            wkdir, "04_results_and_figures", "differential_analysis", omics_type
+        )
+        heatmap_dir = os.path.join(
+            wkdir, "04_results_and_figures", "heatmaps", omics_type
+        )
 
     _CS_PAIRS      = [("Control", "Complication")]
     _COMPL_SOURCES = ["FGR", "HDP", "sPTB"]
@@ -268,7 +278,7 @@ if __name__ == "__main__":
     )
 
     def _run_default_mode() -> None:
-        wkdir               = os.getcwd()
+        wkdir               = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         cleaned_dir_placenta = os.path.join(
             wkdir, "data", "cleaned", "proteomics", "normalized_full_results"
         )

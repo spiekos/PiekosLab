@@ -52,6 +52,15 @@ _TIMEPOINT_ORDER = ["A", "B", "C", "D", "E"]
 _CTRL_COLOUR  = "steelblue"
 _COMPL_COLOUR = "tomato"
 
+# Specific-subgroup colour palette (used for the subgroup annotation row)
+_SUBGROUP_PALETTE: dict[str, str] = {
+    "Control": "steelblue",
+    "FGR":     "tomato",
+    "HDP":     "darkorange",
+    "sPTB":    "mediumpurple",
+}
+_SUBGROUP_DEFAULT_COLOUR = "lightgray"   # for any unknown/unlabelled subgroup
+
 
 # ---------------------------------------------------------------------------
 # Shared data helpers
@@ -356,6 +365,11 @@ def run_longitudinal(
         fname    = f"{group}_{t_b}_minus_{t_a}_longitudinal_results.csv"
         out_path = os.path.join(output_dir, fname)
         results_df.to_csv(out_path)
+
+        sig_df   = results_df[results_df["significant"] == True]
+        sig_path = os.path.join(output_dir, f"{group}_{t_b}_minus_{t_a}_significant_analytes.csv")
+        sig_df.to_csv(sig_path)
+
         n_excluded = results_df["excluded"].sum()
         logger.info(
             "  %s−%s → %d tested, %d excluded (n < %d), %d significant (q < %.2f)",
@@ -439,6 +453,159 @@ def collect_significant_analytes(results_dir: str) -> set:
     return analytes
 
 
+def _make_subgroup_col_colors(
+    df: pd.DataFrame,
+    ordered_samples: list,
+    subgroup_col: str = "Subgroup",
+    group_col: str = "Group",
+    original_groups: "pd.Series | None" = None,
+) -> pd.Series:
+    """Return a Series of hex/named colours for the subgroup annotation row.
+
+    Uses the raw subgroup label when it already matches the palette keys.
+    Otherwise falls back to the parent Group label so detailed clinical
+    phenotypes like "LO severe PE" still inherit the HDP colour rather than
+    collapsing to the default grey.
+
+    Parameters
+    ----------
+    original_groups : optional Series (index = SampleID)
+        Pass the *pre-relabelling* Group Series when calling from a pairwise
+        function that has already renamed the group column to "Complication".
+        Without this, the fallback lookup sees "Complication" (not in the
+        palette) and every complication sample would be rendered grey.
+    """
+    subgroups = df[subgroup_col] if subgroup_col in df.columns else pd.Series(dtype=str)
+    if original_groups is not None:
+        groups = original_groups
+    else:
+        groups = df[group_col] if group_col in df.columns else pd.Series(dtype=str)
+
+    def _resolve_parent_label(sample_id: str) -> str:
+        subgroup = str(subgroups.get(sample_id, "")).strip()
+        group = str(groups.get(sample_id, "")).strip()
+
+        if subgroup in _GROUP_LABEL_MAP:
+            subgroup = _GROUP_LABEL_MAP[subgroup]
+        if group in _GROUP_LABEL_MAP:
+            group = _GROUP_LABEL_MAP[group]
+
+        if subgroup in _SUBGROUP_PALETTE:
+            return subgroup
+        if group in _SUBGROUP_PALETTE:
+            return group
+        return ""
+
+    colours = [
+        _SUBGROUP_PALETTE.get(_resolve_parent_label(s), _SUBGROUP_DEFAULT_COLOUR)
+        for s in ordered_samples
+    ]
+    return pd.Series(colours, index=ordered_samples, name="Subgroup")
+
+
+def _resolve_present_subgroup_labels(
+    df: pd.DataFrame,
+    ordered_samples: list,
+    subgroup_col: str = "Subgroup",
+    group_col: str = "Group",
+    original_groups: "pd.Series | None" = None,
+) -> list[str]:
+    """Return the canonical labels that actually appear in the subgroup bar."""
+    subgroups = df[subgroup_col] if subgroup_col in df.columns else pd.Series(dtype=str)
+    if original_groups is not None:
+        groups = original_groups
+    else:
+        groups = df[group_col] if group_col in df.columns else pd.Series(dtype=str)
+
+    present = set()
+    for sample_id in ordered_samples:
+        subgroup = str(subgroups.get(sample_id, "")).strip()
+        group = str(groups.get(sample_id, "")).strip()
+        if subgroup in _GROUP_LABEL_MAP:
+            subgroup = _GROUP_LABEL_MAP[subgroup]
+        if group in _GROUP_LABEL_MAP:
+            group = _GROUP_LABEL_MAP[group]
+        if subgroup in _SUBGROUP_PALETTE:
+            present.add(subgroup)
+        elif group in _SUBGROUP_PALETTE:
+            present.add(group)
+    return sorted(present)
+
+
+def _style_clustermap(
+    cg,
+    row_fontsize: int,
+    title: str,
+    title_y: float = 0.99,
+    font_scale: float = 1.0,
+) -> None:
+    """Apply consistent presentation-quality text sizes to a seaborn ClusterGrid.
+
+    font_scale is computed as figw / 12.0 by the caller so that all text stays
+    proportionally readable whether the figure is 12" or 34" wide.
+
+    Covers:
+      - Row (analyte) tick labels
+      - Colorbar tick labels + axis label
+      - Column-colour annotation bar row labels
+      - Figure suptitle
+    Call this immediately after sns.clustermap() and before saving.
+    """
+    fs = font_scale  # shorthand
+
+    # --- row labels ---
+    plt.setp(cg.ax_heatmap.get_yticklabels(), fontsize=row_fontsize)
+
+    # --- colorbar: shift down so it clears the suptitle ---
+    try:
+        pos = cg.cax.get_position()
+        cg.cax.set_position([pos.x0, pos.y0 - 0.07, pos.width, pos.height])
+        cg.cax.tick_params(labelsize=int(13 * fs))
+        cg.cax.set_ylabel("z-score", fontsize=int(13 * fs), rotation=270, labelpad=18 * fs)
+    except Exception:
+        pass
+
+    # --- annotation bar row-name labels (right side of col_colors strip) ---
+    try:
+        plt.setp(cg.ax_col_colors.get_yticklabels(), fontsize=int(13 * fs))
+    except Exception:
+        pass
+
+    # --- figure title ---
+    cg.figure.suptitle(title, y=title_y, fontsize=int(16 * fs), fontweight="bold")
+
+
+def _add_subgroup_legend(fig, present_subgroups: list[str], font_scale: float = 1.0) -> None:
+    """Add a legend patch block below the suptitle so it never obscures it.
+
+    bbox_to_anchor=(0.99, 0.91) in figure coordinates places the legend's
+    upper-right corner at 91 % of figure height — below a suptitle at y=0.99.
+    """
+    import matplotlib.patches as mpatches
+    fs = font_scale
+    patches = [
+        mpatches.Patch(color=_SUBGROUP_PALETTE.get(sg, _SUBGROUP_DEFAULT_COLOUR), label=sg)
+        for sg in present_subgroups
+        if sg and str(sg) != "nan"
+    ]
+    if patches:
+        fig.legend(
+            handles=patches,
+            title="Subgroup",
+            loc="upper right",
+            bbox_to_anchor=(0.99, 0.91),   # sit below the suptitle line
+            fontsize=int(14 * fs),
+            title_fontsize=int(16 * fs),
+            framealpha=0.9,
+            ncol=min(len(patches), 4),
+            markerscale=2.5 * fs,
+            handlelength=2.5,
+            handleheight=1.8,
+            borderpad=1.0,
+            labelspacing=0.7,
+        )
+
+
 def _rank_analytes_by_min_q(sig_analytes: list, results_dir: str) -> pd.Series:
     """Return a Series of min q-value per analyte across all result CSVs."""
     min_q = pd.Series(1.0, index=sig_analytes)
@@ -517,19 +684,27 @@ def plot_cross_sectional_heatmap(
     X_z_plot       = X_z.loc[ordered_samples].T
     X_z_plot.index = X_z_plot.index.tolist()  # all rows are significant
 
-    palette        = sns.color_palette("tab10", n_colors=len(group_order))
-    group_color_map = dict(zip(group_order, palette))
-    col_colors      = pd.Series(
-        [group_color_map.get(groups.get(s, group_order[0]), "gray") for s in ordered_samples],
+    # Annotation row 1: binary Control vs Complication
+    binary_colors = pd.Series(
+        [_CTRL_COLOUR if groups.get(s) == "Control" else _COMPL_COLOUR
+         for s in ordered_samples],
         index=ordered_samples,
-        name=group_col,
+        name="Control vs Complication",
+    )
+    # Annotation row 2: specific subgroup (Control / FGR / HDP / sPTB)
+    subgroup_colors = _make_subgroup_col_colors(df, ordered_samples)
+    col_colors = pd.DataFrame(
+        {"Control vs Complication": binary_colors, "Subgroup": subgroup_colors}
     )
 
     n_samples    = X_z_plot.shape[1]
     n_total      = X_z_plot.shape[0]
     figw         = max(20, n_samples * 0.22 + 6)
-    figh         = max(10, n_total * 0.20)
-    row_fontsize = max(5, min(9, int(180 / n_total)))
+    figh         = max(10, n_total * 0.22)
+    font_scale   = figw / 12.0
+    # Cap row font so labels never overlap: use 65 % of available row height
+    pts_per_row  = (figh * 0.78 / n_total) * 72   # ~78 % of fig height is heatmap
+    row_fontsize = max(6, min(int(pts_per_row * 0.65), int(14 * font_scale)))
 
     cg = sns.clustermap(
         X_z_plot,
@@ -549,12 +724,13 @@ def plot_cross_sectional_heatmap(
     )
     cg.ax_heatmap.set_xlabel("")
     cg.ax_heatmap.set_ylabel("")
-    plt.setp(cg.ax_heatmap.get_yticklabels(), fontsize=row_fontsize)
-    cg.figure.suptitle(
-        f"Cross-sectional Heatmap  |  {n_total} significant analytes  "
-        f"|  {n_samples} samples",
-        y=0.99, fontsize=11,
+    _style_clustermap(
+        cg, row_fontsize, font_scale=font_scale,
+        title=f"Cross-sectional Heatmap  |  {n_total} significant analytes  |  {n_samples} samples",
     )
+
+    present_subgroups = _resolve_present_subgroup_labels(df, ordered_samples)
+    _add_subgroup_legend(cg.figure, sorted(present_subgroups), font_scale=font_scale)
 
     cg.figure.savefig(
         os.path.join(output_dir, f"{label}_heatmap.pdf"),
@@ -617,10 +793,14 @@ def plot_pairwise_cross_sectional_heatmap(
         # Filter to g1 + underlying source groups, then relabel them as g2
         mask = df[group_col].isin([g1] + list(g2_source_groups))
         df   = df.loc[mask].copy()
+        # Save original canonical groups BEFORE relabelling so the subgroup
+        # colour bar can still map "HDP", "FGR", "sPTB" → correct colours.
+        original_groups = df[group_col].copy()
         df.loc[df[group_col] != g1, group_col] = g2
     else:
         mask = df[group_col].isin([g1, g2])
         df   = df.loc[mask].copy()
+        original_groups = df[group_col].copy()
     analyte_cols = get_analyte_columns(df)
 
     # Significant analytes only
@@ -652,18 +832,30 @@ def plot_pairwise_cross_sectional_heatmap(
     X_z_plot       = X_z.loc[ordered_samples].T
     X_z_plot.index = X_z_plot.index.tolist()  # all rows are significant
 
-    # Binary colour bar: Control (steelblue) vs Complication (tomato)
-    col_colors = pd.Series(
+    # Annotation row 1: binary Control vs Complication
+    binary_colors = pd.Series(
         [_CTRL_COLOUR if groups[s] == "Control" else _COMPL_COLOUR for s in ordered_samples],
         index=ordered_samples,
         name="Control vs Complication",
+    )
+    # Annotation row 2: specific subgroup (Control / FGR / HDP / sPTB).
+    # Pass original_groups so the lookup uses canonical group labels even
+    # though df[group_col] has been relabelled to "Complication".
+    subgroup_colors = _make_subgroup_col_colors(
+        df, ordered_samples, original_groups=original_groups
+    )
+    col_colors = pd.DataFrame(
+        {"Control vs Complication": binary_colors, "Subgroup": subgroup_colors}
     )
 
     n_samples    = X_z_plot.shape[1]
     n_total      = X_z_plot.shape[0]
     figw         = max(20, n_samples * 0.22 + 6)
-    figh         = max(10, n_total * 0.20)
-    row_fontsize = max(5, min(9, int(180 / n_total)))
+    figh         = max(10, n_total * 0.22)
+    font_scale   = figw / 12.0
+    # Cap row font so labels never overlap: use 65 % of available row height
+    pts_per_row  = (figh * 0.78 / n_total) * 72   # ~78 % of fig height is heatmap
+    row_fontsize = max(6, min(int(pts_per_row * 0.65), int(14 * font_scale)))
 
     cg = sns.clustermap(
         X_z_plot,
@@ -683,12 +875,19 @@ def plot_pairwise_cross_sectional_heatmap(
     )
     cg.ax_heatmap.set_xlabel("")
     cg.ax_heatmap.set_ylabel("")
-    plt.setp(cg.ax_heatmap.get_yticklabels(), fontsize=row_fontsize)
-    cg.figure.suptitle(
-        f"Cross-sectional Heatmap  |  {g1} vs {g2}  |  "
-        f"{n_total} significant analytes  |  {n_samples} samples",
-        y=0.99, fontsize=11,
+    _style_clustermap(
+        cg, row_fontsize, font_scale=font_scale,
+        title=f"Cross-sectional Heatmap  |  {g1} vs {g2}  |  "
+              f"{n_total} significant analytes  |  {n_samples} samples",
     )
+
+    # Use _resolve_present_subgroup_labels (with original_groups) so that
+    # the legend shows canonical names only (Control/FGR/HDP/sPTB), not
+    # fine-grained clinical phenotype strings.
+    present_subgroups = _resolve_present_subgroup_labels(
+        df, ordered_samples, original_groups=original_groups
+    )
+    _add_subgroup_legend(cg.figure, sorted(present_subgroups), font_scale=font_scale)
 
     cg.figure.savefig(
         os.path.join(pair_dir, f"{pair_label}_heatmap.pdf"),
