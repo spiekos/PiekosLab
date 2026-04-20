@@ -91,14 +91,14 @@ def kruskal_wallis(groups_data: dict[str, np.ndarray]) -> tuple[float, float]:
     return float(h), float(p)
 
 
-def mann_whitney_pairwise(
+def ks_pairwise(
     df: pd.DataFrame,
     score_col: str,
     survey: str,
     visit: str,
 ) -> pd.DataFrame:
     """
-    Pairwise Mann-Whitney U: Control vs each complication group.
+    Pairwise two-sample KS test: Control vs each complication group.
     Returns a DataFrame of results with BH-corrected q-values.
     """
     rows = []
@@ -111,13 +111,13 @@ def mann_whitney_pairwise(
         if len(a) < MIN_N or len(b) < MIN_N:
             rows.append(dict(survey=survey, visit=visit, g1=g1, g2=g2,
                              n_g1=len(a), n_g2=len(b),
-                             U=np.nan, p_value=np.nan, q_value=np.nan,
+                             KS=np.nan, p_value=np.nan, q_value=np.nan,
                              significant=False, excluded=True))
             continue
-        u, p = stats.mannwhitneyu(a, b, alternative="two-sided")
+        ks, p = stats.ks_2samp(a, b, alternative="two-sided")
         rows.append(dict(survey=survey, visit=visit, g1=g1, g2=g2,
                          n_g1=len(a), n_g2=len(b),
-                         U=float(u), p_value=float(p), q_value=np.nan,
+                         KS=float(ks), p_value=float(p), q_value=np.nan,
                          significant=False, excluded=False))
 
     result = pd.DataFrame(rows)
@@ -157,16 +157,22 @@ def plot_distribution(
         order=present_groups,
         palette=GROUP_PALETTE,
         inner=None, linewidth=1.2,
+        saturation=1.0, alpha=0.5,
         ax=ax,
     )
-    # Strip
-    sns.stripplot(
+    # Boxplot overlay (narrow, white fill so violin shows through)
+    sns.boxplot(
         data=df, x="Group", y=score_col,
         order=present_groups,
-        palette=GROUP_PALETTE,
-        size=3, alpha=0.6, jitter=True,
+        width=0.18, linewidth=1.2,
+        color="white", fliersize=0,
+        boxprops=dict(alpha=0.85),
+        medianprops=dict(color="black", linewidth=2),
+        whiskerprops=dict(color="black", linewidth=1.2),
+        capprops=dict(color="black", linewidth=1.2),
         ax=ax,
     )
+
 
     # Annotate n per group
     for i, grp in enumerate(present_groups):
@@ -174,29 +180,110 @@ def plot_distribution(
         ax.text(i, ax.get_ylim()[0] - 0.03 * (ax.get_ylim()[1] - ax.get_ylim()[0]),
                 f"n={n}", ha="center", va="top", fontsize=8)
 
-    # Mark significant pairs
+    # Mark significant pairs — brackets sit just above the violin, capped so
+    # they don't crowd the group labels on the top x-axis.
     sig = stats_df[stats_df["significant"] == True]
-    y_max = df[score_col].max()
-    y_range = df[score_col].max() - df[score_col].min()
-    step = y_range * 0.08
+    y_data_max = df[score_col].max()
+    y_data_min = df[score_col].min()
+    y_range    = y_data_max - y_data_min
+    step       = y_range * 0.07
+    # Reserve the top 20 % of the axis for brackets; labels sit above that.
+    y_ceil     = y_data_max + y_range * 0.20
+    y_bracket  = y_data_max + step * 0.5   # starting height for first bracket
     for _, row in sig.iterrows():
         if row["g1"] not in present_groups or row["g2"] not in present_groups:
             continue
+        if y_bracket > y_ceil:
+            break   # stop drawing if we'd hit the label area
         x1 = present_groups.index(row["g1"])
         x2 = present_groups.index(row["g2"])
-        y_max += step
-        ax.plot([x1, x1, x2, x2], [y_max - step * 0.3, y_max, y_max, y_max - step * 0.3],
+        ax.plot([x1, x1, x2, x2],
+                [y_bracket - step * 0.25, y_bracket, y_bracket, y_bracket - step * 0.25],
                 lw=1, color="black")
         q = row["q_value"]
         sig_str = "***" if q < 0.001 else ("**" if q < 0.01 else "*")
-        ax.text((x1 + x2) / 2, y_max + step * 0.1, sig_str,
+        ax.text((x1 + x2) / 2, y_bracket + step * 0.05, sig_str,
                 ha="center", va="bottom", fontsize=9)
+        y_bracket += step
+    ax.set_ylim(top=y_ceil + step * 0.5)
 
     visit_label = VISIT_LABELS.get(visit, visit)
     ax.set_title(f"{survey_title}  —  {visit_label}", fontsize=12, fontweight="bold")
     ax.set_xlabel("")
     ax.set_ylabel(y_label, fontsize=10)
-    ax.tick_params(axis="x", labelsize=10)
+    ax.tick_params(axis="x", labelbottom=False, labeltop=True, labelsize=10)
+    ax.xaxis.set_label_position("top")
+
+    plt.tight_layout()
+    fig.savefig(out_path, dpi=PNG_DPI, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_ecdf(
+    df: pd.DataFrame,
+    score_col: str,
+    visit: str,
+    survey_title: str,
+    x_label: str,
+    out_path: str,
+    stats_df: pd.DataFrame,
+) -> None:
+    """One ECDF subplot per complication group (Control vs FGR/HDP/sPTB).
+    The KS statistic is the maximum vertical distance between the two curves,
+    annotated on each panel along with the BH q-value.
+    """
+    complication_groups = [g for g in GROUP_ORDER if g != "Control"
+                           and g in df["Group"].values]
+    if not complication_groups:
+        return
+
+    ncols = len(complication_groups)
+    fig, axes = plt.subplots(1, ncols, figsize=(4.5 * ncols, 4), sharey=True)
+    if ncols == 1:
+        axes = [axes]
+
+    visit_label = VISIT_LABELS.get(visit, visit)
+    fig.suptitle(f"{survey_title}  —  {visit_label}  (ECDF)",
+                 fontsize=12, fontweight="bold", y=1.02)
+
+    for ax, grp in zip(axes, complication_groups):
+        ctrl = df.loc[df["Group"] == "Control", score_col].dropna()
+        comp = df.loc[df["Group"] == grp,        score_col].dropna()
+
+        # ECDF curves via seaborn
+        sns.ecdfplot(data=ctrl.values, ax=ax,
+                     color=GROUP_PALETTE["Control"], linewidth=2,
+                     label=f"Control (n={len(ctrl)})")
+        sns.ecdfplot(data=comp.values, ax=ax,
+                     color=GROUP_PALETTE[grp], linewidth=2,
+                     label=f"{grp} (n={len(comp)})")
+
+        # Annotate KS stat and q-value; add asterisks to title if significant
+        row = stats_df[(stats_df["g1"] == "Control") & (stats_df["g2"] == grp)]
+        stars, title_color = "", "black"
+        if not row.empty:
+            ks_val = row["KS"].values[0]
+            q_val  = row["q_value"].values[0]
+            sig    = row["significant"].values[0]
+            if not (pd.isna(ks_val) or pd.isna(q_val)):
+                ax.text(0.97, 0.05,
+                        f"KS = {ks_val:.3f}\nq = {q_val:.3f}",
+                        transform=ax.transAxes, ha="right", va="bottom",
+                        fontsize=8.5,
+                        color="crimson" if sig else "black",
+                        bbox=dict(boxstyle="round,pad=0.3",
+                                  fc="white", ec="grey", alpha=0.8))
+                if sig:
+                    stars = " ***" if q_val < 0.001 else (" **" if q_val < 0.01 else " *")
+                    title_color = "crimson"
+
+        ax.set_title(f"Control vs {grp}{stars}", fontsize=10, fontweight="bold",
+                     color=title_color)
+        ax.set_xlabel(x_label, fontsize=9)
+        ax.set_ylabel("Cumulative proportion" if grp == complication_groups[0] else "",
+                      fontsize=9)
+        ax.legend(fontsize=8, loc="upper left")
+        ax.tick_params(labelsize=8)
 
     plt.tight_layout()
     fig.savefig(out_path, dpi=PNG_DPI, bbox_inches="tight")
@@ -248,15 +335,20 @@ def analyse_survey(survey_key: str) -> None:
             kw_p if not np.isnan(kw_p) else 1, len(sub),
         )
 
-        pw = mann_whitney_pairwise(sub, score_col, survey_key, visit)
+        pw = ks_pairwise(sub, score_col, survey_key, visit)
         pw["KW_H"] = kw_h
         pw["KW_p"] = kw_p
         all_stats.append(pw)
 
-        # Plot
+        # Violin plot
         plot_path = os.path.join(out_dir, f"{survey_key}_{visit}_distribution.png")
         plot_distribution(sub, score_col, visit, title, y_label, plot_path, pw)
         logger.info("  Saved: %s", plot_path)
+
+        # ECDF plot
+        ecdf_path = os.path.join(out_dir, f"{survey_key}_{visit}_ecdf.png")
+        plot_ecdf(sub, score_col, visit, title, y_label, ecdf_path, pw)
+        logger.info("  Saved: %s", ecdf_path)
 
     if all_stats:
         stats_df = pd.concat(all_stats, ignore_index=True)

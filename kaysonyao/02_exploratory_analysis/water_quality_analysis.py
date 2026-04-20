@@ -32,6 +32,7 @@ Output
 """
 
 import os
+import math
 import warnings
 import logging
 import itertools
@@ -84,9 +85,10 @@ AVG_ANALYTES = [
 EXCEED_ANALYTES = [
     ("TTHM_exceed_rate",   "TTHM"),
     ("CHCl3_exceed_rate",  "CHCl₃"),
-    ("CHBr3_exceed_rate",  "CHBr₃"),
-    ("BDCM_exceed_rate",   "BDCM"),
     ("CDBM_exceed_rate",   "CDBM"),
+    # CHBr3 and BDCM excluded: 100% of samples exceed the limit for both,
+    # so their exceedance rates are uniformly 1.0 and provide no discriminative
+    # information for modelling.
 ]
 
 
@@ -107,7 +109,7 @@ def kruskal_wallis(groups_data: dict) -> tuple:
     return float(h), float(p)
 
 
-def mann_whitney_pairwise(df: pd.DataFrame, col: str, label: str) -> pd.DataFrame:
+def ks_pairwise(df: pd.DataFrame, col: str, label: str) -> pd.DataFrame:
     rows = []
     comparisons = [(g1, g2) for g1, g2 in itertools.combinations(GROUP_ORDER, 2)
                    if g1 == "Control"]
@@ -117,13 +119,13 @@ def mann_whitney_pairwise(df: pd.DataFrame, col: str, label: str) -> pd.DataFram
         if len(a) < MIN_N or len(b) < MIN_N:
             rows.append(dict(analyte=label, g1=g1, g2=g2,
                              n_g1=len(a), n_g2=len(b),
-                             U=np.nan, p_value=np.nan, q_value=np.nan,
+                             KS=np.nan, p_value=np.nan, q_value=np.nan,
                              significant=False, excluded=True))
             continue
-        u, p = stats.mannwhitneyu(a, b, alternative="two-sided")
+        ks, p = stats.ks_2samp(a, b, alternative="two-sided")
         rows.append(dict(analyte=label, g1=g1, g2=g2,
                          n_g1=len(a), n_g2=len(b),
-                         U=float(u), p_value=float(p), q_value=np.nan,
+                         KS=float(ks), p_value=float(p), q_value=np.nan,
                          significant=False, excluded=False))
 
     result = pd.DataFrame(rows)
@@ -139,29 +141,34 @@ def mann_whitney_pairwise(df: pd.DataFrame, col: str, label: str) -> pd.DataFram
 # Plotting helper: one analyte → one axes
 # ---------------------------------------------------------------------------
 def _plot_one_analyte(ax, df, col, label, stats_row_df):
-    """Box + strip plot for a single analyte, coloured by group."""
+    """Violin + boxplot overlay + strip plot for a single analyte."""
     present = [g for g in GROUP_ORDER if g in df["Group"].values
                and df.loc[df["Group"] == g, col].dropna().shape[0] >= 1]
     if not present:
         ax.set_visible(False)
         return
 
-    # Box plot
-    sns.boxplot(
-        data=df[df["Group"].isin(present)],
-        x="Group", y=col, order=present,
-        palette=GROUP_PALETTE,
-        width=0.55, linewidth=1.2,
-        fliersize=0, ax=ax,
-    )
-    # Strip
-    sns.stripplot(
-        data=df[df["Group"].isin(present)],
-        x="Group", y=col, order=present,
-        palette=GROUP_PALETTE,
-        size=4, alpha=0.65, jitter=True, ax=ax,
-    )
+    sub = df[df["Group"].isin(present)]
 
+    # Violin
+    sns.violinplot(
+        data=sub, x="Group", y=col, order=present,
+        palette=GROUP_PALETTE,
+        inner=None, linewidth=1.2,
+        saturation=1.0, alpha=0.5,
+        ax=ax,
+    )
+    # Boxplot overlay (narrow white fill so violin shows through)
+    sns.boxplot(
+        data=sub, x="Group", y=col, order=present,
+        width=0.18, linewidth=1.2,
+        color="white", fliersize=0,
+        boxprops=dict(alpha=0.85),
+        medianprops=dict(color="black", linewidth=2),
+        whiskerprops=dict(color="black", linewidth=1.2),
+        capprops=dict(color="black", linewidth=1.2),
+        ax=ax,
+    )
     # n per group
     ylo, yhi = ax.get_ylim()
     for i, grp in enumerate(present):
@@ -169,30 +176,37 @@ def _plot_one_analyte(ax, df, col, label, stats_row_df):
         ax.text(i, ylo - 0.04 * (yhi - ylo), f"n={n}",
                 ha="center", va="top", fontsize=7)
 
-    # Significance brackets for this analyte
+    # Significance brackets — capped so they don't reach the top x-axis labels
     sig = stats_row_df[
         (stats_row_df["analyte"] == label) & (stats_row_df["significant"] == True)
     ]
-    y_top = df[col].dropna().max()
-    y_range = df[col].dropna().max() - df[col].dropna().min()
-    step = y_range * 0.10 if y_range > 0 else 0.1
+    y_data_max = df[col].dropna().max()
+    y_data_min = df[col].dropna().min()
+    y_range    = y_data_max - y_data_min if y_data_max != y_data_min else 0.1
+    step       = y_range * 0.07
+    y_ceil     = y_data_max + y_range * 0.20
+    y_bracket  = y_data_max + step * 0.5
     for _, row in sig.iterrows():
         if row["g1"] not in present or row["g2"] not in present:
             continue
+        if y_bracket > y_ceil:
+            break
         x1, x2 = present.index(row["g1"]), present.index(row["g2"])
-        y_top += step
         ax.plot([x1, x1, x2, x2],
-                [y_top - step * 0.3, y_top, y_top, y_top - step * 0.3],
+                [y_bracket - step * 0.25, y_bracket, y_bracket, y_bracket - step * 0.25],
                 lw=1, color="black")
         q = row["q_value"]
         sig_str = "***" if q < 0.001 else ("**" if q < 0.01 else "*")
-        ax.text((x1 + x2) / 2, y_top + step * 0.1, sig_str,
+        ax.text((x1 + x2) / 2, y_bracket + step * 0.05, sig_str,
                 ha="center", va="bottom", fontsize=8)
+        y_bracket += step
+    ax.set_ylim(top=y_ceil + step * 0.5)
 
     ax.set_title(label, fontsize=10, fontweight="bold")
     ax.set_xlabel("")
     ax.set_ylabel("")
-    ax.tick_params(axis="x", labelsize=9)
+    ax.tick_params(axis="x", labelbottom=False, labeltop=True, labelsize=9)
+    ax.xaxis.set_label_position("top")
     ax.tick_params(axis="y", labelsize=8)
 
 
@@ -258,17 +272,20 @@ def plot_combined(
       Right column  = exceedance rates       (EXCEED_ANALYTES)
     Each column has its own rows of subplots (one subplot per analyte).
     """
-    n_avg = len(AVG_ANALYTES)
-    n_exc = len(EXCEED_ANALYTES)
-    n_rows = max(n_avg, n_exc)
+    n_avg      = len(AVG_ANALYTES)
+    n_exc      = len(EXCEED_ANALYTES)
+    ncols_panel = 3
+    n_rows     = max(
+        math.ceil(n_avg / ncols_panel),
+        math.ceil(n_exc / ncols_panel),
+    )
 
     fig = plt.figure(figsize=(14, 4.2 * n_rows))
-    # Left block: column 1-3; right block: column 4-6 (add gap column between)
-    gs = fig.add_gridspec(n_rows, 7, hspace=0.55, wspace=0.45)
+    # Left block: columns 0-2; gap column 3; right block: columns 4-6
+    gs = fig.add_gridspec(n_rows, 7, hspace=0.30, wspace=0.40)
 
     def make_axes(panel_analytes, col_offset, stats_df, y_label, header):
         n = len(panel_analytes)
-        ncols_panel = min(n, 3)
         for idx, (col, label) in enumerate(panel_analytes):
             r   = idx // ncols_panel
             c   = idx %  ncols_panel
@@ -310,6 +327,83 @@ def plot_combined(
 
 
 # ---------------------------------------------------------------------------
+# ECDF plots
+# ---------------------------------------------------------------------------
+def plot_ecdf_panel(
+    df: pd.DataFrame,
+    analytes: list,
+    stats_df: pd.DataFrame,
+    panel_title: str,
+    x_label: str,
+    out_path: str,
+) -> None:
+    """Grid of ECDF subplots: one row per analyte, one column per comparison."""
+    complication_groups = [g for g in GROUP_ORDER if g != "Control"
+                           and g in df["Group"].values]
+    n_analytes = len(analytes)
+    ncols      = len(complication_groups)
+
+    fig, axes = plt.subplots(n_analytes, ncols,
+                              figsize=(4.5 * ncols, 3.5 * n_analytes),
+                              squeeze=False)
+
+    for r, (col, label) in enumerate(analytes):
+        if col not in df.columns:
+            for c in range(ncols):
+                axes[r][c].set_visible(False)
+            continue
+
+        ctrl = df.loc[df["Group"] == "Control", col].dropna()
+
+        for c, grp in enumerate(complication_groups):
+            ax   = axes[r][c]
+            comp = df.loc[df["Group"] == grp, col].dropna()
+
+            sns.ecdfplot(data=ctrl.values, ax=ax,
+                         color=GROUP_PALETTE["Control"], linewidth=2,
+                         label=f"Control (n={len(ctrl)})")
+            sns.ecdfplot(data=comp.values, ax=ax,
+                         color=GROUP_PALETTE[grp], linewidth=2,
+                         label=f"{grp} (n={len(comp)})")
+
+            # Annotate KS stat and q-value
+            row = stats_df[(stats_df["analyte"] == label) &
+                           (stats_df["g1"] == "Control") &
+                           (stats_df["g2"] == grp)]
+            stars, title_color = "", "black"
+            if not row.empty:
+                ks_val = row["KS"].values[0]
+                q_val  = row["q_value"].values[0]
+                sig    = row["significant"].values[0]
+                if not (pd.isna(ks_val) or pd.isna(q_val)):
+                    ax.text(0.97, 0.05,
+                            f"KS = {ks_val:.3f}\nq = {q_val:.3f}",
+                            transform=ax.transAxes, ha="right", va="bottom",
+                            fontsize=8,
+                            color="crimson" if sig else "black",
+                            bbox=dict(boxstyle="round,pad=0.3",
+                                      fc="white", ec="grey", alpha=0.8))
+                    if sig:
+                        stars = " ***" if q_val < 0.001 else (" **" if q_val < 0.01 else " *")
+                        title_color = "crimson"
+
+            if r == 0:
+                ax.set_title(f"Control vs {grp}{stars}", fontsize=10,
+                             fontweight="bold", color=title_color)
+            ax.set_ylabel(f"{label}\nCumul. proportion" if c == 0 else "",
+                          fontsize=8)
+            ax.set_xlabel(x_label if r == n_analytes - 1 else "", fontsize=8)
+            ax.legend(fontsize=7, loc="upper left")
+            ax.tick_params(labelsize=7)
+
+    fig.suptitle(panel_title, fontsize=13, fontweight="bold", y=1.01)
+    plt.tight_layout()
+    fig.savefig(out_path, dpi=PNG_DPI, bbox_inches="tight")
+    plt.close(fig)
+    logger.info("Saved: %s", out_path)
+
+
+# ---------------------------------------------------------------------------
 # Run statistics for one set of analytes
 # ---------------------------------------------------------------------------
 def run_stats(df: pd.DataFrame, analytes: list) -> pd.DataFrame:
@@ -326,7 +420,7 @@ def run_stats(df: pd.DataFrame, analytes: list) -> pd.DataFrame:
                     label,
                     kw_h if not np.isnan(kw_h) else -1,
                     kw_p if not np.isnan(kw_p) else 1)
-        pw = mann_whitney_pairwise(df, col, label)
+        pw = ks_pairwise(df, col, label)
         pw["KW_H"] = kw_h
         pw["KW_p"] = kw_p
         all_rows.append(pw)
@@ -388,6 +482,21 @@ def main():
     plot_combined(
         df, avg_stats, exc_stats,
         out_path=os.path.join(OUT_DIR, "water_combined_distribution.png"),
+    )
+
+    # ── ECDF plots ───────────────────────────────────────────────────────────
+    plot_ecdf_panel(
+        df, AVG_ANALYTES, avg_stats,
+        panel_title="Water Quality — Average Concentrations (ECDF)",
+        x_label="Concentration (µg/L)",
+        out_path=os.path.join(OUT_DIR, "water_avg_ecdf.png"),
+    )
+
+    plot_ecdf_panel(
+        df, EXCEED_ANALYTES, exc_stats,
+        panel_title="Water Quality — Exceedance Rates (ECDF)",
+        x_label="Exceedance Rate (fraction)",
+        out_path=os.path.join(OUT_DIR, "water_exceed_ecdf.png"),
     )
 
     logger.info("Water quality analysis complete.")

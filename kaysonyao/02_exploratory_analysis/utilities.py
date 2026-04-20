@@ -138,7 +138,7 @@ def _test_one_pair(v1: pd.Series, v2: pd.Series) -> dict:
     v2 = v2.dropna()
     if len(v1) < MIN_N or len(v2) < MIN_N:
         return {
-            "U_statistic":  np.nan,
+            "U_statistic":   np.nan,
             "p_value":       np.nan,
             "median_group1": v1.median() if len(v1) else np.nan,
             "median_group2": v2.median() if len(v2) else np.nan,
@@ -149,11 +149,11 @@ def _test_one_pair(v1: pd.Series, v2: pd.Series) -> dict:
         }
     u_stat, p_val = stats.mannwhitneyu(v1, v2, alternative="two-sided", method="auto")
     med1, med2 = v1.median(), v2.median()
-    # fold_change is the log2 difference (= log2 fold change in linear space),
+    # fold_change is the log2 difference of medians (= log2 FC in linear space),
     # since NPX values are already on a log2 scale.
     fc = med2 - med1
     return {
-        "U_statistic":  u_stat,
+        "U_statistic":   u_stat,
         "p_value":       p_val,
         "median_group1": med1,
         "median_group2": med2,

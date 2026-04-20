@@ -1,0 +1,64 @@
+{
+  "tissue": "pss",
+  "timepoint": "A",
+  "data_path": "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/survey/model_ready/pss/normalized_sliced_by_suffix/pss_plasma_formatted_suffix_A.csv",
+  "outcome": "Complication",
+  "complications_pooled": [
+    "HDP",
+    "FGR",
+    "sPTB"
+  ],
+  "n_train": 250,
+  "n_val": 54,
+  "n_test": 54,
+  "class_dist_train": {
+    "control": 175,
+    "complication": 75
+  },
+  "class_dist_val": {
+    "control": 37,
+    "complication": 17
+  },
+  "class_dist_test": {
+    "control": 38,
+    "complication": 16
+  },
+  "n_features_pretlasso": 11,
+  "n_features_postlasso": 2,
+  "best_model_val": "SVM",
+  "best_val_pr_auc": 0.45831644219928724,
+  "test_metrics": {
+    "LogisticRegression": {
+      "pr_auc": 0.41865634365634363,
+      "roc_auc": 0.6299342105263158,
+      "accuracy": 0.6851851851851852,
+      "precision": 0.46153846153846156,
+      "recall": 0.375,
+      "f1": 0.41379310344827586
+    },
+    "RandomForest": {
+      "pr_auc": 0.45002746565246565,
+      "roc_auc": 0.6019736842105262,
+      "accuracy": 0.6851851851851852,
+      "precision": 0.46153846153846156,
+      "recall": 0.375,
+      "f1": 0.41379310344827586
+    },
+    "XGBoost": {
+      "pr_auc": 0.4270945659362779,
+      "roc_auc": 0.5904605263157895,
+      "accuracy": 0.6666666666666666,
+      "precision": 0.42857142857142855,
+      "recall": 0.375,
+      "f1": 0.4
+    },
+    "SVM": {
+      "pr_auc": 0.25253411411379006,
+      "roc_auc": 0.37828947368421056,
+      "accuracy": 0.7037037037037037,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    }
+  }
+}

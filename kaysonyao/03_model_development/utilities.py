@@ -520,7 +520,7 @@ def tune_hyperparams_multilabel(
 
     def objective(trial):
         base = _build_model_from_trial_multilabel(trial, model_name, random_state)
-        model = MultiOutputClassifier(base, n_jobs=-1)
+        model = MultiOutputClassifier(base, n_jobs=1)
         model.fit(X_tr_s, Y_train)
         Y_prob = model.predict_proba(X_val_s)
         scores = []
@@ -601,7 +601,7 @@ def build_tuned_model_multilabel(
     """
     from sklearn.multioutput import MultiOutputClassifier
     base = build_tuned_model_binary(model_name, params, y_train=None, random_state=random_state)
-    return MultiOutputClassifier(base, n_jobs=-1)
+    return MultiOutputClassifier(base, n_jobs=1)
 
 # ---------------------------------------------------------------------------
 # Cross-validation
@@ -849,4 +849,3 @@ def save_feature_importance(
     plt.tight_layout()
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
-
