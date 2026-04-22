@@ -48,7 +48,7 @@ marp: true
 ### Cleaning plots to show
 - PCA before vs after ComBat:
 
-![Proteomics plasma PCA pre/post ComBat](./data_cleaning/plasma/pca/comparison/pca_pre_post_shared_axes.png)
+![Proteomics plasma PCA pre/post ComBat](./data_cleaning/plasma/wpca/comparison/pca_pre_post_shared_axes.png)
 
 
 ---
