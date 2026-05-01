@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SOP Pipeline Diagnostic Plots</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f1f5f9; color: #1e293b; display: flex; height: 100vh; overflow: hidden; }
+
+  /* Sidebar */
+  #sidebar { width: 220px; flex-shrink: 0; background: #1e293b; color: #e2e8f0; padding: 20px 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+  #sidebar h1 { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #94a3b8; }
+  .filter-group label { display: block; font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+  .filter-btn { display: block; width: 100%; text-align: left; background: none; border: none; color: #cbd5e1; font-size: 12.5px; padding: 5px 9px; border-radius: 5px; cursor: pointer; margin-bottom: 2px; transition: background .15s; }
+  .filter-btn:hover { background: #334155; }
+  .filter-btn.active { background: #3b82f6; color: #fff; font-weight: 600; }
+  #count { font-size: 11.5px; color: #64748b; margin-top: auto; padding-top: 12px; border-top: 1px solid #334155; }
+
+  /* Main */
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  #toolbar { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 10px 18px; display: flex; align-items: center; gap: 12px; }
+  #search { flex: 1; padding: 7px 12px; border: 1px solid #cbd5e1; border-radius: 7px; font-size: 13px; outline: none; }
+  #search:focus { border-color: #3b82f6; }
+  #sort { padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 7px; font-size: 13px; background: #fff; cursor: pointer; }
+  #grid { flex: 1; overflow-y: auto; padding: 18px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; align-content: start; }
+
+  .card { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); cursor: pointer; transition: transform .15s, box-shadow .15s; }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.12); }
+  .card img { width: 100%; height: 150px; object-fit: cover; display: block; background: #f8fafc; }
+  .card-body { padding: 9px 11px 10px; }
+  .card-title { font-size: 11.5px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-meta { font-size: 10.5px; color: #64748b; margin-top: 3px; }
+  .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-right: 3px; }
+  .badge-POS  { background: #dbeafe; color: #1d4ed8; }
+  .badge-NEG  { background: #fce7f3; color: #9d174d; }
+  .badge-cat  { background: #f0fdf4; color: #166534; }
+  .badge-new  { background: #fef3c7; color: #92400e; }
+
+  #empty { display: none; flex: 1; align-items: center; justify-content: center; color: #94a3b8; font-size: 14px; }
+
+  /* ── Top tab bar ────────────────────────────────────────────────────── */
+  #tab-bar { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 18px; display: flex; gap: 4px; flex-shrink: 0; }
+  .tab-btn { background: none; border: none; border-bottom: 3px solid transparent; padding: 12px 16px 10px; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; transition: color .15s, border-color .15s; }
+  .tab-btn:hover { color: #1e293b; }
+  .tab-btn.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+
+  /* ── Report panel & sub-tabs ─────────────────────────────────────────── */
+  #report-view { flex: 1; overflow: hidden; display: none; flex-direction: column; }
+  #report-view.visible { display: flex; }
+  #sub-tab-bar { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 0 28px; display: flex; gap: 2px; flex-shrink: 0; }
+  .sub-tab-btn { background: none; border: none; border-bottom: 2px solid transparent; padding: 9px 14px 8px; font-size: 12px; font-weight: 600; color: #64748b; cursor: pointer; transition: color .15s, border-color .15s; }
+  .sub-tab-btn:hover { color: #1e293b; }
+  .sub-tab-btn.active { color: #0f172a; border-bottom-color: #6366f1; }
+  #report-scroll { flex: 1; overflow-y: auto; padding: 24px 28px; }
+  .sub-panel { display: none; flex-direction: column; gap: 28px; }
+  .sub-panel.visible { display: flex; }
+  #gallery-view { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  .report-section h2 { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 12px; padding-bottom: 7px; border-bottom: 2px solid #e2e8f0; }
+  .report-section p  { font-size: 12.5px; color: #475569; line-height: 1.6; margin-bottom: 8px; }
+  .report-section code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11.5px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; padding: 1px 5px; color: #1e40af; }
+
+  .rtable { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .rtable th { background: #1e293b; color: #e2e8f0; font-weight: 600; padding: 8px 10px; text-align: left; font-size: 11px; letter-spacing: .03em; white-space: nowrap; }
+  .rtable td { padding: 7px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; white-space: nowrap; }
+  .rtable tr:hover td { background: #f8fafc; }
+  .rtable .best { font-weight: 700; color: #166534; }
+  .rtable .warn { color: #92400e; font-style: italic; }
+  .rtable .ci   { font-size: 10.5px; color: #94a3b8; }
+  .highlight-row td { background: #f0fdf4 !important; }
+  .tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
+  .tag-good { background: #dcfce7; color: #166534; }
+  .tag-warn { background: #fef3c7; color: #92400e; }
+  .tag-low  { background: #fee2e2; color: #991b1b; }
+  .path-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; font-size: 11.5px; line-height: 1.9; }
+  .path-box .label { font-weight: 700; color: #1e293b; min-width: 180px; display: inline-block; }
+
+  /* Lightbox */
+  #lb { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 999; align-items: center; justify-content: center; flex-direction: column; gap: 10px; }
+  #lb.open { display: flex; }
+  #lb img { max-width: 92vw; max-height: 82vh; border-radius: 8px; object-fit: contain; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  #lb-caption { color: #e2e8f0; font-size: 13px; text-align: center; max-width: 80vw; }
+  #lb-nav { display: flex; gap: 16px; }
+  .lb-btn { background: rgba(255,255,255,.12); border: none; color: #fff; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: background .15s; }
+  .lb-btn:hover { background: rgba(255,255,255,.25); }
+  #lb-close { position: fixed; top: 18px; right: 22px; font-size: 26px; color: #fff; cursor: pointer; background: none; border: none; line-height: 1; }
+</style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <h1>SOP Plots</h1>
+
+  <div class="filter-group">
+    <label>Dataset</label>
+    <button class="filter-btn active" data-filter="dataset" data-value="">All</button>
+    <button class="filter-btn" data-filter="dataset" data-value="MTBL_plasma">MTBL Plasma</button>
+    <button class="filter-btn" data-filter="dataset" data-value="MTBL_placenta">MTBL Placenta</button>
+    <button class="filter-btn" data-filter="dataset" data-value="LIPD_plasma">LIPD Plasma</button>
+    <button class="filter-btn" data-filter="dataset" data-value="LIPD_placenta">LIPD Placenta</button>
+    <button class="filter-btn" data-filter="dataset" data-value="MTBL_pathway">Pathway ORA</button>
+  </div>
+
+  <div class="filter-group">
+    <label>Polarity</label>
+    <button class="filter-btn active" data-filter="polarity" data-value="">Both</button>
+    <button class="filter-btn" data-filter="polarity" data-value="POS">POS</button>
+    <button class="filter-btn" data-filter="polarity" data-value="NEG">NEG</button>
+  </div>
+
+  <div class="filter-group">
+    <label>Plot Type</label>
+    <button class="filter-btn active" data-filter="category" data-value="">All types</button>
+    <button class="filter-btn" data-filter="category" data-value="PCA">PCA</button>
+    <button class="filter-btn" data-filter="category" data-value="Pre-norm drift">Pre-norm drift</button>
+    <button class="filter-btn" data-filter="category" data-value="Post-norm drift">Post-norm drift</button>
+    <button class="filter-btn" data-filter="category" data-value="Post-ComBat check (Step 15)">Post-ComBat ✦ NEW</button>
+  </div>
+
+  <div id="count"></div>
+</nav>
+
+<div id="main">
+
+  <!-- Tab bar -->
+  <div id="tab-bar">
+    <button class="tab-btn active" id="tab-gallery">📊 Plot Gallery</button>
+    <button class="tab-btn" id="tab-report">📋 Reports</button>
+  </div>
+
+  <!-- Gallery view (default) -->
+  <div id="gallery-view">
+    <div id="toolbar">
+      <input id="search" type="text" placeholder="Search by filename, batch, dataset…">
+      <select id="sort">
+        <option value="dataset">Sort: Dataset</option>
+        <option value="category">Sort: Type</option>
+        <option value="filename">Sort: Filename</option>
+      </select>
+    </div>
+    <div id="grid"></div>
+    <div id="empty">No plots match the current filters.</div>
+  </div>
+
+  <!-- Reports view -->
+  <div id="report-view">
+
+    <!-- Sub-tab bar -->
+    <div id="sub-tab-bar">
+      <button class="sub-tab-btn active" data-sub="qc">🧹 QC &amp; Dedup</button>
+      <button class="sub-tab-btn" data-sub="models">📈 Models &amp; Features</button>
+      <button class="sub-tab-btn" data-sub="pathways">🧬 Pathways</button>
+      <button class="sub-tab-btn" data-sub="files">📁 File Reference</button>
+    </div>
+
+    <div id="report-scroll">
+
+    <!-- ══ SUB-PANEL: QC & Dedup ══════════════════════════════════════════ -->
+    <div id="sub-qc" class="sub-panel visible">
+      <div class="report-section">
+        <h2>Deduplication Summary — All Datasets</h2>
+        <p>Deduplication runs after raw feature extraction and QC filtering. It collapses redundant features within two broad groups: <strong>named</strong> (compound annotation assigned) and <strong>unnamed</strong> (no annotation). The proportion of named features changes significantly through dedup because most redundancy in unnamed features arises from adduct/isotope/fragment graphs — collapsing these shifts the dataset toward named-only entries.</p>
+
+        <h3 style="font-size:13px;font-weight:700;color:#1e293b;margin:18px 0 8px">MTBL Plasma</h3>
+        <table class="rtable">
+          <thead><tr><th>Step</th><th>Total</th><th>Named</th><th>Named %</th><th>Unnamed</th><th>Unnamed %</th><th>Dropped (this step)</th><th>Drop reason / breakdown</th></tr></thead>
+          <tbody>
+            <tr><td>① Raw (pre-QC)</td><td>~9,744</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr class="highlight-row"><td>② After QC filter</td><td>1,074</td><td>332</td><td>30.9%</td><td>742</td><td>69.1%</td><td style="color:#dc2626;font-weight:600">−8,670</td><td>High QC RSD (noisy features)</td></tr>
+            <tr><td rowspan="4">③ Final (after dedup)</td><td rowspan="4"><strong>502</strong></td><td rowspan="4">283</td><td rowspan="4" style="color:#166534;font-weight:700">56.4% ▲</td><td rowspan="4">219</td><td rowspan="4">43.6%</td>
+              <td style="color:#dc2626;font-weight:600">−49 named</td><td>Chromatographic artifact: 24 &nbsp;·&nbsp; Structural isomers: 21 &nbsp;·&nbsp; Single candidate: 4</td></tr>
+            <tr><td style="color:#dc2626;font-weight:600">−500 unnamed</td><td>Adduct / isotope / fragment graph collapse</td></tr>
+            <tr><td style="color:#dc2626">−22 unnamed</td><td>m/z + RT collapse</td></tr>
+            <tr><td style="color:#dc2626">−1 unnamed</td><td>Formula + RT collapse</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="font-size:13px;font-weight:700;color:#1e293b;margin:18px 0 8px">MTBL Placenta</h3>
+        <table class="rtable">
+          <thead><tr><th>Step</th><th>Total</th><th>Named</th><th>Named %</th><th>Unnamed</th><th>Unnamed %</th><th>Dropped (this step)</th><th>Drop reason / breakdown</th></tr></thead>
+          <tbody>
+            <tr><td>① Raw (pre-QC)</td><td>~5,435</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr class="highlight-row"><td>② After QC filter</td><td>1,081</td><td>539</td><td>49.9%</td><td>542</td><td>50.1%</td><td style="color:#dc2626;font-weight:600">−4,354</td><td>High QC RSD (noisy features)</td></tr>
+            <tr><td rowspan="4">③ Final (after dedup)</td><td rowspan="4"><strong>644</strong></td><td rowspan="4">440</td><td rowspan="4" style="color:#166534;font-weight:700">68.3% ▲</td><td rowspan="4">204</td><td rowspan="4">31.7%</td>
+              <td style="color:#dc2626;font-weight:600">−99 named</td><td>Annotation error: 34 &nbsp;·&nbsp; Chromatographic artifact: 34 &nbsp;·&nbsp; Structural isomers: 27 &nbsp;·&nbsp; Single candidate: 4</td></tr>
+            <tr><td style="color:#dc2626;font-weight:600">−315 unnamed</td><td>Adduct / isotope / fragment graph collapse</td></tr>
+            <tr><td style="color:#dc2626">−19 unnamed</td><td>m/z + RT collapse</td></tr>
+            <tr><td style="color:#dc2626">−4 unnamed</td><td>Formula + RT collapse</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="font-size:13px;font-weight:700;color:#1e293b;margin:18px 0 8px">LIPD Plasma <span style="font-size:11px;font-weight:400;color:#64748b">(LIPID MAPS — all features named, 100%)</span></h3>
+        <table class="rtable">
+          <thead><tr><th>Step</th><th>Total</th><th>Named</th><th>Named %</th><th>Unnamed</th><th>Unnamed %</th><th>Dropped (this step)</th><th>Drop reason / breakdown</th></tr></thead>
+          <tbody>
+            <tr><td>① Raw (pre-QC)</td><td>~5,181</td><td>~5,181</td><td>100%</td><td>0</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr class="highlight-row"><td>② After QC filter</td><td>1,252</td><td>1,252</td><td>100%</td><td>0</td><td>—</td><td style="color:#dc2626;font-weight:600">−3,929</td><td>High QC RSD: 3,803 &nbsp;·&nbsp; High missingness: 126</td></tr>
+            <tr><td>③ Final (after dedup)</td><td><strong>715</strong></td><td>715</td><td>100%</td><td>0</td><td>—</td>
+              <td style="color:#dc2626;font-weight:600">−537 named</td><td>Annotation error: 335 &nbsp;·&nbsp; Chromatographic artifact: 148 &nbsp;·&nbsp; Structural isomers: 54</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="font-size:13px;font-weight:700;color:#1e293b;margin:18px 0 8px">LIPD Placenta <span style="font-size:11px;font-weight:400;color:#64748b">(LIPID MAPS — all features named, 100%)</span></h3>
+        <table class="rtable">
+          <thead><tr><th>Step</th><th>Total</th><th>Named</th><th>Named %</th><th>Unnamed</th><th>Unnamed %</th><th>Dropped (this step)</th><th>Drop reason / breakdown</th></tr></thead>
+          <tbody>
+            <tr><td>① Raw (pre-QC)</td><td>~5,014</td><td>~5,014</td><td>100%</td><td>0</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr class="highlight-row"><td>② After QC filter</td><td>2,077</td><td>2,077</td><td>100%</td><td>0</td><td>—</td><td style="color:#dc2626;font-weight:600">−2,937</td><td>High QC RSD: 2,913 &nbsp;·&nbsp; High missingness: 24</td></tr>
+            <tr><td>③ Final (after dedup)</td><td><strong>1,234</strong></td><td>1,234</td><td>100%</td><td>0</td><td>—</td>
+              <td style="color:#dc2626;font-weight:600">−843 named</td><td>Annotation error: 551 &nbsp;·&nbsp; Chromatographic artifact: 181 &nbsp;·&nbsp; Structural isomers: 111</td></tr>
+          </tbody>
+        </table>
+
+        <p style="margin-top:14px;font-size:11.5px;color:#64748b">
+          <strong>Key observations:</strong><br>
+          • <strong>MTBL named % roughly doubles through dedup</strong> (plasma: 30.9% → 56.4%; placenta: 49.9% → 68.3%). This is because the unnamed collapse is dominated by the adduct/isotope/fragment graph phase — these are signals from the same molecule detected as [M+H]⁺, [M+Na]⁺, [M+2H]²⁺ etc., which carry no independent annotation and get merged into one representative.<br>
+          • <strong>LIPD stays at 100% named</strong> throughout — all features come from LIPID MAPS which has systematic lipid nomenclature; there are no anonymous peaks.<br>
+          • <strong>Annotation errors dominate LIPD dedup</strong> (335/537 plasma, 551/843 placenta = ~62–65% of drops). These arise from ambiguous m/z matches where multiple lipid species share a nominal mass, particularly in placental tissue with more complex lipid composition.<br>
+          • <strong>QC filter is the biggest single cut</strong>: removes ~89% of raw features in MTBL plasma and ~57–76% in LIPD datasets.
+        </p>
+      </div>
+    </div><!-- /sub-qc -->
+
+    <!-- ══ SUB-PANEL: Models & Features ══════════════════════════════════ -->
+    <div id="sub-models" class="sub-panel">
+
+      <!-- ── Model Results ─────────────────────────────────────────────── -->
+      <div class="report-section">
+        <h2>MTBL_sop — Binary Model Results (run 2026-04-30 · Control vs Complication)</h2>
+      <p>Pre-filter: differential analysis q&lt;0.05 (no FC threshold) → LASSO feature selection within training split → 4 classifiers tuned by Optuna (50 trials). Best model chosen by val PR-AUC. Test metrics reported with bootstrapped 95% CI (1 000 draws). <span class="tag tag-warn">⚠ TP E has only 5 test samples — treat all TP E scores as unreliable.</span></p>
+      <table class="rtable">
+        <thead>
+          <tr>
+            <th>Tissue</th><th>TP</th><th>n train</th><th>n val</th><th>n test</th>
+            <th>Best model (val)</th><th>Val PR-AUC</th>
+            <th>Model</th><th>Test PR-AUC</th><th>95% CI</th><th>ROC-AUC</th><th>F1</th><th>Acc</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Plasma A -->
+          <tr class="highlight-row">
+            <td rowspan="4">Plasma</td><td rowspan="4">A</td>
+            <td rowspan="4">93</td><td rowspan="4">20</td><td rowspan="4">20</td>
+            <td rowspan="4">LogisticRegression</td><td rowspan="4">0.976</td>
+            <td>LogisticRegression</td><td>0.954</td><td class="ci">[0.831 – 1.000]</td><td>0.950</td><td>0.909</td><td>0.900</td>
+          </tr>
+          <tr class="highlight-row"><td class="best">RandomForest ★</td><td class="best">0.984</td><td class="ci">[0.927 – 1.000]</td><td class="best">0.980</td><td class="best">0.957</td><td class="best">0.950</td></tr>
+          <tr class="highlight-row"><td>XGBoost</td><td>0.975</td><td class="ci">[0.904 – 1.000]</td><td>0.970</td><td>0.857</td><td>0.850</td></tr>
+          <tr class="highlight-row"><td>SVM</td><td>0.978</td><td class="ci">[0.908 – 1.000]</td><td>0.970</td><td>0.857</td><td>0.850</td></tr>
+          <!-- Plasma B -->
+          <tr>
+            <td rowspan="4">Plasma</td><td rowspan="4">B</td>
+            <td rowspan="4">93</td><td rowspan="4">20</td><td rowspan="4">20</td>
+            <td rowspan="4">LogisticRegression</td><td rowspan="4">1.000</td>
+            <td class="best">LogisticRegression ★</td><td class="best">0.965</td><td class="ci">[0.877 – 1.000]</td><td class="best">0.960</td><td class="best">0.857</td><td class="best">0.850</td>
+          </tr>
+          <tr><td>RandomForest</td><td>0.959</td><td class="ci">[0.855 – 1.000]</td><td>0.950</td><td>0.800</td><td>0.800</td></tr>
+          <tr><td>XGBoost</td><td>0.965</td><td class="ci">[0.864 – 1.000]</td><td>0.960</td><td>0.800</td><td>0.800</td></tr>
+          <tr><td>SVM</td><td>0.934</td><td class="ci">[0.779 – 1.000]</td><td>0.929</td><td>0.737</td><td>0.750</td></tr>
+          <!-- Plasma C -->
+          <tr class="highlight-row">
+            <td rowspan="4">Plasma</td><td rowspan="4">C</td>
+            <td rowspan="4">89</td><td rowspan="4">19</td><td rowspan="4">20</td>
+            <td rowspan="4">LogisticRegression</td><td rowspan="4">0.992</td>
+            <td class="best">LogisticRegression ★</td><td class="best">1.000</td><td class="ci">[1.000 – 1.000]</td><td class="best">1.000</td><td class="best">0.952</td><td class="best">0.950</td>
+          </tr>
+          <tr class="highlight-row"><td>RandomForest</td><td>0.937</td><td class="ci">[0.800 – 1.000]</td><td>0.899</td><td>0.783</td><td>0.750</td></tr>
+          <tr class="highlight-row"><td>XGBoost</td><td>0.934</td><td class="ci">[0.799 – 1.000]</td><td>0.899</td><td>0.800</td><td>0.800</td></tr>
+          <tr class="highlight-row"><td>SVM</td><td>0.981</td><td class="ci">[0.915 – 1.000]</td><td>0.970</td><td>0.833</td><td>0.800</td></tr>
+          <!-- Plasma D -->
+          <tr>
+            <td rowspan="4">Plasma</td><td rowspan="4">D</td>
+            <td rowspan="4">76</td><td rowspan="4">16</td><td rowspan="4">17</td>
+            <td rowspan="4">LogisticRegression</td><td rowspan="4">1.000</td>
+            <td class="best">LogisticRegression ★</td><td class="best">0.975</td><td class="ci">[0.886 – 1.000]</td><td class="best">0.972</td><td class="best">0.933</td><td class="best">0.941</td>
+          </tr>
+          <tr><td>RandomForest</td><td>0.966</td><td class="ci">[0.848 – 1.000]</td><td>0.958</td><td>0.824</td><td>0.824</td></tr>
+          <tr><td>XGBoost</td><td>1.000</td><td class="ci">[1.000 – 1.000]</td><td>1.000</td><td>0.842</td><td>0.824</td></tr>
+          <tr><td>SVM</td><td>0.986</td><td class="ci">[0.917 – 1.000]</td><td>0.986</td><td>0.857</td><td>0.882</td></tr>
+          <!-- Plasma E (warning) -->
+          <tr class="highlight-row">
+            <td rowspan="4">Plasma</td><td rowspan="4" class="warn">E ⚠</td>
+            <td rowspan="4" class="warn">18</td><td rowspan="4" class="warn">4</td><td rowspan="4" class="warn">5</td>
+            <td rowspan="4" class="warn">RandomForest</td><td rowspan="4" class="warn">1.000</td>
+            <td class="warn">LogisticRegression</td><td class="warn">1.000</td><td class="ci warn">[1.000 – 1.000]</td><td class="warn">1.000</td><td class="warn">1.000</td><td class="warn">1.000</td>
+          </tr>
+          <tr class="highlight-row"><td class="warn">RandomForest</td><td class="warn">1.000</td><td class="ci warn">[1.000 – 1.000]</td><td class="warn">1.000</td><td class="warn">1.000</td><td class="warn">1.000</td></tr>
+          <tr class="highlight-row"><td class="warn">XGBoost</td><td class="warn">1.000</td><td class="ci warn">[1.000 – 1.000]</td><td class="warn">1.000</td><td class="warn">1.000</td><td class="warn">1.000</td></tr>
+          <tr class="highlight-row"><td class="warn">SVM</td><td class="warn">1.000</td><td class="ci warn">[1.000 – 1.000]</td><td class="warn">1.000</td><td class="warn">1.000</td><td class="warn">1.000</td></tr>
+          <!-- Placenta -->
+          <tr>
+            <td rowspan="4">Placenta</td><td rowspan="4">all</td>
+            <td rowspan="4">78</td><td rowspan="4">17</td><td rowspan="4">17</td>
+            <td rowspan="4">SVM</td><td rowspan="4">0.926</td>
+            <td class="best">LogisticRegression ★</td><td class="best">0.850</td><td class="ci">[0.589 – 0.985]</td><td class="best">0.750</td><td class="best">0.706</td><td class="best">0.706</td>
+          </tr>
+          <tr><td>RandomForest</td><td>0.682</td><td class="ci">[0.376 – 0.962]</td><td>0.667</td><td>0.700</td><td>0.647</td></tr>
+          <tr><td>XGBoost</td><td>0.683</td><td class="ci">[0.393 – 0.961]</td><td>0.694</td><td>0.667</td><td>0.647</td></tr>
+          <tr><td>SVM</td><td>0.828</td><td class="ci">[0.554 – 0.972]</td><td>0.708</td><td>0.667</td><td>0.706</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:10px;font-size:11.5px;color:#64748b">★ = chosen as best by val PR-AUC and retrained on train+val before test evaluation. Green rows = alternating tissue grouping. Bold = best test PR-AUC per tissue/timepoint across all models.</p>
+      </div>
+
+      <!-- ── Feature Selection Funnel ─────────────────────────────────── -->
+    <div class="report-section">
+      <h2>MTBL_sop — Feature Selection Funnel (Control vs Complication)</h2>
+      <p>Full pipeline: raw data → differential analysis filter → LASSO within training split. Two parallel thresholds are tracked for differential analysis: <strong>q&lt;0.05 only</strong> (what feeds the model — no FC filter) and <strong>q&lt;0.05 + |log₂FC| ≥ 0.585</strong> (the biologically reported significant set). Numbers in <span style="color:#dc2626">red</span> = features dropped at that step.</p>
+
+      <table class="rtable" style="margin-top:12px">
+        <thead>
+          <tr>
+            <th rowspan="2" style="vertical-align:middle">Tissue</th>
+            <th rowspan="2" style="vertical-align:middle">TP</th>
+            <th colspan="2" style="text-align:center;background:#334155;border-bottom:1px solid #475569">① Raw data</th>
+            <th colspan="3" style="text-align:center;background:#1e3a5f;border-bottom:1px solid #2563eb">② Differential analysis (q&lt;0.05, no FC)</th>
+            <th colspan="2" style="text-align:center;background:#14532d;border-bottom:1px solid #16a34a">③ Additional FC filter (|log₂FC| ≥ 0.585)</th>
+            <th colspan="2" style="text-align:center;background:#4c1d95;border-bottom:1px solid #7c3aed">④ LASSO (train split only)</th>
+          </tr>
+          <tr>
+            <th style="background:#334155">Numeric analytes</th>
+            <th style="background:#334155">Tested in diff</th>
+            <th style="background:#1e3a5f">Dropped (q≥0.05)</th>
+            <th style="background:#1e3a5f">Remaining</th>
+            <th style="background:#1e3a5f">% retained</th>
+            <th style="background:#14532d">Dropped (FC&lt;0.585)</th>
+            <th style="background:#14532d">Biologically sig.</th>
+            <th style="background:#4c1d95">Dropped by LASSO</th>
+            <th style="background:#4c1d95">Final features</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="highlight-row">
+            <td rowspan="5">Plasma</td><td>A</td>
+            <td>504</td><td>502</td>
+            <td style="color:#dc2626;font-weight:600">−462</td><td><strong>40</strong></td><td>8.0%</td>
+            <td style="color:#dc2626">−34</td><td>6</td>
+            <td style="color:#dc2626">−9</td><td><strong>31</strong></td>
+          </tr>
+          <tr>
+            <td>B</td>
+            <td>504</td><td>502</td>
+            <td style="color:#dc2626;font-weight:600">−430</td><td><strong>72</strong></td><td>14.3%</td>
+            <td style="color:#dc2626">−67</td><td>5</td>
+            <td style="color:#dc2626">−6</td><td><strong>66</strong></td>
+          </tr>
+          <tr class="highlight-row">
+            <td>C</td>
+            <td>504</td><td>502</td>
+            <td style="color:#dc2626;font-weight:600">−434</td><td><strong>68</strong></td><td>13.5%</td>
+            <td style="color:#dc2626">−63</td><td>5</td>
+            <td style="color:#64748b">0</td><td><strong>68</strong></td>
+          </tr>
+          <tr>
+            <td>D</td>
+            <td>504</td><td>502</td>
+            <td style="color:#dc2626;font-weight:600">−453</td><td><strong>49</strong></td><td>9.8%</td>
+            <td style="color:#dc2626">−42</td><td>7</td>
+            <td style="color:#dc2626">−1</td><td><strong>48</strong></td>
+          </tr>
+          <tr class="highlight-row">
+            <td class="warn">E ⚠</td>
+            <td class="warn">504</td><td class="warn">502</td>
+            <td style="color:#dc2626;font-weight:600" class="warn">−459</td><td class="warn"><strong>43</strong></td><td class="warn">8.6%</td>
+            <td style="color:#dc2626" class="warn">−28</td><td class="warn">15</td>
+            <td style="color:#dc2626;font-weight:600" class="warn">−39</td><td class="warn"><strong>4</strong></td>
+          </tr>
+          <tr>
+            <td>Placenta</td><td>all</td>
+            <td>645</td><td>644</td>
+            <td style="color:#dc2626;font-weight:600">−642</td><td><strong>2</strong></td><td>0.3%</td>
+            <td style="color:#dc2626">−1</td><td>1</td>
+            <td style="color:#64748b">0</td><td><strong>2</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p style="margin-top:12px;font-size:11.5px;color:#64748b">
+        <strong>Step notes:</strong><br>
+        ① <strong>Raw → Tested:</strong> 2 plasma analytes (1 placenta) excluded from differential analysis, likely due to missing values or near-zero variance across all samples.<br>
+        ② <strong>Diff analysis (q&lt;0.05, no FC):</strong> Mann–Whitney U test with BH correction. This set feeds the model — FC filter intentionally omitted here because log₂(ratio+1) space makes raw FC differences unreliable; LASSO handles effect-size selection downstream.<br>
+        ③ <strong>FC filter (|log₂FC| ≥ 0.585, i.e. 1.5× fold change):</strong> Applied only for biological reporting. These are the analytes you would cite as "differentially abundant" to your PI. Note TP E has the most biologically significant analytes (15), consistent with its late pregnancy timepoint.<br>
+        ④ <strong>LASSO (L1 logistic regression, fit on training split only):</strong> Further compresses features by zeroing out weak/redundant predictors. TP E drops 39 → 4 features, suggesting high multicollinearity in the late-timepoint analytes. TP C retains all 68 (LASSO penalty did not eliminate any).
+      </p>
+      </div>
+
+      <!-- ── Permutation Test ─────────────────────────────────────────── -->
+    <div class="report-section">
+      <h2>MTBL_sop — Permutation Test (n = 1 000 permutations per condition)</h2>
+      <p>To confirm the model is not overfitting to noise, labels were shuffled 1 000 times and the best model (with fixed tuned hyperparameters) was re-fit on each permutation. p-value = fraction of null PR-AUCs ≥ observed. Data: pre-saved scaled trainval/test splits — no re-running of LASSO or Optuna.</p>
+      <table class="rtable">
+        <thead>
+          <tr>
+            <th>Condition</th><th>Best Model</th><th>Observed PR-AUC</th>
+            <th>Null mean</th><th>Null max</th><th>p-value</th><th>Verdict</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="highlight-row">
+            <td>Plasma A</td><td>LogisticRegression</td><td class="best">0.954</td>
+            <td>0.631</td><td>1.000</td><td>0.0040</td>
+            <td><span class="tag tag-good">✓ p &lt; 0.05</span></td>
+          </tr>
+          <tr>
+            <td>Plasma B</td><td>LogisticRegression</td><td class="best">0.965</td>
+            <td>0.613</td><td>0.944</td><td>&lt; 0.001</td>
+            <td><span class="tag tag-good">✓ p &lt; 0.001</span></td>
+          </tr>
+          <tr class="highlight-row">
+            <td>Plasma C</td><td>LogisticRegression</td><td class="best">1.000</td>
+            <td>0.642</td><td>0.963</td><td>&lt; 0.001</td>
+            <td><span class="tag tag-good">✓ p &lt; 0.001</span></td>
+          </tr>
+          <tr>
+            <td>Plasma D</td><td>LogisticRegression</td><td class="best">0.975</td>
+            <td>0.612</td><td>0.914</td><td>&lt; 0.001</td>
+            <td><span class="tag tag-good">✓ p &lt; 0.001</span></td>
+          </tr>
+          <tr class="highlight-row">
+            <td class="warn">Plasma E ⚠</td><td class="warn">RandomForest</td><td class="warn">1.000</td>
+            <td class="warn">0.731</td><td class="warn">1.000</td><td class="warn">0.216</td>
+            <td><span class="tag tag-warn">✗ n.s. — n_test = 5</span></td>
+          </tr>
+          <tr>
+            <td>Placenta</td><td>SVM</td><td>0.828</td>
+            <td>0.627</td><td>0.887</td><td>0.049</td>
+            <td><span class="tag tag-good">✓ p = 0.049 (borderline)</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="margin-top:10px;font-size:11.5px;color:#64748b"><strong>Interpretation:</strong> Plasma A–D and Placenta all pass the permutation test (p &lt; 0.05), confirming the model captures genuine biological signal rather than noise. TP E fails the test but this is expected: with only 5 test samples the null distribution itself frequently reaches PR-AUC = 1.0 by chance, making the test uninformative. Permutation plots saved at <code>04_results_and_figures/models/binary/MTBL_sop/{tissue}/{tp}/permutation_test.png</code>. Re-run with: <code>python3 03_model_development/run_permutation_test.py --n-perm 1000</code></p>
+      </div>
+
+    </div><!-- /sub-models -->
+
+    <!-- ══ SUB-PANEL: Pathways ════════════════════════════════════════════ -->
+    <div id="sub-pathways" class="sub-panel">
+
+      <!-- ── Pathway Analysis ──────────────────────────────────────────── -->
+    <div class="report-section">
+      <h2>MTBL_sop — KEGG Pathway ORA Results (Plasma, sig. analytes q&lt;0.05)</h2>
+      <p><strong>Method:</strong> Compound names mapped to KEGG IDs via MetaboAnalyst REST API → KEGG reference pathway membership → Fisher's exact test ORA with BH FDR correction. Background = all 283 named analytes in the dataset.</p>
+
+      <table class="rtable" style="margin-top:12px">
+        <thead>
+          <tr>
+            <th>Timepoint</th><th>Named hits (sig.)</th><th>Hits with KEGG ID</th>
+            <th>Pathways tested</th><th>Sig. pathways (q&lt;0.05)</th><th>Top pathway (raw p)</th><th>Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Plasma A</td><td>21</td><td>0</td><td>—</td><td>—</td><td>—</td><td><span class="tag tag-low">No KEGG match</span></td></tr>
+          <tr class="highlight-row"><td>Plasma B</td><td>38</td><td>3</td><td>9</td><td>0</td><td>Metabolic pathways (p=0.077)</td><td><span class="tag tag-warn">Underpowered</span></td></tr>
+          <tr><td>Plasma C</td><td>35</td><td>3</td><td>8</td><td>0</td><td>Vitamin digestion &amp; absorption (p=0.200)</td><td><span class="tag tag-warn">Underpowered</span></td></tr>
+          <tr class="highlight-row"><td>Plasma D</td><td>31</td><td>2</td><td>6</td><td>0</td><td>Pantothenate &amp; CoA biosynthesis (p=0.371)</td><td><span class="tag tag-warn">Underpowered</span></td></tr>
+          <tr><td>Plasma E</td><td>27</td><td>2</td><td>6</td><td>0</td><td>Pantothenate &amp; CoA biosynthesis (p=0.371)</td><td><span class="tag tag-warn">Underpowered</span></td></tr>
+          <tr class="highlight-row"><td>Union (all TPs)</td><td>—</td><td>4</td><td>9</td><td>0</td><td>Metabolic pathways (p=0.231)</td><td><span class="tag tag-warn">Underpowered</span></td></tr>
+        </tbody>
+      </table>
+
+      <p style="margin-top:12px;font-size:12px;color:#dc2626;font-weight:600">⚠ Critical limitation: Only 18/283 background analytes (6.4%) and 0–3/21–38 hit analytes have KEGG IDs. ORA is statistically underpowered.</p>
+      <p style="font-size:12px;color:#475569;margin-top:6px"><strong>Why so few KEGG matches?</strong> The MTBL_sop dataset is dominated by xenobiotics, drugs, and environmental contaminants (e.g. Tranexamic Acid, Bupivacaine, Ecgonine, Endothion, pesticide derivatives) and many analytes carry Schymanski Level 2–3 annotations (uncertain structures). These compound classes are largely absent from KEGG's endogenous metabolic pathways.</p>
+      <p style="font-size:12px;color:#475569;margin-top:6px"><strong>KEGG-mapped compounds in hits:</strong> D-Raffinose (C00492, galactose metabolism) · Pantothenic acid / Vitamin B5 (C00864, pantothenate &amp; CoA biosynthesis) · Acetylhomoserine (C01077, cysteine/methionine metabolism) · Lenticin (C09213, biosynthesis of secondary metabolites). These are interesting endogenous metabolites but too few for robust enrichment.</p>
+      <p style="font-size:12px;color:#475569;margin-top:6px"><strong>Recommended alternatives:</strong> (1) <strong>Chemical class enrichment</strong> using ClassyFire/ChemOnt hierarchy via PubChem — much higher coverage for mixed datasets; (2) <strong>HMDB API</strong> for endogenous metabolite pathway mapping; (3) <strong>mummichog</strong> for activity metabolomics ORA without needing compound IDs. Dot plots for the tested pathways are available in the Plot Gallery → "Pathway ORA" filter.</p>
+      </div>
+
+    </div><!-- /sub-pathways -->
+
+    <!-- ══ SUB-PANEL: File Reference ══════════════════════════════════════ -->
+    <div id="sub-files" class="sub-panel">
+
+      <!-- ── Where to Find Things ──────────────────────────────────────── -->
+    <div class="report-section">
+      <h2>Where to Find Key Outputs</h2>
+      <div class="path-box">
+        <div><span class="label">Diff analysis results</span><code>04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional/{TP}/Control_vs_Complication_differential_results.csv</code></div>
+        <div style="margin-top:6px;padding-left:184px;font-size:11.5px;color:#64748b">Columns: <code>analyte_id</code>, <code>q_value</code>, <code>fold_change</code> (log₂FC back-converted), <code>significant</code> (q&lt;0.05 AND |FC|≥0.585)</div>
+        <div style="margin-top:8px"><span class="label">Placenta diff results</span><code>04_results_and_figures/differential_analysis/MTBL_sop/placenta/cross_sectional/Control_vs_Complication_differential_results.csv</code></div>
+        <div style="margin-top:8px"><span class="label">Model summary (per TP)</span><code>04_results_and_figures/models/binary/MTBL_sop/plasma/{TP}/summary.json</code></div>
+        <div style="margin-top:6px;padding-left:184px;font-size:11.5px;color:#64748b">Fields: <code>n_features_pretlasso</code> (features entering LASSO), <code>n_features_postlasso</code> (LASSO-selected), <code>test_metrics</code> (PR-AUC + 95% CI, ROC-AUC, F1)</div>
+        <div style="margin-top:8px"><span class="label">LASSO feature names</span><code>04_results_and_figures/models/binary/MTBL_sop/plasma/{TP}/lasso_selected_features.csv</code></div>
+        <div style="margin-top:8px"><span class="label">All model metrics (CSV)</span><code>04_results_and_figures/models/binary/MTBL_sop/all_summaries.json</code></div>
+        <div style="margin-top:8px"><span class="label">Sample train/val/test split</span><code>04_results_and_figures/models/binary/MTBL_sop/plasma/{TP}/sample_splits.csv</code></div>
+        <div style="margin-top:8px"><span class="label">Differential boxplots</span><code>04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/</code></div>
+        <div style="margin-top:8px"><span class="label">Dedup logs (all datasets)</span><code>data/cleaned/sop_omics_pipeline_v2/{DATASET}/{DATASET}_dedup_log.csv</code></div>
+        <div style="margin-top:8px"><span class="label">Feature metadata (post-dedup)</span><code>data/cleaned/sop_omics_pipeline_v2/{DATASET}/{DATASET}_feature_metadata.csv</code></div>
+        <div style="margin-top:8px"><span class="label">Pathway ORA results</span><code>04_results_and_figures/pathway_analysis/MTBL_sop/plasma_TP{X}/pathway_ora_results.csv</code></div>
+        <div style="margin-top:8px"><span class="label">KEGG background mapping</span><code>04_results_and_figures/pathway_analysis/MTBL_sop/background_name_mapping.csv</code></div>
+      </div>
+      </div>
+
+    </div><!-- /sub-files -->
+
+    </div><!-- /report-scroll -->
+  </div><!-- /report-view -->
+
+</div><!-- /main -->
+
+<!-- Lightbox -->
+<div id="lb">
+  <button id="lb-close">✕</button>
+  <img id="lb-img" src="" alt="">
+  <div id="lb-caption"></div>
+  <div id="lb-nav">
+    <button class="lb-btn" id="lb-prev">← Prev</button>
+    <button class="lb-btn" id="lb-next">Next →</button>
+  </div>
+</div>
+
+<script>
+const PLOTS = [
+  {dataset:"LIPD_placenta",polarity:"NEG",category:"PCA",filename:"pca_post_correction_batch.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/neg/pca_post_correction_batch.png"},
+  {dataset:"LIPD_placenta",polarity:"NEG",category:"PCA",filename:"pca_post_correction_group.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/neg/pca_post_correction_group.png"},
+  {dataset:"LIPD_placenta",polarity:"NEG",category:"PCA",filename:"pca_pre_correction_batch.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/neg/pca_pre_correction_batch.png"},
+  {dataset:"LIPD_placenta",polarity:"NEG",category:"Post-ComBat check (Step 15)",filename:"neg_postcombat_batch_32425_postcombat.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/neg/post_combat_intensity_check/neg_postcombat_batch_32425_postcombat.png"},
+  {dataset:"LIPD_placenta",polarity:"NEG",category:"Post-ComBat check (Step 15)",filename:"neg_postcombat_batch_62923_postcombat.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/neg/post_combat_intensity_check/neg_postcombat_batch_62923_postcombat.png"},
+  {dataset:"LIPD_placenta",polarity:"NEG",category:"Post-ComBat check (Step 15)",filename:"neg_postcombat_cross_batch_postcombat_overlay.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/neg/post_combat_intensity_check/neg_postcombat_cross_batch_postcombat_overlay.png"},
+  {dataset:"LIPD_placenta",polarity:"NEG",category:"Post-norm drift",filename:"neg_post_batch_32425_postnorm.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/neg/post_norm/neg_post_batch_32425_postnorm.png"},
+  {dataset:"LIPD_placenta",polarity:"NEG",category:"Post-norm drift",filename:"neg_post_batch_62923_postnorm.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/neg/post_norm/neg_post_batch_62923_postnorm.png"},
+  {dataset:"LIPD_placenta",polarity:"NEG",category:"Post-norm drift",filename:"neg_post_cross_batch_postnorm_overlay.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/neg/post_norm/neg_post_cross_batch_postnorm_overlay.png"},
+  {dataset:"LIPD_placenta",polarity:"NEG",category:"Pre-norm drift",filename:"neg_pre_batch_32425_drift.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/neg/pre_norm/neg_pre_batch_32425_drift.png"},
+  {dataset:"LIPD_placenta",polarity:"NEG",category:"Pre-norm drift",filename:"neg_pre_batch_62923_drift.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/neg/pre_norm/neg_pre_batch_62923_drift.png"},
+  {dataset:"LIPD_placenta",polarity:"POS",category:"PCA",filename:"pca_post_correction_batch.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/pos/pca_post_correction_batch.png"},
+  {dataset:"LIPD_placenta",polarity:"POS",category:"PCA",filename:"pca_post_correction_group.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/pos/pca_post_correction_group.png"},
+  {dataset:"LIPD_placenta",polarity:"POS",category:"PCA",filename:"pca_pre_correction_batch.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/pos/pca_pre_correction_batch.png"},
+  {dataset:"LIPD_placenta",polarity:"POS",category:"Post-ComBat check (Step 15)",filename:"pos_postcombat_batch_32425_postcombat.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/pos/post_combat_intensity_check/pos_postcombat_batch_32425_postcombat.png"},
+  {dataset:"LIPD_placenta",polarity:"POS",category:"Post-ComBat check (Step 15)",filename:"pos_postcombat_batch_62923_postcombat.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/pos/post_combat_intensity_check/pos_postcombat_batch_62923_postcombat.png"},
+  {dataset:"LIPD_placenta",polarity:"POS",category:"Post-ComBat check (Step 15)",filename:"pos_postcombat_cross_batch_postcombat_overlay.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/pos/post_combat_intensity_check/pos_postcombat_cross_batch_postcombat_overlay.png"},
+  {dataset:"LIPD_placenta",polarity:"POS",category:"Post-norm drift",filename:"pos_post_batch_32425_postnorm.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/pos/post_norm/pos_post_batch_32425_postnorm.png"},
+  {dataset:"LIPD_placenta",polarity:"POS",category:"Post-norm drift",filename:"pos_post_batch_62923_postnorm.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/pos/post_norm/pos_post_batch_62923_postnorm.png"},
+  {dataset:"LIPD_placenta",polarity:"POS",category:"Post-norm drift",filename:"pos_post_cross_batch_postnorm_overlay.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/pos/post_norm/pos_post_cross_batch_postnorm_overlay.png"},
+  {dataset:"LIPD_placenta",polarity:"POS",category:"Pre-norm drift",filename:"pos_pre_batch_32425_drift.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/pos/pre_norm/pos_pre_batch_32425_drift.png"},
+  {dataset:"LIPD_placenta",polarity:"POS",category:"Pre-norm drift",filename:"pos_pre_batch_62923_drift.png",path:"data/cleaned/sop_omics_pipeline/LIPD_placenta/diagnostics/pos/pre_norm/pos_pre_batch_62923_drift.png"},
+  {dataset:"LIPD_plasma",polarity:"NEG",category:"PCA",filename:"pca_post_correction_batch.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/neg/pca_post_correction_batch.png"},
+  {dataset:"LIPD_plasma",polarity:"NEG",category:"PCA",filename:"pca_post_correction_group.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/neg/pca_post_correction_group.png"},
+  {dataset:"LIPD_plasma",polarity:"NEG",category:"PCA",filename:"pca_pre_correction_batch.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/neg/pca_pre_correction_batch.png"},
+  {dataset:"LIPD_plasma",polarity:"NEG",category:"Post-ComBat check (Step 15)",filename:"neg_postcombat_batch_110123_postcombat.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/neg/post_combat_intensity_check/neg_postcombat_batch_110123_postcombat.png"},
+  {dataset:"LIPD_plasma",polarity:"NEG",category:"Post-ComBat check (Step 15)",filename:"neg_postcombat_batch_41625_postcombat.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/neg/post_combat_intensity_check/neg_postcombat_batch_41625_postcombat.png"},
+  {dataset:"LIPD_plasma",polarity:"NEG",category:"Post-ComBat check (Step 15)",filename:"neg_postcombat_batch_51223_postcombat.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/neg/post_combat_intensity_check/neg_postcombat_batch_51223_postcombat.png"},
+  {dataset:"LIPD_plasma",polarity:"NEG",category:"Post-ComBat check (Step 15)",filename:"neg_postcombat_cross_batch_postcombat_overlay.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/neg/post_combat_intensity_check/neg_postcombat_cross_batch_postcombat_overlay.png"},
+  {dataset:"LIPD_plasma",polarity:"NEG",category:"Post-norm drift",filename:"neg_post_batch_110123_postnorm.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/neg/post_norm/neg_post_batch_110123_postnorm.png"},
+  {dataset:"LIPD_plasma",polarity:"NEG",category:"Post-norm drift",filename:"neg_post_batch_41625_postnorm.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/neg/post_norm/neg_post_batch_41625_postnorm.png"},
+  {dataset:"LIPD_plasma",polarity:"NEG",category:"Post-norm drift",filename:"neg_post_batch_51223_postnorm.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/neg/post_norm/neg_post_batch_51223_postnorm.png"},
+  {dataset:"LIPD_plasma",polarity:"NEG",category:"Post-norm drift",filename:"neg_post_cross_batch_postnorm_overlay.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/neg/post_norm/neg_post_cross_batch_postnorm_overlay.png"},
+  {dataset:"LIPD_plasma",polarity:"NEG",category:"Pre-norm drift",filename:"neg_pre_batch_110123_drift.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/neg/pre_norm/neg_pre_batch_110123_drift.png"},
+  {dataset:"LIPD_plasma",polarity:"NEG",category:"Pre-norm drift",filename:"neg_pre_batch_41625_drift.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/neg/pre_norm/neg_pre_batch_41625_drift.png"},
+  {dataset:"LIPD_plasma",polarity:"NEG",category:"Pre-norm drift",filename:"neg_pre_batch_51223_drift.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/neg/pre_norm/neg_pre_batch_51223_drift.png"},
+  {dataset:"LIPD_plasma",polarity:"POS",category:"PCA",filename:"pca_post_correction_batch.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/pos/pca_post_correction_batch.png"},
+  {dataset:"LIPD_plasma",polarity:"POS",category:"PCA",filename:"pca_post_correction_group.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/pos/pca_post_correction_group.png"},
+  {dataset:"LIPD_plasma",polarity:"POS",category:"PCA",filename:"pca_pre_correction_batch.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/pos/pca_pre_correction_batch.png"},
+  {dataset:"LIPD_plasma",polarity:"POS",category:"Post-ComBat check (Step 15)",filename:"pos_postcombat_batch_110123_postcombat.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/pos/post_combat_intensity_check/pos_postcombat_batch_110123_postcombat.png"},
+  {dataset:"LIPD_plasma",polarity:"POS",category:"Post-ComBat check (Step 15)",filename:"pos_postcombat_batch_41625_postcombat.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/pos/post_combat_intensity_check/pos_postcombat_batch_41625_postcombat.png"},
+  {dataset:"LIPD_plasma",polarity:"POS",category:"Post-ComBat check (Step 15)",filename:"pos_postcombat_batch_51223_postcombat.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/pos/post_combat_intensity_check/pos_postcombat_batch_51223_postcombat.png"},
+  {dataset:"LIPD_plasma",polarity:"POS",category:"Post-ComBat check (Step 15)",filename:"pos_postcombat_cross_batch_postcombat_overlay.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/pos/post_combat_intensity_check/pos_postcombat_cross_batch_postcombat_overlay.png"},
+  {dataset:"LIPD_plasma",polarity:"POS",category:"Post-norm drift",filename:"pos_post_batch_110123_postnorm.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/pos/post_norm/pos_post_batch_110123_postnorm.png"},
+  {dataset:"LIPD_plasma",polarity:"POS",category:"Post-norm drift",filename:"pos_post_batch_41625_postnorm.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/pos/post_norm/pos_post_batch_41625_postnorm.png"},
+  {dataset:"LIPD_plasma",polarity:"POS",category:"Post-norm drift",filename:"pos_post_batch_51223_postnorm.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/pos/post_norm/pos_post_batch_51223_postnorm.png"},
+  {dataset:"LIPD_plasma",polarity:"POS",category:"Post-norm drift",filename:"pos_post_cross_batch_postnorm_overlay.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/pos/post_norm/pos_post_cross_batch_postnorm_overlay.png"},
+  {dataset:"LIPD_plasma",polarity:"POS",category:"Pre-norm drift",filename:"pos_pre_batch_110123_drift.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/pos/pre_norm/pos_pre_batch_110123_drift.png"},
+  {dataset:"LIPD_plasma",polarity:"POS",category:"Pre-norm drift",filename:"pos_pre_batch_41625_drift.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/pos/pre_norm/pos_pre_batch_41625_drift.png"},
+  {dataset:"LIPD_plasma",polarity:"POS",category:"Pre-norm drift",filename:"pos_pre_batch_51223_drift.png",path:"data/cleaned/sop_omics_pipeline/LIPD_plasma/diagnostics/pos/pre_norm/pos_pre_batch_51223_drift.png"},
+  {dataset:"MTBL_placenta",polarity:"NEG",category:"PCA",filename:"pca_post_correction_batch.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/neg/pca_post_correction_batch.png"},
+  {dataset:"MTBL_placenta",polarity:"NEG",category:"PCA",filename:"pca_post_correction_group.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/neg/pca_post_correction_group.png"},
+  {dataset:"MTBL_placenta",polarity:"NEG",category:"PCA",filename:"pca_pre_correction_batch.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/neg/pca_pre_correction_batch.png"},
+  {dataset:"MTBL_placenta",polarity:"NEG",category:"Post-ComBat check (Step 15)",filename:"neg_postcombat_batch_32425_postcombat.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/neg/post_combat_intensity_check/neg_postcombat_batch_32425_postcombat.png"},
+  {dataset:"MTBL_placenta",polarity:"NEG",category:"Post-ComBat check (Step 15)",filename:"neg_postcombat_batch_62323_postcombat.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/neg/post_combat_intensity_check/neg_postcombat_batch_62323_postcombat.png"},
+  {dataset:"MTBL_placenta",polarity:"NEG",category:"Post-ComBat check (Step 15)",filename:"neg_postcombat_cross_batch_postcombat_overlay.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/neg/post_combat_intensity_check/neg_postcombat_cross_batch_postcombat_overlay.png"},
+  {dataset:"MTBL_placenta",polarity:"NEG",category:"Post-norm drift",filename:"neg_post_batch_32425_postnorm.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/neg/post_norm/neg_post_batch_32425_postnorm.png"},
+  {dataset:"MTBL_placenta",polarity:"NEG",category:"Post-norm drift",filename:"neg_post_batch_62323_postnorm.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/neg/post_norm/neg_post_batch_62323_postnorm.png"},
+  {dataset:"MTBL_placenta",polarity:"NEG",category:"Post-norm drift",filename:"neg_post_cross_batch_postnorm_overlay.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/neg/post_norm/neg_post_cross_batch_postnorm_overlay.png"},
+  {dataset:"MTBL_placenta",polarity:"NEG",category:"Pre-norm drift",filename:"neg_pre_batch_32425_drift.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/neg/pre_norm/neg_pre_batch_32425_drift.png"},
+  {dataset:"MTBL_placenta",polarity:"NEG",category:"Pre-norm drift",filename:"neg_pre_batch_62323_drift.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/neg/pre_norm/neg_pre_batch_62323_drift.png"},
+  {dataset:"MTBL_placenta",polarity:"POS",category:"PCA",filename:"pca_post_correction_batch.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/pos/pca_post_correction_batch.png"},
+  {dataset:"MTBL_placenta",polarity:"POS",category:"PCA",filename:"pca_post_correction_group.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/pos/pca_post_correction_group.png"},
+  {dataset:"MTBL_placenta",polarity:"POS",category:"PCA",filename:"pca_pre_correction_batch.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/pos/pca_pre_correction_batch.png"},
+  {dataset:"MTBL_placenta",polarity:"POS",category:"Post-ComBat check (Step 15)",filename:"pos_postcombat_batch_32425_postcombat.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/pos/post_combat_intensity_check/pos_postcombat_batch_32425_postcombat.png"},
+  {dataset:"MTBL_placenta",polarity:"POS",category:"Post-ComBat check (Step 15)",filename:"pos_postcombat_batch_62323_postcombat.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/pos/post_combat_intensity_check/pos_postcombat_batch_62323_postcombat.png"},
+  {dataset:"MTBL_placenta",polarity:"POS",category:"Post-ComBat check (Step 15)",filename:"pos_postcombat_cross_batch_postcombat_overlay.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/pos/post_combat_intensity_check/pos_postcombat_cross_batch_postcombat_overlay.png"},
+  {dataset:"MTBL_placenta",polarity:"POS",category:"Post-norm drift",filename:"pos_post_batch_32425_postnorm.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/pos/post_norm/pos_post_batch_32425_postnorm.png"},
+  {dataset:"MTBL_placenta",polarity:"POS",category:"Post-norm drift",filename:"pos_post_batch_62323_postnorm.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/pos/post_norm/pos_post_batch_62323_postnorm.png"},
+  {dataset:"MTBL_placenta",polarity:"POS",category:"Post-norm drift",filename:"pos_post_cross_batch_postnorm_overlay.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/pos/post_norm/pos_post_cross_batch_postnorm_overlay.png"},
+  {dataset:"MTBL_placenta",polarity:"POS",category:"Pre-norm drift",filename:"pos_pre_batch_32425_drift.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/pos/pre_norm/pos_pre_batch_32425_drift.png"},
+  {dataset:"MTBL_placenta",polarity:"POS",category:"Pre-norm drift",filename:"pos_pre_batch_62323_drift.png",path:"data/cleaned/sop_omics_pipeline/MTBL_placenta/diagnostics/pos/pre_norm/pos_pre_batch_62323_drift.png"},
+  {dataset:"MTBL_plasma",polarity:"NEG",category:"PCA",filename:"pca_post_correction_batch.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/neg/pca_post_correction_batch.png"},
+  {dataset:"MTBL_plasma",polarity:"NEG",category:"PCA",filename:"pca_post_correction_group.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/neg/pca_post_correction_group.png"},
+  {dataset:"MTBL_plasma",polarity:"NEG",category:"PCA",filename:"pca_pre_correction_batch.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/neg/pca_pre_correction_batch.png"},
+  {dataset:"MTBL_plasma",polarity:"NEG",category:"Post-ComBat check (Step 15)",filename:"neg_postcombat_batch_110123_postcombat.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/neg/post_combat_intensity_check/neg_postcombat_batch_110123_postcombat.png"},
+  {dataset:"MTBL_plasma",polarity:"NEG",category:"Post-ComBat check (Step 15)",filename:"neg_postcombat_batch_112524_postcombat.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/neg/post_combat_intensity_check/neg_postcombat_batch_112524_postcombat.png"},
+  {dataset:"MTBL_plasma",polarity:"NEG",category:"Post-ComBat check (Step 15)",filename:"neg_postcombat_batch_51223_postcombat.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/neg/post_combat_intensity_check/neg_postcombat_batch_51223_postcombat.png"},
+  {dataset:"MTBL_plasma",polarity:"NEG",category:"Post-ComBat check (Step 15)",filename:"neg_postcombat_cross_batch_postcombat_overlay.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/neg/post_combat_intensity_check/neg_postcombat_cross_batch_postcombat_overlay.png"},
+  {dataset:"MTBL_plasma",polarity:"NEG",category:"Post-norm drift",filename:"neg_post_batch_110123_postnorm.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/neg/post_norm/neg_post_batch_110123_postnorm.png"},
+  {dataset:"MTBL_plasma",polarity:"NEG",category:"Post-norm drift",filename:"neg_post_batch_112524_postnorm.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/neg/post_norm/neg_post_batch_112524_postnorm.png"},
+  {dataset:"MTBL_plasma",polarity:"NEG",category:"Post-norm drift",filename:"neg_post_batch_51223_postnorm.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/neg/post_norm/neg_post_batch_51223_postnorm.png"},
+  {dataset:"MTBL_plasma",polarity:"NEG",category:"Post-norm drift",filename:"neg_post_cross_batch_postnorm_overlay.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/neg/post_norm/neg_post_cross_batch_postnorm_overlay.png"},
+  {dataset:"MTBL_plasma",polarity:"NEG",category:"Pre-norm drift",filename:"neg_pre_batch_110123_drift.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/neg/pre_norm/neg_pre_batch_110123_drift.png"},
+  {dataset:"MTBL_plasma",polarity:"NEG",category:"Pre-norm drift",filename:"neg_pre_batch_112524_drift.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/neg/pre_norm/neg_pre_batch_112524_drift.png"},
+  {dataset:"MTBL_plasma",polarity:"NEG",category:"Pre-norm drift",filename:"neg_pre_batch_51223_drift.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/neg/pre_norm/neg_pre_batch_51223_drift.png"},
+  {dataset:"MTBL_plasma",polarity:"POS",category:"PCA",filename:"pca_post_correction_batch.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/pos/pca_post_correction_batch.png"},
+  {dataset:"MTBL_plasma",polarity:"POS",category:"PCA",filename:"pca_post_correction_group.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/pos/pca_post_correction_group.png"},
+  {dataset:"MTBL_plasma",polarity:"POS",category:"PCA",filename:"pca_pre_correction_batch.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/pos/pca_pre_correction_batch.png"},
+  {dataset:"MTBL_plasma",polarity:"POS",category:"Post-ComBat check (Step 15)",filename:"pos_postcombat_batch_110123_postcombat.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/pos/post_combat_intensity_check/pos_postcombat_batch_110123_postcombat.png"},
+  {dataset:"MTBL_plasma",polarity:"POS",category:"Post-ComBat check (Step 15)",filename:"pos_postcombat_batch_112524_postcombat.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/pos/post_combat_intensity_check/pos_postcombat_batch_112524_postcombat.png"},
+  {dataset:"MTBL_plasma",polarity:"POS",category:"Post-ComBat check (Step 15)",filename:"pos_postcombat_batch_51223_postcombat.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/pos/post_combat_intensity_check/pos_postcombat_batch_51223_postcombat.png"},
+  {dataset:"MTBL_plasma",polarity:"POS",category:"Post-ComBat check (Step 15)",filename:"pos_postcombat_cross_batch_postcombat_overlay.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/pos/post_combat_intensity_check/pos_postcombat_cross_batch_postcombat_overlay.png"},
+  {dataset:"MTBL_plasma",polarity:"POS",category:"Post-norm drift",filename:"pos_post_batch_110123_postnorm.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/pos/post_norm/pos_post_batch_110123_postnorm.png"},
+  {dataset:"MTBL_plasma",polarity:"POS",category:"Post-norm drift",filename:"pos_post_batch_112524_postnorm.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/pos/post_norm/pos_post_batch_112524_postnorm.png"},
+  {dataset:"MTBL_plasma",polarity:"POS",category:"Post-norm drift",filename:"pos_post_batch_51223_postnorm.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/pos/post_norm/pos_post_batch_51223_postnorm.png"},
+  {dataset:"MTBL_plasma",polarity:"POS",category:"Post-norm drift",filename:"pos_post_cross_batch_postnorm_overlay.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/pos/post_norm/pos_post_cross_batch_postnorm_overlay.png"},
+  {dataset:"MTBL_plasma",polarity:"POS",category:"Pre-norm drift",filename:"pos_pre_batch_110123_drift.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/pos/pre_norm/pos_pre_batch_110123_drift.png"},
+  {dataset:"MTBL_plasma",polarity:"POS",category:"Pre-norm drift",filename:"pos_pre_batch_112524_drift.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/pos/pre_norm/pos_pre_batch_112524_drift.png"},
+  {dataset:"MTBL_plasma",polarity:"POS",category:"Pre-norm drift",filename:"pos_pre_batch_51223_drift.png",path:"data/cleaned/sop_omics_pipeline/MTBL_plasma/diagnostics/pos/pre_norm/pos_pre_batch_51223_drift.png"},
+  // ── MTBL_sop differential analysis (SOP v4 pipeline) ──────────────────────
+  {dataset:"MTBL_sop_diff",polarity:"NEG",category:"CS Boxplots (top 25 by q)",filename:"1-_2-Furylmethyl_-5-oxopyrrolidine-3-carboxylic_acid_NEG_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/1-_2-Furylmethyl_-5-oxopyrrolidine-3-carboxylic_acid_NEG_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"POS",category:"CS Boxplots (top 25 by q)",filename:"3-Hydroxybupivicaine_POS_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/3-Hydroxybupivicaine_POS_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"POS",category:"CS Boxplots (top 25 by q)",filename:"4-Thialysine_POS_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/4-Thialysine_POS_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"POS",category:"CS Boxplots (top 25 by q)",filename:"5-___3-chloro-5-_trifluoromethyl_-2-pyridyl_methyl_thio_-4-pentyl-4H-1_2_4-triazol-3-ol_POS_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/5-___3-chloro-5-_trifluoromethyl_-2-pyridyl_methyl_thio_-4-pentyl-4H-1_2_4-triazol-3-ol_POS_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"POS",category:"CS Boxplots (top 25 by q)",filename:"Colletotricole_A_POS_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/Colletotricole_A_POS_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"POS",category:"CS Boxplots (top 25 by q)",filename:"Cyclobutyl_fentanyl-d5_POS_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/Cyclobutyl_fentanyl-d5_POS_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"NEG",category:"CS Boxplots (top 25 by q)",filename:"Cysteine-S-sulfate_NEG_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/Cysteine-S-sulfate_NEG_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"POS",category:"CS Boxplots (top 25 by q)",filename:"HMBOA_trihexose_POS_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/HMBOA_trihexose_POS_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"POS",category:"CS Boxplots (top 25 by q)",filename:"Leucylleucine_methyl_ester_POS_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/Leucylleucine_methyl_ester_POS_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"POS",category:"CS Boxplots (top 25 by q)",filename:"N_-_6-__5-chloro-3-pyridyl_oxy_-3-pyridyl_-N_N-dimethyliminoformamide_POS_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/N_-_6-__5-chloro-3-pyridyl_oxy_-3-pyridyl_-N_N-dimethyliminoformamide_POS_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"POS",category:"CS Boxplots (top 25 by q)",filename:"Tranexamic_Acid_POS_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/Tranexamic_Acid_POS_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"POS",category:"CS Boxplots (top 25 by q)",filename:"_2S_8R_-2-Amino-8-hydroxydecanoic_acid_POS_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/_2S_8R_-2-Amino-8-hydroxydecanoic_acid_POS_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"NEG",category:"CS Boxplots (top 25 by q)",filename:"_Similar_to__N2-_3-_Trifluoromethyl_phenyl_-5-_2-_methylthio_pyrimidin-4-yl_thiophene-2-sulfonamide__ΔMass__35_9766_Da__NEG_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/_Similar_to__N2-_3-_Trifluoromethyl_phenyl_-5-_2-_methylthio_pyrimidin-4-yl_thiophene-2-sulfonamide__ΔMass__35_9766_Da__NEG_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"NEG",category:"CS Boxplots (top 25 by q)",filename:"unk_n2474_NEG_100_9608_RT0_32_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/unk_n2474_NEG_100_9608_RT0_32_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"NEG",category:"CS Boxplots (top 25 by q)",filename:"unk_n2712_NEG_218_8171_RT2_93_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/unk_n2712_NEG_218_8171_RT2_93_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"NEG",category:"CS Boxplots (top 25 by q)",filename:"unk_n3293_NEG_569_2651_RT11_51_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/unk_n3293_NEG_569_2651_RT11_51_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"NEG",category:"CS Boxplots (top 25 by q)",filename:"unk_n3298_NEG_249_8488_RT5_85_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/unk_n3298_NEG_249_8488_RT5_85_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"NEG",category:"CS Boxplots (top 25 by q)",filename:"unk_n3303_NEG_508_0135_RT5_71_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/unk_n3303_NEG_508_0135_RT5_71_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"NEG",category:"CS Boxplots (top 25 by q)",filename:"unk_n3479_NEG_501_9508_RT5_71_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/unk_n3479_NEG_501_9508_RT5_71_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"NEG",category:"CS Boxplots (top 25 by q)",filename:"unk_n3675_NEG_331_2241_RT9_52_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/unk_n3675_NEG_331_2241_RT9_52_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"NEG",category:"CS Boxplots (top 25 by q)",filename:"unk_n3757_NEG_719_2019_RT5_72_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/unk_n3757_NEG_719_2019_RT5_72_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"NEG",category:"CS Boxplots (top 25 by q)",filename:"unk_n3911_NEG_459_0447_RT5_71_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/unk_n3911_NEG_459_0447_RT5_71_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"POS",category:"CS Boxplots (top 25 by q)",filename:"unk_p2327_POS_272_1338_RT2_37_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/unk_p2327_POS_272_1338_RT2_37_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"POS",category:"CS Boxplots (top 25 by q)",filename:"unk_p5424_POS_364_2330_RT12_04_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/unk_p5424_POS_364_2330_RT12_04_boxplot.png"},
+  {dataset:"MTBL_sop_diff",polarity:"POS",category:"CS Boxplots (top 25 by q)",filename:"unk_p5723_POS_300_1653_RT2_30_boxplot.png",path:"04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots/unk_p5723_POS_300_1653_RT2_30_boxplot.png"},
+  /* ── Pathway Analysis ─────────────────────────────────────────────────── */
+  {dataset:"MTBL_pathway",polarity:"",category:"Pathway ORA",filename:"cross_tp_pathway_heatmap.png",path:"04_results_and_figures/pathway_analysis/MTBL_sop/cross_tp_pathway_heatmap.png"},
+  {dataset:"MTBL_pathway",polarity:"",category:"Pathway ORA",filename:"plasma_TPB_pathway_dotplot.png",path:"04_results_and_figures/pathway_analysis/MTBL_sop/plasma_TPB/pathway_dotplot.png"},
+  {dataset:"MTBL_pathway",polarity:"",category:"Pathway ORA",filename:"plasma_TPC_pathway_dotplot.png",path:"04_results_and_figures/pathway_analysis/MTBL_sop/plasma_TPC/pathway_dotplot.png"},
+  {dataset:"MTBL_pathway",polarity:"",category:"Pathway ORA",filename:"plasma_TPD_pathway_dotplot.png",path:"04_results_and_figures/pathway_analysis/MTBL_sop/plasma_TPD/pathway_dotplot.png"},
+  {dataset:"MTBL_pathway",polarity:"",category:"Pathway ORA",filename:"plasma_TPE_pathway_dotplot.png",path:"04_results_and_figures/pathway_analysis/MTBL_sop/plasma_TPE/pathway_dotplot.png"},
+  {dataset:"MTBL_pathway",polarity:"",category:"Pathway ORA",filename:"plasma_union_pathway_dotplot.png",path:"04_results_and_figures/pathway_analysis/MTBL_sop/plasma_union/pathway_dotplot.png"},
+];
+
+// ── State ──────────────────────────────────────────────────────────────────
+const filters = { dataset: '', polarity: '', category: '' };
+let visibleIndices = [];
+let lbIdx = 0;
+
+// ── Filter + render ────────────────────────────────────────────────────────
+function friendlyName(p) {
+  const parts = [];
+  if (p.dataset)   parts.push(p.dataset.replace('_', ' '));
+  if (p.polarity)  parts.push(p.polarity);
+  if (p.category)  parts.push(p.category);
+  // batch extraction
+  const bm = p.filename.match(/batch_(\d+)/);
+  if (bm) parts.push('batch ' + bm[1]);
+  return parts.join(' · ');
+}
+
+function render() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const sortKey = document.getElementById('sort').value;
+
+  let items = PLOTS.map((p, i) => ({...p, _i: i})).filter(p => {
+    if (filters.dataset  && p.dataset   !== filters.dataset)   return false;
+    if (filters.polarity && p.polarity  !== filters.polarity)  return false;
+    if (filters.category && p.category  !== filters.category)  return false;
+    if (q && !friendlyName(p).toLowerCase().includes(q) && !p.filename.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  items.sort((a, b) => {
+    const k = sortKey;
+    return (a[k] || '').localeCompare(b[k] || '');
+  });
+
+  visibleIndices = items.map(p => p._i);
+
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('empty');
+  grid.innerHTML = '';
+
+  if (!items.length) {
+    empty.style.display = 'flex';
+    document.getElementById('count').textContent = '0 plots';
+    return;
+  }
+  empty.style.display = 'none';
+  document.getElementById('count').textContent = items.length + ' of ' + PLOTS.length + ' plots';
+
+  items.forEach((p, vi) => {
+    const isNew = p.category.includes('Step 15');
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <img src="${p.path}" alt="${p.filename}" loading="lazy">
+      <div class="card-body">
+        <div class="card-title">${p.filename.replace('.png','').replace(/_/g,' ')}</div>
+        <div class="card-meta">
+          <span class="badge badge-${p.polarity}">${p.polarity}</span>
+          <span class="badge badge-cat">${p.dataset.replace('_',' ')}</span>
+          ${isNew ? '<span class="badge badge-new">✦ NEW</span>' : ''}
+        </div>
+        <div class="card-meta" style="margin-top:3px;color:#94a3b8">${p.category}</div>
+      </div>`;
+    card.addEventListener('click', () => openLb(vi));
+    grid.appendChild(card);
+  });
+}
+
+// ── Sidebar buttons ────────────────────────────────────────────────────────
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const f = btn.dataset.filter;
+    document.querySelectorAll(`.filter-btn[data-filter="${f}"]`).forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filters[f] = btn.dataset.value;
+    render();
+  });
+});
+document.getElementById('search').addEventListener('input', render);
+document.getElementById('sort').addEventListener('change', render);
+
+// ── Lightbox ───────────────────────────────────────────────────────────────
+function openLb(vi) {
+  lbIdx = vi;
+  showLb();
+  document.getElementById('lb').classList.add('open');
+}
+function showLb() {
+  const idx = visibleIndices[lbIdx];
+  const p = PLOTS[idx];
+  document.getElementById('lb-img').src = p.path;
+  document.getElementById('lb-caption').textContent = friendlyName(p) + '  ·  ' + p.filename;
+}
+function closeLb() { document.getElementById('lb').classList.remove('open'); }
+
+document.getElementById('lb-close').addEventListener('click', closeLb);
+document.getElementById('lb-prev').addEventListener('click', () => { lbIdx = (lbIdx - 1 + visibleIndices.length) % visibleIndices.length; showLb(); });
+document.getElementById('lb-next').addEventListener('click', () => { lbIdx = (lbIdx + 1) % visibleIndices.length; showLb(); });
+document.getElementById('lb').addEventListener('click', e => { if (e.target === document.getElementById('lb')) closeLb(); });
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('lb').classList.contains('open')) return;
+  if (e.key === 'Escape') closeLb();
+  if (e.key === 'ArrowLeft')  { lbIdx = (lbIdx - 1 + visibleIndices.length) % visibleIndices.length; showLb(); }
+  if (e.key === 'ArrowRight') { lbIdx = (lbIdx + 1) % visibleIndices.length; showLb(); }
+});
+
+render();
+
+// ── Top tab switching ──────────────────────────────────────────────────────
+document.getElementById('tab-gallery').addEventListener('click', () => {
+  document.getElementById('tab-gallery').classList.add('active');
+  document.getElementById('tab-report').classList.remove('active');
+  document.getElementById('gallery-view').style.display = 'flex';
+  document.getElementById('report-view').classList.remove('visible');
+  document.getElementById('sidebar').style.display = 'flex';
+});
+document.getElementById('tab-report').addEventListener('click', () => {
+  document.getElementById('tab-report').classList.add('active');
+  document.getElementById('tab-gallery').classList.remove('active');
+  document.getElementById('gallery-view').style.display = 'none';
+  document.getElementById('report-view').classList.add('visible');
+  document.getElementById('sidebar').style.display = 'none';
+});
+
+// ── Sub-tab switching (inside Reports) ────────────────────────────────────
+document.querySelectorAll('.sub-tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    // Update active button
+    document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    // Show/hide sub-panels
+    const target = btn.dataset.sub;
+    document.querySelectorAll('.sub-panel').forEach(p => p.classList.remove('visible'));
+    document.getElementById('sub-' + target).classList.add('visible');
+    // Scroll to top
+    document.getElementById('report-scroll').scrollTop = 0;
+  });
+});
+</script>
+</body>
+</html>

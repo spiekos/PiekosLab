@@ -191,6 +191,29 @@ def run_binary_pipeline(
         tag, len(y_train), len(y_val), len(y_test),
     )
 
+    # 2b. Median imputation for any remaining NaN values.
+    #     Check all three splits — val/test can have NaN in columns that were
+    #     clean in training (e.g. when only 1-2 features survive LASSO and the
+    #     split is small). Fit medians on X_train only; apply to all splits.
+    any_nan = (
+        X_train.isna().any().any()
+        or X_val.isna().any().any()
+        or X_test.isna().any().any()
+    )
+    if any_nan:
+        nan_cols = (
+            X_train.columns[X_train.isna().any()].tolist()
+            + [c for c in X_val.columns if X_val[c].isna().any() and c not in X_train.columns[X_train.isna().any()]]
+        )
+        logger.info(
+            "%s Imputing with training-set medians (NaN in at least one split, %d affected features).",
+            tag, len(set(nan_cols)),
+        )
+        train_medians = X_train.median(skipna=True)
+        X_train = X_train.fillna(train_medians)
+        X_val   = X_val.fillna(train_medians)
+        X_test  = X_test.fillna(train_medians)
+
     # Save split indices with original Group labels for traceability
     split_df = pd.concat([
         pd.DataFrame({"SampleID": X_train.index, "split": "train"}),

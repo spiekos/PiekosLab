@@ -1,0 +1,84 @@
+{
+  "tissue": "plasma",
+  "timepoint": "E",
+  "data_path": "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_plasma/MTBL_plasma_suffix_E.csv",
+  "outcome": "Complication",
+  "complications_pooled": [
+    "HDP",
+    "FGR",
+    "sPTB"
+  ],
+  "n_train": 18,
+  "n_val": 4,
+  "n_test": 5,
+  "class_dist_train": {
+    "control": 7,
+    "complication": 11
+  },
+  "class_dist_val": {
+    "control": 2,
+    "complication": 2
+  },
+  "class_dist_test": {
+    "control": 2,
+    "complication": 3
+  },
+  "n_features_pretlasso": 43,
+  "n_features_postlasso": 4,
+  "best_model_val": "RandomForest",
+  "best_val_pr_auc": 1.0,
+  "test_metrics": {
+    "LogisticRegression": {
+      "pr_auc": 1.0,
+      "pr_auc_ci_low": 1.0,
+      "pr_auc_ci_high": 1.0,
+      "roc_auc": 1.0,
+      "roc_auc_ci_low": 1.0,
+      "roc_auc_ci_high": 1.0,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "n_test": 5
+    },
+    "RandomForest": {
+      "pr_auc": 1.0,
+      "pr_auc_ci_low": 1.0,
+      "pr_auc_ci_high": 1.0,
+      "roc_auc": 1.0,
+      "roc_auc_ci_low": 1.0,
+      "roc_auc_ci_high": 1.0,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "n_test": 5
+    },
+    "XGBoost": {
+      "pr_auc": 1.0,
+      "pr_auc_ci_low": 1.0,
+      "pr_auc_ci_high": 1.0,
+      "roc_auc": 1.0,
+      "roc_auc_ci_low": 1.0,
+      "roc_auc_ci_high": 1.0,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "n_test": 5
+    },
+    "SVM": {
+      "pr_auc": 1.0,
+      "pr_auc_ci_low": 1.0,
+      "pr_auc_ci_high": 1.0,
+      "roc_auc": 1.0,
+      "roc_auc_ci_low": 1.0,
+      "roc_auc_ci_high": 1.0,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "n_test": 5
+    }
+  }
+}

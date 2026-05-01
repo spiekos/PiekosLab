@@ -45,7 +45,8 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _METADATA_COLS = [
-    "SubjectID", "Group", "Subgroup", "Batch", "GestAgeDelivery", "SampleGestAge"
+    "SubjectID", "Group", "Subgroup", "Batch", "GestAgeDelivery", "SampleGestAge",
+    "MetadataCanonicalID",  # audit field added by sop_omics_pipeline
 ]
 _GROUP_LABEL_MAP = {"sptb": "sPTB"}
 
@@ -361,7 +362,10 @@ def _build_model_from_trial_binary(trial, model_name: str, y_train, random_state
     elif model_name == "RandomForest":
         return RandomForestClassifier(
             n_estimators=trial.suggest_int("n_estimators", 100, 500),
-            max_depth=trial.suggest_categorical("max_depth", [None, 5, 10, 20, 30]),
+            # max_depth=None (unbounded) is excluded: it guarantees zero training
+            # error (pure leaves) in every tree, leading to overfitting on small
+            # omics datasets. Values ≤ 15 encourage generalization.
+            max_depth=trial.suggest_int("max_depth", 2, 15),
             min_samples_split=trial.suggest_int("min_samples_split", 2, 20),
             min_samples_leaf=trial.suggest_int("min_samples_leaf", 1, 10),
             max_features=trial.suggest_categorical("max_features", ["sqrt", "log2"]),
@@ -407,7 +411,8 @@ def _build_model_from_trial_multilabel(trial, model_name: str, random_state: int
     elif model_name == "RandomForest":
         return RandomForestClassifier(
             n_estimators=trial.suggest_int("n_estimators", 100, 500),
-            max_depth=trial.suggest_categorical("max_depth", [None, 5, 10, 20, 30]),
+            # max_depth=None excluded for same overfitting reasons as binary builder.
+            max_depth=trial.suggest_int("max_depth", 2, 15),
             min_samples_split=trial.suggest_int("min_samples_split", 2, 20),
             min_samples_leaf=trial.suggest_int("min_samples_leaf", 1, 10),
             max_features=trial.suggest_categorical("max_features", ["sqrt", "log2"]),
@@ -721,14 +726,53 @@ def run_cv_multilabel(
 # Final evaluation on held-out test set
 # ---------------------------------------------------------------------------
 
+def _bootstrap_auc_ci(
+    y_true: np.ndarray,
+    y_prob: np.ndarray,
+    metric_fn,
+    n_boot: int = 1000,
+    ci: float = 0.95,
+    random_state: int = RANDOM_STATE,
+) -> tuple[float, float]:
+    """
+    Percentile bootstrap 95% CI for a scoring metric (e.g. average_precision_score).
+
+    Skips bootstrap samples where only one class is present (returns NaN for
+    those draws). If fewer than 20 valid draws are obtained, returns (nan, nan).
+    """
+    rng = np.random.default_rng(random_state)
+    n   = len(y_true)
+    scores = []
+    for _ in range(n_boot):
+        idx = rng.integers(0, n, size=n)
+        yt, yp = y_true[idx], y_prob[idx]
+        if len(np.unique(yt)) < 2:
+            continue
+        try:
+            scores.append(metric_fn(yt, yp))
+        except ValueError:
+            continue
+    if len(scores) < 20:
+        return float("nan"), float("nan")
+    alpha = (1.0 - ci) / 2.0
+    return float(np.percentile(scores, 100 * alpha)), float(np.percentile(scores, 100 * (1 - alpha)))
+
+
 def evaluate_binary(
     model,
     X_train: pd.DataFrame,
     y_train: pd.Series,
     X_test: pd.DataFrame,
     y_test: pd.Series,
+    n_boot: int = 1000,
 ) -> dict:
-    """Fit on training data and evaluate on test set. Returns metrics dict."""
+    """
+    Fit on training data and evaluate on test set.
+
+    Returns metrics dict including bootstrapped 95% CI for PR-AUC and ROC-AUC.
+    Bootstrap CIs are especially informative when the test set is small (n < 50);
+    a wide CI signals that the point estimate should not be over-interpreted.
+    """
     scaler = RobustScaler()
     X_tr_s  = scaler.fit_transform(X_train)
     X_te_s  = scaler.transform(X_test)
@@ -737,13 +781,25 @@ def evaluate_binary(
     y_prob = model.predict_proba(X_te_s)[:, 1]
     y_pred = model.predict(X_te_s)
 
+    yt = y_test.values
+    pr_auc  = float(average_precision_score(yt, y_prob))
+    roc_auc = float(roc_auc_score(yt, y_prob))
+
+    pr_lo,  pr_hi  = _bootstrap_auc_ci(yt, y_prob, average_precision_score, n_boot=n_boot)
+    roc_lo, roc_hi = _bootstrap_auc_ci(yt, y_prob, roc_auc_score,           n_boot=n_boot)
+
     return {
-        "pr_auc":    float(average_precision_score(y_test, y_prob)),
-        "roc_auc":   float(roc_auc_score(y_test, y_prob)),
-        "accuracy":  float(accuracy_score(y_test, y_pred)),
-        "precision": float(precision_score(y_test, y_pred, zero_division=0)),
-        "recall":    float(recall_score(y_test, y_pred, zero_division=0)),
-        "f1":        float(f1_score(y_test, y_pred, zero_division=0)),
+        "pr_auc":         pr_auc,
+        "pr_auc_ci_low":  pr_lo,
+        "pr_auc_ci_high": pr_hi,
+        "roc_auc":        roc_auc,
+        "roc_auc_ci_low":  roc_lo,
+        "roc_auc_ci_high": roc_hi,
+        "accuracy":  float(accuracy_score(yt, y_pred)),
+        "precision": float(precision_score(yt, y_pred, zero_division=0)),
+        "recall":    float(recall_score(yt, y_pred, zero_division=0)),
+        "f1":        float(f1_score(yt, y_pred, zero_division=0)),
+        "n_test":    int(len(yt)),
     }, scaler
 
 def evaluate_multilabel(

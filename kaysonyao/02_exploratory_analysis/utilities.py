@@ -149,9 +149,15 @@ def _test_one_pair(v1: pd.Series, v2: pd.Series) -> dict:
         }
     u_stat, p_val = stats.mannwhitneyu(v1, v2, alternative="two-sided", method="auto")
     med1, med2 = v1.median(), v2.median()
-    # fold_change is the log2 difference of medians (= log2 FC in linear space),
-    # since NPX values are already on a log2 scale.
-    fc = med2 - med1
+    # fold_change is log2(ratio2 / ratio1) back-converted from log2(x+1) space.
+    # For proteomics NPX (large values): log2(2^med - 1) ≈ med, so this converges
+    # to med2 - med1 as before. For metabolomics log2(ISTD_ratio + 1) (tiny values
+    # near 0): med2 - med1 ≈ raw ratio difference, not log2FC — this correction
+    # ensures the threshold is applied consistently across both data types.
+    _EPS = 1e-12
+    ratio1 = max(float(2 ** med1) - 1.0, _EPS)
+    ratio2 = max(float(2 ** med2) - 1.0, _EPS)
+    fc = float(np.log2(ratio2 / ratio1))
     return {
         "U_statistic":   u_stat,
         "p_value":       p_val,
@@ -344,21 +350,38 @@ def run_longitudinal(
         results_df  = pd.DataFrame(rows).set_index("analyte_id")
         tested_mask = ~results_df["_excluded"]
         results_df["q_value"]    = np.nan
+        results_df["log2fc"]     = np.nan
         results_df["significant"] = False
         if tested_mask.sum() > 0:
             _, q_vals, _, _ = multitest.multipletests(
                 results_df.loc[tested_mask, "p_value"], method="fdr_bh"
             )
             results_df.loc[tested_mask, "q_value"] = q_vals
-            abs_delta = results_df.loc[tested_mask, "median_delta"].abs()
+
+            # Compute effective log2FC from median_delta.
+            # median_delta is in log2(x+1) space; use timepoint-A group median as
+            # baseline to back-convert: FC = log2(ratio_B / ratio_A) in linear space.
+            # For proteomics NPX (large values) this converges to median_delta.
+            # For metabolomics log2(ISTD_ratio+1) (tiny values) this gives the true FC.
+            _EPS = 1e-12
+            ta_cols = [c for c in analyte_cols if c in filtered[t_a].columns]
+            baseline = filtered[t_a][ta_cols].median()  # Series: analyte → t_a group median
+            tested_idx = results_df.loc[tested_mask].index.intersection(baseline.index)
+            b  = baseline.loc[tested_idx]
+            md = results_df.loc[tested_idx, "median_delta"]
+            r_a = (2.0 ** b  - 1.0).clip(lower=_EPS)
+            r_b = (2.0 ** (b + md) - 1.0).clip(lower=_EPS)
+            results_df.loc[tested_idx, "log2fc"] = np.log2(r_b / r_a)
+
+            abs_fc = results_df.loc[tested_mask, "log2fc"].abs()
             results_df.loc[tested_mask, "significant"] = (
-                (q_vals < FDR_THRESHOLD) & (abs_delta >= LOG2_FC_THRESHOLD)
+                (q_vals < FDR_THRESHOLD) & (abs_fc >= LOG2_FC_THRESHOLD)
             )
 
         results_df = results_df.rename(columns={"_excluded": "excluded"})
         col_order  = [
             "delta_comparison", "W_statistic", "p_value", "q_value",
-            "significant", "median_delta", "n_pairs", "excluded",
+            "significant", "median_delta", "log2fc", "n_pairs", "excluded",
         ]
         results_df = results_df[col_order].sort_values("q_value")
 
@@ -1398,9 +1421,13 @@ def plot_longitudinal_boxplots(
             return df.set_index(subject_col)
         return df
 
+    _ref_df = next(iter(tp_dfs.values()))
     analyte_cols_global = [
-        c for c in next(iter(tp_dfs.values())).columns
-        if c not in _METADATA_COLS and c != group_col and c != subject_col
+        c for c in _ref_df.columns
+        if c not in _METADATA_COLS
+        and c != group_col
+        and c != subject_col
+        and pd.api.types.is_numeric_dtype(_ref_df[c])   # exclude stray string cols (e.g. MetadataCanonicalID)
     ]
 
     ctrl_deltas:  dict = {}

@@ -15,19 +15,21 @@ the SOP ordering:
 5. Median fold-change batch normalization
 6. Post-normalization drift diagnostics
 7. Feature missingness filter
-8. QC-pool RSD filter
-9. Sample missingness filter
-10. Sample-level ISTD MAD QC
-11. Log2 transformation
-12. Half-minimum imputation
-13. Pre-correction PCA
-14. Batch-confounding checks
-15. Batch correction
-16. Post-correction PCA
-17. Bridge-sample averaging
-18-31. Deduplication, annotation, metadata integration, and file outputs
-32. Biological trajectory plots
-33. Human-readable pipeline log
+8. Sample missingness filter
+9. Log2 transformation
+10. Half-minimum imputation
+11. Pre-correction PCA
+12. Batch-confounding checks
+13. Batch correction (ComBat)
+14. Post-correction PCA
+15. Post-ComBat intensity check
+16. Sample-level ISTD MAD QC (post-ComBat)
+17. QC-pool RSD filter (post-ComBat, on corrected data)
+18. IQR filter (within-timepoint, post-ComBat)
+19. Bridge-sample averaging
+20-33. Deduplication, annotation, metadata integration, and file outputs
+34. Biological trajectory plots
+35. Human-readable pipeline log
 
 Notes
 -----
@@ -89,6 +91,11 @@ class Thresholds:
     rsd_threshold: float = 30.0
     mzcloud_l2_threshold: float = 80.0
     annot_source_l2_threshold: int = 3
+    # Step 18 — IQR filter (SOP v4)
+    iqr_low_percentile: float = 5.0    # percentile below which a feature is "near-constant"
+    iqr_high_percentile: float = 95.0  # percentile above which a feature is "hypervariable"
+    iqr_floor: float = 0.1             # absolute min IQR on log2 scale; feature must also fail percentile
+    iqr_ceiling: float = 5.0           # absolute max IQR on log2 scale; feature must also fail percentile
 
 
 @dataclass(frozen=True)
@@ -133,7 +140,7 @@ class PipelineArtifacts:
     drift_flags: list[str] = field(default_factory=list)
     method_log: list[str] = field(default_factory=list)
     bridge_counts: dict[str, int] = field(default_factory=dict)
-    # Step 33: structured per-step tracking
+    # Step 35: structured per-step tracking
     # Each entry: {polarity, step, label, n_features, n_samples}
     step_counts: list[dict] = field(default_factory=list)
     # polarity -> list of ISTD feature names that were removed during normalization
@@ -1289,7 +1296,7 @@ def _rsd_filter(
         )
         artifacts.feature_filter_log.append(
             {
-                "step": 8,
+                "step": 17,
                 "feature_id": col,
                 "polarity": polarity,
                 "reason": f"QC RSD >30% in ≥1 batch ({per_batch_str})",
@@ -1315,7 +1322,7 @@ def _sample_missingness_filter(
             keep_mask.loc[row_id] = False
             artifacts.sample_filter_log.append(
                 {
-                    "step": 9,
+                    "step": 8,
                     "row_id": row_id,
                     "sample_name": sample_info.at[row_id, "sample_name"],
                     "polarity": polarity,
@@ -1348,7 +1355,7 @@ def _sample_istd_mad_filter(
                 bad_row_ids.add(row_id)
                 artifacts.sample_filter_log.append(
                     {
-                        "step": 10,
+                        "step": 16,
                         "row_id": row_id,
                         "sample_name": sample_info.at[row_id, "sample_name"],
                         "polarity": run.polarity,
@@ -1704,6 +1711,265 @@ def _apply_batch_correction(
         "harmonization instead."
     )
     return corrected, method_name
+
+
+def _post_combat_intensity_check(
+    run: PolarityRun,
+    corrected: pd.DataFrame,
+    sample_info: pd.DataFrame,
+    output_dir: Path,
+    prefix: str,
+) -> list[str]:
+    """Step 15 (SOP v4): Re-plot injection-order intensity diagnostics on the
+    batch-corrected matrix to verify ComBat did not introduce new trends.
+
+    Generates the same three plots as the post-normalization diagnostics
+    (per-batch TIC, per-batch feature traces, cross-batch overlay) but on the
+    corrected data.  Any new systematic trends relative to Step 6 should be
+    investigated.
+    """
+    flags: list[str] = []
+    diag_dir = output_dir / "post_combat_intensity_check"
+    _ensure_dir(diag_dir)
+
+    # Select representative high-abundance features (excluding ISTDs)
+    bio_mask = sample_info["sample_type"] == "biological"
+    bio_corrected = corrected.loc[bio_mask]
+    traces = _select_feature_traces(bio_corrected.drop(columns=run.raw_istd.columns, errors="ignore"))
+
+    x_label = (
+        "Injection order (F#)"
+        if "f_number" in run.injection_order_source
+        else "Injection order"
+        if "raw_workbook" in run.injection_order_source or "file_sequence" in run.injection_order_source
+        else "Injection order proxy"
+    )
+
+    # Per-batch: TIC + feature traces
+    for batch, batch_rows in sample_info.groupby("batch"):
+        batch_rows = batch_rows.sort_values("injection_order")
+        row_ids = batch_rows.index.tolist()
+        if len(row_ids) < 2:
+            continue
+
+        fig, axes = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+        tic = _tic(corrected.loc[row_ids])
+        axes[0].plot(batch_rows["injection_order"], tic.values, marker="o", color="steelblue")
+        axes[0].set_title(f"{prefix} batch {batch}: post-ComBat mean intensity")
+        axes[0].set_ylabel("Mean intensity (log2)")
+
+        for feature in traces:
+            if feature not in corrected.columns:
+                continue
+            axes[1].plot(
+                batch_rows["injection_order"],
+                corrected.loc[row_ids, feature].values,
+                marker="o",
+                label=feature,
+            )
+        axes[1].set_title("Post-ComBat high-abundance feature traces")
+        axes[1].set_xlabel(x_label)
+        axes[1].set_ylabel("corrected intensity (log2)")
+        axes[1].legend(fontsize=7, ncol=2)
+
+        out_path = diag_dir / f"{prefix.lower()}_batch_{batch}_postcombat.png"
+        fig.tight_layout()
+        fig.savefig(out_path, dpi=180)
+        plt.close(fig)
+
+        # Flag any residual trend
+        if len(tic) >= 3:
+            slope = np.polyfit(batch_rows["injection_order"], tic.values, deg=1)[0]
+            if np.isfinite(slope):
+                scale = np.nanmean(np.abs(tic.values)) or 1.0
+                if abs(slope) / scale > 0.05:
+                    flags.append(
+                        f"{prefix} batch {batch}: post-ComBat intensity still trends with "
+                        f"injection order (relative slope={abs(slope)/scale:.3f}). "
+                        "ComBat may have introduced artifacts — inspect correction parameters."
+                    )
+
+    # Cross-batch overlay
+    if traces:
+        batch_frames = [
+            (batch, batch_rows.sort_values("injection_order"))
+            for batch, batch_rows in sample_info.groupby("batch")
+        ]
+        n_panels = len(traces) + 1
+        fig, axes = plt.subplots(n_panels, 1, figsize=(11, 3.1 * n_panels))
+        if n_panels == 1:
+            axes = [axes]
+
+        for batch, batch_rows in batch_frames:
+            row_ids = batch_rows.index.tolist()
+            axes[0].plot(
+                batch_rows["injection_order"],
+                _tic(corrected.loc[row_ids]).values,
+                marker="o",
+                label=batch,
+            )
+        axes[0].set_title(f"{prefix} cross-batch post-ComBat mean intensity overlay")
+        axes[0].set_ylabel("Mean intensity (log2)")
+        axes[0].legend(fontsize=8, ncol=2)
+
+        for ax, feature in zip(axes[1:], traces):
+            for batch, batch_rows in batch_frames:
+                row_ids = batch_rows.index.tolist()
+                if feature not in corrected.columns:
+                    continue
+                ax.plot(
+                    batch_rows["injection_order"],
+                    corrected.loc[row_ids, feature].values,
+                    marker="o",
+                    label=batch,
+                )
+            ax.set_title(feature)
+            ax.set_ylabel("corrected intensity (log2)")
+        axes[-1].set_xlabel(x_label)
+        if len(axes) > 1:
+            axes[1].legend(fontsize=8, ncol=2)
+
+        overlay_path = diag_dir / f"{prefix.lower()}_cross_batch_postcombat_overlay.png"
+        fig.tight_layout()
+        fig.savefig(overlay_path, dpi=180)
+        plt.close(fig)
+
+    return flags
+
+
+def _iqr_filter(
+    df: pd.DataFrame,
+    sample_info: pd.DataFrame,
+    thresholds: Thresholds,
+    artifacts: PipelineArtifacts,
+    polarity: str,
+) -> pd.DataFrame:
+    """Step 18 (SOP v4): Remove near-constant or hypervariable features using
+    within-timepoint IQR on the batch-corrected log2 data.
+
+    IQR is computed separately within each timepoint (A–E) for biological
+    samples only.  The median of the per-timepoint IQRs is used as the
+    feature's representative spread, so longitudinal trends do not inflate it.
+
+    A feature is removed only when BOTH conditions hold:
+    * Constant: median IQR < IQR_LOW_PERCENTILE AND median IQR < IQR_FLOOR
+    * Hypervariable: median IQR > IQR_HIGH_PERCENTILE AND median IQR > IQR_CEILING
+
+    This dual-threshold (relative AND absolute) ensures no features are removed
+    if the data is well-behaved.
+    """
+    bio_mask = sample_info["sample_type"] == "biological"
+    bio_si = sample_info.loc[bio_mask]
+    bio_df = df.loc[bio_mask]
+
+    # Extract timepoint from sample_name (last character A–E)
+    def _tp(name: str) -> str | None:
+        m = re.search(r"([A-E])$", str(name).strip())
+        return m.group(1) if m else None
+
+    bio_si = bio_si.copy()
+    bio_si["_tp"] = bio_si["sample_name"].map(_tp)
+    timepoints = [t for t in sorted(bio_si["_tp"].dropna().unique()) if t in VALID_TIMEPOINTS]
+
+    if not timepoints:
+        artifacts.qc_warnings.append(
+            f"{polarity}: no timepoint labels (A–E) found in sample names; IQR filter skipped."
+        )
+        return df
+
+    # Compute per-timepoint IQR for each feature
+    tp_iqrs: dict[str, pd.Series] = {}
+    for tp in timepoints:
+        idx = bio_si.index[bio_si["_tp"] == tp]
+        if len(idx) < 4:
+            # Need at least 4 samples to get a meaningful IQR
+            continue
+        sub = bio_df.loc[idx]
+        q75 = sub.quantile(0.75, numeric_only=True)
+        q25 = sub.quantile(0.25, numeric_only=True)
+        tp_iqrs[tp] = (q75 - q25).clip(lower=0.0)
+
+    if not tp_iqrs:
+        artifacts.qc_warnings.append(
+            f"{polarity}: no timepoint had ≥4 biological samples for IQR calculation; "
+            "IQR filter skipped."
+        )
+        return df
+
+    iqr_table = pd.DataFrame(tp_iqrs)  # features × timepoints
+    median_iqr = iqr_table.median(axis=1, skipna=True)  # per-feature
+
+    n_features = len(median_iqr)
+    low_pct_val = float(np.nanpercentile(median_iqr.values, thresholds.iqr_low_percentile))
+    high_pct_val = float(np.nanpercentile(median_iqr.values, thresholds.iqr_high_percentile))
+
+    # Log whether the filter is active
+    artifacts.qc_warnings.append(
+        f"{polarity} Step 18 IQR filter: "
+        f"{thresholds.iqr_low_percentile}th pct IQR = {low_pct_val:.4f} "
+        f"(floor = {thresholds.iqr_floor}; filter active = {low_pct_val < thresholds.iqr_floor}), "
+        f"{thresholds.iqr_high_percentile}th pct IQR = {high_pct_val:.4f} "
+        f"(ceiling = {thresholds.iqr_ceiling}; filter active = {high_pct_val > thresholds.iqr_ceiling})."
+    )
+
+    to_drop: list[str] = []
+    for feat, miqr in median_iqr.items():
+        if pd.isna(miqr):
+            continue
+        if miqr < low_pct_val and miqr < thresholds.iqr_floor:
+            # Near-constant: fails both relative and absolute threshold
+            artifacts.feature_filter_log.append(
+                {
+                    "step": 18,
+                    "feature_id": feat,
+                    "polarity": polarity,
+                    "reason": (
+                        f"near-constant: median IQR={miqr:.4f} < "
+                        f"{thresholds.iqr_low_percentile}th pct ({low_pct_val:.4f}) "
+                        f"AND < floor ({thresholds.iqr_floor})"
+                    ),
+                }
+            )
+            to_drop.append(feat)
+        elif miqr > high_pct_val and miqr > thresholds.iqr_ceiling:
+            # Hypervariable: fails both relative and absolute threshold
+            artifacts.feature_filter_log.append(
+                {
+                    "step": 18,
+                    "feature_id": feat,
+                    "polarity": polarity,
+                    "reason": (
+                        f"hypervariable: median IQR={miqr:.4f} > "
+                        f"{thresholds.iqr_high_percentile}th pct ({high_pct_val:.4f}) "
+                        f"AND > ceiling ({thresholds.iqr_ceiling})"
+                    ),
+                }
+            )
+            to_drop.append(feat)
+
+    if to_drop:
+        LOGGER.info(
+            "%s Step 18 IQR filter: removed %d/%d features "
+            "(%d near-constant, %d hypervariable).",
+            polarity,
+            len(to_drop),
+            n_features,
+            sum(1 for f in to_drop if "near-constant" in next(
+                e["reason"] for e in artifacts.feature_filter_log
+                if e.get("feature_id") == f and e.get("step") == 18
+            )),
+            sum(1 for f in to_drop if "hypervariable" in next(
+                e["reason"] for e in artifacts.feature_filter_log
+                if e.get("feature_id") == f and e.get("step") == 18
+            )),
+        )
+    else:
+        LOGGER.info(
+            "%s Step 18 IQR filter: no features removed (data is well-behaved).", polarity
+        )
+
+    keep = [c for c in df.columns if c not in set(to_drop)]
+    return df[keep].copy()
 
 
 def _annotation_score(meta: pd.DataFrame, expression: pd.DataFrame) -> pd.Series:
@@ -2191,7 +2457,7 @@ def _write_plain_text_log(
     missingness_reports: dict[str, pd.DataFrame],
     confounding_rows: list[dict],
 ) -> None:
-    """Write the SOP Step 33 pipeline log.
+    """Write the SOP Step 35 pipeline log.
 
     Includes: ISTD names, drift detection flags, per-step feature and sample
     counts (Steps 7-10), per-batch initial sample counts, flagged samples per
@@ -2262,7 +2528,7 @@ def _write_plain_text_log(
 
     # ── Per-step feature / sample count table ─────────────────────────────────
     lines.append("")
-    lines.append("PER-STEP FEATURE AND SAMPLE COUNTS (Steps 7–10)")
+    lines.append("PER-STEP FEATURE AND SAMPLE COUNTS (Steps 7–18)")
     lines.append("-" * 40)
     if artifacts.step_counts:
         for pol in sorted({sc["polarity"] for sc in artifacts.step_counts}):
@@ -2293,7 +2559,7 @@ def _write_plain_text_log(
             f"({entry.get('reason', '')})"
         )
     if sample_steps:
-        step_labels = {9: "Step 9 — sample missingness", 10: "Step 10 — ISTD MAD"}
+        step_labels = {8: "Step 8 — sample missingness", 16: "Step 16 — ISTD MAD (post-ComBat)"}
         for (pol, step), names in sorted(sample_steps.items()):
             label = step_labels.get(step, f"Step {step}")
             lines.append(f"  {pol} {label}: {len(names)} sample(s) removed")
@@ -2312,8 +2578,9 @@ def _write_plain_text_log(
         feat_by_step[key] = feat_by_step.get(key, 0) + 1
     if feat_by_step:
         step_labels_feat = {
-            7: "Step 7 — feature missingness",
-            8: "Step 8 — QC RSD (per-batch)",
+            7: "Step 7  — feature missingness",
+            17: "Step 17 — QC RSD (per-batch, post-ComBat)",
+            18: "Step 18 — IQR filter (within-timepoint)",
         }
         for (pol, step), count in sorted(feat_by_step.items()):
             label = step_labels_feat.get(step, f"Step {step}")
@@ -2323,13 +2590,13 @@ def _write_plain_text_log(
 
     # ── Deduplication ─────────────────────────────────────────────────────────
     lines.append("")
-    lines.append("DEDUPLICATION (Steps 18–26)")
+    lines.append("DEDUPLICATION (Steps 20–28)")
     lines.append("-" * 40)
     lines.append(f"  Total deduplication drop events: {len(artifacts.dedup_log):,}")
 
     # ── Batch correction ──────────────────────────────────────────────────────
     lines.append("")
-    lines.append("BATCH CORRECTION (Step 15)")
+    lines.append("BATCH CORRECTION (Step 13)")
     lines.append("-" * 40)
     combat_lines = [m for m in artifacts.method_log if "batch correction" in m.lower()]
     for m in combat_lines:
@@ -2343,7 +2610,7 @@ def _write_plain_text_log(
     # ── Confounding checks ────────────────────────────────────────────────────
     if confounding_rows:
         lines.append("")
-        lines.append("BATCH-CONFOUNDING CHECKS (Step 14)")
+        lines.append("BATCH-CONFOUNDING CHECKS (Step 12)")
         lines.append("-" * 40)
         for row in confounding_rows:
             sig = " *** SIGNIFICANT" if row["p_value"] < 0.05 else ""
@@ -2422,7 +2689,7 @@ def _process_polarity(
         _plot_istd_diagnostics(run, diag_dir / "pre_norm", f"{run.polarity}_pre")
     )
 
-    # ── Step 33 tracking: initial counts before any filtering ────────────────
+    # ── Step 35 tracking: initial counts before any filtering ────────────────
     pol = run.polarity
     bio_mask = run.sample_info["sample_type"] == "biological"
     artifacts.initial_sample_counts[pol] = (
@@ -2447,7 +2714,7 @@ def _process_polarity(
     # ─────────────────────────────────────────────────────────────────────────
 
     normalized, removed_istds = _istd_normalize(run, artifacts)
-    artifacts.istd_names[pol] = removed_istds  # Step 33: record ISTD names used
+    artifacts.istd_names[pol] = removed_istds  # Step 35: record ISTD names used
 
     normalized = _median_fold_change_batch_normalize(
         normalized,
@@ -2471,24 +2738,17 @@ def _process_polarity(
     )
     _snap("after Step 7 (feature missingness)", filtered, run.sample_info)
 
-    filtered = _rsd_filter(filtered, run.sample_info, thresholds, artifacts, run.polarity)
-    _snap("after Step 8 (QC RSD filter)", filtered, run.sample_info)
-
+    # ── Step 8: Sample missingness filter (moved before log2 in SOP v4) ──────
     filtered, sample_info = _sample_missingness_filter(
         filtered, run.sample_info, thresholds, artifacts, run.polarity
     )
-    _snap("after Step 9 (sample missingness)", filtered, sample_info)
+    _snap("after Step 8 (sample missingness)", filtered, sample_info)
 
-    bad_samples = _sample_istd_mad_filter(run, sample_info, thresholds, artifacts)
-    if bad_samples:
-        keep_mask = ~sample_info.index.isin(bad_samples)
-        filtered = filtered.loc[keep_mask].copy()
-        sample_info = sample_info.loc[keep_mask].copy()
-    _snap("after Step 10 (sample ISTD MAD)", filtered, sample_info)
-
+    # ── Steps 9–10: Log2 transform + half-minimum imputation ─────────────────
     log2_df = np.log2(filtered + 1.0)
     imputed = _half_minimum_impute(log2_df)
 
+    # ── Step 11: Pre-correction PCA ───────────────────────────────────────────
     batch_labels = sample_info["batch"]
     _pca_plot(
         imputed,
@@ -2496,9 +2756,19 @@ def _process_polarity(
         f"{run.polarity} pre-correction PCA (batch)",
         diag_dir / "pca_pre_correction_batch.png",
     )
-    groups = sample_metadata.reindex(sample_info["sample_name"])["Group"].fillna("Unknown")
-    groups.index = sample_info.index
+
+    # ── Step 12: Batch-confounding checks ─────────────────────────────────────
+    # Build group labels for biological samples only.
+    # QC pools have no Group metadata so restricting to biological rows prevents
+    # them from appearing as "Unknown" in the group PCA.
+    bio_mask = sample_info["sample_type"] == "biological"
+    bio_sample_info = sample_info.loc[bio_mask]
+    groups = sample_metadata.reindex(bio_sample_info["sample_name"])["Group"].fillna("Unknown")
+    groups.index = bio_sample_info.index
+
     confounding_rows = _batch_confounding_checks(sample_info, sample_metadata, artifacts)
+
+    # ── Step 13: ComBat batch correction ──────────────────────────────────────
     combat_covariates, protected_covariates = _combat_design_matrix(sample_info, sample_metadata)
     bridge_count = int(sample_info.loc[sample_info["is_bridge"], "sample_name"].nunique())
     artifacts.bridge_counts[run.polarity] = bridge_count
@@ -2516,18 +2786,42 @@ def _process_polarity(
         f"{run.polarity}: batch correction method={method_name}, reference batch={ref_batch}."
     )
 
+    # ── Step 14: Post-correction PCA ──────────────────────────────────────────
     _pca_plot(
         corrected,
         batch_labels,
         f"{run.polarity} post-correction PCA (batch)",
         diag_dir / "pca_post_correction_batch.png",
     )
+    # Group PCA restricted to biological samples so QC pools are excluded
     _pca_plot(
-        corrected,
-        groups.reset_index(drop=True) if isinstance(groups, pd.Series) else groups,
+        corrected.loc[bio_mask],
+        groups,
         f"{run.polarity} post-correction PCA (group)",
         diag_dir / "pca_post_correction_group.png",
     )
+
+    # ── Step 15: Post-ComBat intensity check (SOP v4 new step) ───────────────
+    post_combat_flags = _post_combat_intensity_check(
+        run, corrected, sample_info, diag_dir, f"{run.polarity}_postcombat"
+    )
+    artifacts.drift_flags.extend(post_combat_flags)
+
+    # ── Step 16: ISTD MAD filter (moved post-ComBat in SOP v4) ───────────────
+    bad_samples = _sample_istd_mad_filter(run, sample_info, thresholds, artifacts)
+    if bad_samples:
+        keep_mask = ~sample_info.index.isin(bad_samples)
+        corrected = corrected.loc[keep_mask].copy()
+        sample_info = sample_info.loc[keep_mask].copy()
+    _snap("after Step 16 (sample ISTD MAD, post-ComBat)", corrected, sample_info)
+
+    # ── Step 17: RSD filter on QC pools (post-ComBat in SOP v4) ─────────────
+    corrected = _rsd_filter(corrected, sample_info, thresholds, artifacts, run.polarity)
+    _snap("after Step 17 (QC RSD filter, post-ComBat)", corrected, sample_info)
+
+    # ── Step 18: IQR filter within-timepoint (SOP v4 new step) ───────────────
+    corrected = _iqr_filter(corrected, sample_info, thresholds, artifacts, run.polarity)
+    _snap("after Step 18 (IQR filter, within-timepoint)", corrected, sample_info)
 
     named_kept, unnamed = _resolve_named_groups(
         run, corrected, thresholds, modifications, artifacts

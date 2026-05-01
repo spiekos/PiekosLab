@@ -1,0 +1,84 @@
+{
+  "tissue": "plasma",
+  "timepoint": "B",
+  "data_path": "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_plasma/MTBL_plasma_suffix_B.csv",
+  "outcome": "Complication",
+  "complications_pooled": [
+    "HDP",
+    "FGR",
+    "sPTB"
+  ],
+  "n_train": 93,
+  "n_val": 20,
+  "n_test": 20,
+  "class_dist_train": {
+    "control": 39,
+    "complication": 54
+  },
+  "class_dist_val": {
+    "control": 8,
+    "complication": 12
+  },
+  "class_dist_test": {
+    "control": 9,
+    "complication": 11
+  },
+  "n_features_pretlasso": 72,
+  "n_features_postlasso": 66,
+  "best_model_val": "LogisticRegression",
+  "best_val_pr_auc": 1.0,
+  "test_metrics": {
+    "LogisticRegression": {
+      "pr_auc": 0.9649678604224059,
+      "pr_auc_ci_low": 0.8769407713498624,
+      "pr_auc_ci_high": 1.0,
+      "roc_auc": 0.9595959595959596,
+      "roc_auc_ci_low": 0.8593552714646465,
+      "roc_auc_ci_high": 1.0,
+      "accuracy": 0.85,
+      "precision": 0.9,
+      "recall": 0.8181818181818182,
+      "f1": 0.8571428571428571,
+      "n_test": 20
+    },
+    "RandomForest": {
+      "pr_auc": 0.9585576040121495,
+      "pr_auc_ci_low": 0.8554393424036281,
+      "pr_auc_ci_high": 1.0,
+      "roc_auc": 0.9494949494949495,
+      "roc_auc_ci_low": 0.839959595959596,
+      "roc_auc_ci_high": 1.0,
+      "accuracy": 0.8,
+      "precision": 0.8888888888888888,
+      "recall": 0.7272727272727273,
+      "f1": 0.8,
+      "n_test": 20
+    },
+    "XGBoost": {
+      "pr_auc": 0.9649678604224059,
+      "pr_auc_ci_low": 0.8638176406926408,
+      "pr_auc_ci_high": 1.0,
+      "roc_auc": 0.9595959595959596,
+      "roc_auc_ci_low": 0.8540246212121213,
+      "roc_auc_ci_high": 1.0,
+      "accuracy": 0.8,
+      "precision": 0.8888888888888888,
+      "recall": 0.7272727272727273,
+      "f1": 0.8,
+      "n_test": 20
+    },
+    "SVM": {
+      "pr_auc": 0.9342069546615002,
+      "pr_auc_ci_low": 0.7786341253443528,
+      "pr_auc_ci_high": 1.0,
+      "roc_auc": 0.9292929292929293,
+      "roc_auc_ci_low": 0.7738095238095238,
+      "roc_auc_ci_high": 1.0,
+      "accuracy": 0.75,
+      "precision": 0.875,
+      "recall": 0.6363636363636364,
+      "f1": 0.7368421052631579,
+      "n_test": 20
+    }
+  }
+}
