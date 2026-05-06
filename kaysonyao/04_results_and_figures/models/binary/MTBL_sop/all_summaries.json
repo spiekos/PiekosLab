@@ -2,7 +2,7 @@
   {
     "tissue": "plasma",
     "timepoint": "A",
-    "data_path": "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_plasma/MTBL_plasma_suffix_A.csv",
+    "data_path": "/sessions/zealous-sleepy-curie/mnt/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_plasma/MTBL_plasma_suffix_A.csv",
     "outcome": "Complication",
     "complications_pooled": [
       "HDP",
@@ -25,16 +25,16 @@
       "complication": 11
     },
     "n_features_pretlasso": 40,
-    "n_features_postlasso": 31,
+    "n_features_postlasso": 40,
     "best_model_val": "LogisticRegression",
-    "best_val_pr_auc": 0.9763888888888891,
+    "best_val_pr_auc": 0.9833333333333335,
     "test_metrics": {
       "LogisticRegression": {
-        "pr_auc": 0.9536042240587697,
-        "pr_auc_ci_low": 0.8306168831168833,
+        "pr_auc": 0.9649678604224059,
+        "pr_auc_ci_low": 0.8491780045351474,
         "pr_auc_ci_high": 1.0,
-        "roc_auc": 0.9494949494949494,
-        "roc_auc_ci_low": 0.8240714285714287,
+        "roc_auc": 0.9595959595959596,
+        "roc_auc_ci_low": 0.8484848484848485,
         "roc_auc_ci_high": 1.0,
         "accuracy": 0.9,
         "precision": 0.9090909090909091,
@@ -49,36 +49,36 @@
         "roc_auc": 0.9797979797979798,
         "roc_auc_ci_low": 0.91,
         "roc_auc_ci_high": 1.0,
-        "accuracy": 0.95,
-        "precision": 0.9166666666666666,
-        "recall": 1.0,
-        "f1": 0.9565217391304348,
+        "accuracy": 0.9,
+        "precision": 0.9090909090909091,
+        "recall": 0.9090909090909091,
+        "f1": 0.9090909090909091,
         "n_test": 20
       },
       "XGBoost": {
-        "pr_auc": 0.975068870523416,
-        "pr_auc_ci_low": 0.9036730769230771,
+        "pr_auc": 0.9173271173271172,
+        "pr_auc_ci_low": 0.7555324074074075,
         "pr_auc_ci_high": 1.0,
-        "roc_auc": 0.9696969696969697,
-        "roc_auc_ci_low": 0.8787878787878789,
+        "roc_auc": 0.9040404040404041,
+        "roc_auc_ci_low": 0.743936011904762,
         "roc_auc_ci_high": 1.0,
-        "accuracy": 0.85,
-        "precision": 0.9,
-        "recall": 0.8181818181818182,
-        "f1": 0.8571428571428571,
+        "accuracy": 0.75,
+        "precision": 0.8,
+        "recall": 0.7272727272727273,
+        "f1": 0.7619047619047619,
         "n_test": 20
       },
       "SVM": {
-        "pr_auc": 0.9777495232040687,
-        "pr_auc_ci_low": 0.9082983143399811,
+        "pr_auc": 0.9595404595404595,
+        "pr_auc_ci_low": 0.8626373626373625,
         "pr_auc_ci_high": 1.0,
-        "roc_auc": 0.9696969696969697,
-        "roc_auc_ci_low": 0.888888888888889,
+        "roc_auc": 0.9393939393939394,
+        "roc_auc_ci_low": 0.8180397727272728,
         "roc_auc_ci_high": 1.0,
-        "accuracy": 0.85,
-        "precision": 0.9,
+        "accuracy": 0.75,
+        "precision": 0.75,
         "recall": 0.8181818181818182,
-        "f1": 0.8571428571428571,
+        "f1": 0.782608695652174,
         "n_test": 20
       }
     }
@@ -86,7 +86,7 @@
   {
     "tissue": "plasma",
     "timepoint": "B",
-    "data_path": "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_plasma/MTBL_plasma_suffix_B.csv",
+    "data_path": "/sessions/zealous-sleepy-curie/mnt/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_plasma/MTBL_plasma_suffix_B.csv",
     "outcome": "Complication",
     "complications_pooled": [
       "HDP",
@@ -109,47 +109,47 @@
       "complication": 11
     },
     "n_features_pretlasso": 72,
-    "n_features_postlasso": 66,
+    "n_features_postlasso": 72,
     "best_model_val": "LogisticRegression",
     "best_val_pr_auc": 1.0,
     "test_metrics": {
       "LogisticRegression": {
-        "pr_auc": 0.9649678604224059,
-        "pr_auc_ci_low": 0.8769407713498624,
+        "pr_auc": 0.9750688705234161,
+        "pr_auc_ci_low": 0.8968190975690975,
         "pr_auc_ci_high": 1.0,
-        "roc_auc": 0.9595959595959596,
-        "roc_auc_ci_low": 0.8593552714646465,
+        "roc_auc": 0.9696969696969696,
+        "roc_auc_ci_low": 0.8799696969696968,
         "roc_auc_ci_high": 1.0,
-        "accuracy": 0.85,
-        "precision": 0.9,
-        "recall": 0.8181818181818182,
-        "f1": 0.8571428571428571,
+        "accuracy": 0.9,
+        "precision": 0.9090909090909091,
+        "recall": 0.9090909090909091,
+        "f1": 0.9090909090909091,
         "n_test": 20
       },
       "RandomForest": {
+        "pr_auc": 0.9649678604224059,
+        "pr_auc_ci_low": 0.8638176406926408,
+        "pr_auc_ci_high": 1.0,
+        "roc_auc": 0.9595959595959596,
+        "roc_auc_ci_low": 0.8540246212121214,
+        "roc_auc_ci_high": 1.0,
+        "accuracy": 0.75,
+        "precision": 0.875,
+        "recall": 0.6363636363636364,
+        "f1": 0.7368421052631579,
+        "n_test": 20
+      },
+      "XGBoost": {
         "pr_auc": 0.9585576040121495,
         "pr_auc_ci_low": 0.8554393424036281,
         "pr_auc_ci_high": 1.0,
         "roc_auc": 0.9494949494949495,
         "roc_auc_ci_low": 0.839959595959596,
         "roc_auc_ci_high": 1.0,
-        "accuracy": 0.8,
-        "precision": 0.8888888888888888,
-        "recall": 0.7272727272727273,
-        "f1": 0.8,
-        "n_test": 20
-      },
-      "XGBoost": {
-        "pr_auc": 0.9649678604224059,
-        "pr_auc_ci_low": 0.8638176406926408,
-        "pr_auc_ci_high": 1.0,
-        "roc_auc": 0.9595959595959596,
-        "roc_auc_ci_low": 0.8540246212121213,
-        "roc_auc_ci_high": 1.0,
-        "accuracy": 0.8,
-        "precision": 0.8888888888888888,
-        "recall": 0.7272727272727273,
-        "f1": 0.8,
+        "accuracy": 0.75,
+        "precision": 0.875,
+        "recall": 0.6363636363636364,
+        "f1": 0.7368421052631579,
         "n_test": 20
       },
       "SVM": {
@@ -159,10 +159,10 @@
         "roc_auc": 0.9292929292929293,
         "roc_auc_ci_low": 0.7738095238095238,
         "roc_auc_ci_high": 1.0,
-        "accuracy": 0.75,
-        "precision": 0.875,
-        "recall": 0.6363636363636364,
-        "f1": 0.7368421052631579,
+        "accuracy": 0.7,
+        "precision": 0.8571428571428571,
+        "recall": 0.5454545454545454,
+        "f1": 0.6666666666666666,
         "n_test": 20
       }
     }
@@ -170,7 +170,7 @@
   {
     "tissue": "plasma",
     "timepoint": "C",
-    "data_path": "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_plasma/MTBL_plasma_suffix_C.csv",
+    "data_path": "/sessions/zealous-sleepy-curie/mnt/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_plasma/MTBL_plasma_suffix_C.csv",
     "outcome": "Complication",
     "complications_pooled": [
       "HDP",
@@ -224,11 +224,11 @@
         "n_test": 20
       },
       "XGBoost": {
-        "pr_auc": 0.9340829624920535,
-        "pr_auc_ci_low": 0.7988859372950283,
+        "pr_auc": 0.9515151515151516,
+        "pr_auc_ci_low": 0.8286796536796537,
         "pr_auc_ci_high": 1.0,
-        "roc_auc": 0.898989898989899,
-        "roc_auc_ci_low": 0.7360863095238097,
+        "roc_auc": 0.9292929292929293,
+        "roc_auc_ci_low": 0.7801587301587303,
         "roc_auc_ci_high": 1.0,
         "accuracy": 0.8,
         "precision": 0.8888888888888888,
@@ -254,7 +254,7 @@
   {
     "tissue": "plasma",
     "timepoint": "D",
-    "data_path": "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_plasma/MTBL_plasma_suffix_D.csv",
+    "data_path": "/sessions/zealous-sleepy-curie/mnt/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_plasma/MTBL_plasma_suffix_D.csv",
     "outcome": "Complication",
     "complications_pooled": [
       "HDP",
@@ -277,7 +277,7 @@
       "complication": 8
     },
     "n_features_pretlasso": 49,
-    "n_features_postlasso": 48,
+    "n_features_postlasso": 49,
     "best_model_val": "LogisticRegression",
     "best_val_pr_auc": 1.0,
     "test_metrics": {
@@ -308,16 +308,16 @@
         "n_test": 17
       },
       "XGBoost": {
-        "pr_auc": 1.0,
-        "pr_auc_ci_low": 0.9999999999999998,
+        "pr_auc": 0.959375,
+        "pr_auc_ci_low": 0.8333333333333333,
         "pr_auc_ci_high": 1.0,
-        "roc_auc": 1.0,
-        "roc_auc_ci_low": 1.0,
+        "roc_auc": 0.9583333333333333,
+        "roc_auc_ci_low": 0.8426190476190478,
         "roc_auc_ci_high": 1.0,
-        "accuracy": 0.8235294117647058,
-        "precision": 0.7272727272727273,
+        "accuracy": 0.8823529411764706,
+        "precision": 0.8,
         "recall": 1.0,
-        "f1": 0.8421052631578947,
+        "f1": 0.8888888888888888,
         "n_test": 17
       },
       "SVM": {
@@ -338,7 +338,7 @@
   {
     "tissue": "plasma",
     "timepoint": "E",
-    "data_path": "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_plasma/MTBL_plasma_suffix_E.csv",
+    "data_path": "/sessions/zealous-sleepy-curie/mnt/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_plasma/MTBL_plasma_suffix_E.csv",
     "outcome": "Complication",
     "complications_pooled": [
       "HDP",
@@ -361,8 +361,8 @@
       "complication": 3
     },
     "n_features_pretlasso": 43,
-    "n_features_postlasso": 4,
-    "best_model_val": "RandomForest",
+    "n_features_postlasso": 43,
+    "best_model_val": "LogisticRegression",
     "best_val_pr_auc": 1.0,
     "test_metrics": {
       "LogisticRegression": {
@@ -411,10 +411,10 @@
         "roc_auc": 1.0,
         "roc_auc_ci_low": 1.0,
         "roc_auc_ci_high": 1.0,
-        "accuracy": 1.0,
-        "precision": 1.0,
+        "accuracy": 0.8,
+        "precision": 0.75,
         "recall": 1.0,
-        "f1": 1.0,
+        "f1": 0.8571428571428571,
         "n_test": 5
       }
     }
@@ -422,7 +422,7 @@
   {
     "tissue": "placenta",
     "timepoint": "all",
-    "data_path": "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_placenta/MTBL_placenta_cleaned_with_metadata.csv",
+    "data_path": "/sessions/zealous-sleepy-curie/mnt/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_placenta/MTBL_placenta_cleaned_with_metadata.csv",
     "outcome": "Complication",
     "complications_pooled": [
       "HDP",
@@ -463,12 +463,12 @@
         "n_test": 17
       },
       "RandomForest": {
-        "pr_auc": 0.6815536315536315,
-        "pr_auc_ci_low": 0.37605519480519484,
-        "pr_auc_ci_high": 0.9623438114915387,
-        "roc_auc": 0.6666666666666666,
-        "roc_auc_ci_low": 0.34261904761904777,
-        "roc_auc_ci_high": 0.9305555555555556,
+        "pr_auc": 0.5882996632996633,
+        "pr_auc_ci_low": 0.3547261904761906,
+        "pr_auc_ci_high": 0.941687062937063,
+        "roc_auc": 0.611111111111111,
+        "roc_auc_ci_low": 0.25756493506493505,
+        "roc_auc_ci_high": 0.888888888888889,
         "accuracy": 0.6470588235294118,
         "precision": 0.6363636363636364,
         "recall": 0.7777777777777778,
@@ -476,12 +476,12 @@
         "n_test": 17
       },
       "XGBoost": {
-        "pr_auc": 0.6825507825507826,
-        "pr_auc_ci_low": 0.39298904220779224,
-        "pr_auc_ci_high": 0.96140873015873,
-        "roc_auc": 0.6944444444444444,
-        "roc_auc_ci_low": 0.3712774725274727,
-        "roc_auc_ci_high": 0.9423076923076923,
+        "pr_auc": 0.7815536315536316,
+        "pr_auc_ci_low": 0.47487689393939414,
+        "pr_auc_ci_high": 0.9610743423243423,
+        "roc_auc": 0.7222222222222221,
+        "roc_auc_ci_low": 0.41666666666666663,
+        "roc_auc_ci_high": 0.9394667832167831,
         "accuracy": 0.6470588235294118,
         "precision": 0.6666666666666666,
         "recall": 0.6666666666666666,

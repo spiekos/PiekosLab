@@ -1,19 +1,3 @@
-"""
-Pathway over-representation analysis (ORA) for MTBL_sop significant metabolites.
-
-Strategy:
-  1. Load MTBL_plasma feature metadata → compound names for all 502 analytes (background)
-  2. Load differential results (MTBL_sop) → compound names for q<0.05 analytes per TP
-  3. Map compound names → HMDB IDs via MetaboAnalyst REST API (name matching)
-  4. Run ORA per timepoint + union-across-TPs using KEGG PATHWAY / SMPDB via MetaboAnalyst
-  5. Save per-TP result CSVs + a dot-plot summary figure
-
-Usage (from kaysonyao/):
-    python3 03_model_development/run_pathway_analysis.py
-    python3 03_model_development/run_pathway_analysis.py --sig-only   # use q<0.05+FC sig set
-    python3 03_model_development/run_pathway_analysis.py --timepoints A B C
-"""
-
 import argparse
 import json
 import logging
@@ -37,14 +21,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ── Constants ────────────────────────────────────────────────────────────────
 METABOANALYST_API = "https://rest.xialab.ca/api"
 KEGG_API          = "https://rest.kegg.jp"
 TIMEPOINTS        = ["A", "B", "C", "D", "E"]
 _METADATA_COLS    = {"SampleID","SubjectID","Group","Timepoint","Batch",
                      "MetadataCanonicalID","Age","BMI","Gestational_Age"}
-
-# ── Data loading ─────────────────────────────────────────────────────────────
 
 def load_feature_metadata(wkdir: str) -> pd.DataFrame:
     path = os.path.join(wkdir, "data", "cleaned", "sop_omics_pipeline_v2",
@@ -55,11 +36,6 @@ def load_feature_metadata(wkdir: str) -> pd.DataFrame:
 
 
 def load_sig_analytes(wkdir: str, use_sig_only: bool = False) -> dict:
-    """
-    Returns {tp: [analyte_id, ...]} for named analytes that pass threshold.
-    use_sig_only=True  → q<0.05 + |log2FC|>=0.585  (the 'significant' column)
-    use_sig_only=False → q<0.05 only               (what feeds the model)
-    """
     result = {}
     diff_root = os.path.join(wkdir, "04_results_and_figures",
                              "differential_analysis", "MTBL_sop",
@@ -77,8 +53,6 @@ def load_sig_analytes(wkdir: str, use_sig_only: bool = False) -> dict:
         result[tp] = hits
     return result
 
-
-# ── Name → HMDB mapping via MetaboAnalyst ────────────────────────────────────
 
 def _match_one(name: str) -> dict:
     """Map a single compound name via MetaboAnalyst REST. Returns a result dict."""
@@ -105,17 +79,9 @@ def _metaboanalyst_name_match(
     cache_path: str | None = None,
     n_workers: int = 20,
 ) -> pd.DataFrame:
-    """
-    Map compound names to KEGG/HMDB IDs via MetaboAnalyst REST.
-    Uses parallel workers and a file-based cache with incremental saving
-    so interrupted runs can resume without re-querying.
-
-    Returns DataFrame with columns: query, hmdb_id, kegg_id, match_status
-    """
     import threading
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
-    # Load cache if available
     cached = {}
     if cache_path and os.path.exists(cache_path):
         cached_df = pd.read_csv(cache_path, dtype=str).fillna("")
@@ -126,7 +92,6 @@ def _metaboanalyst_name_match(
     logger.info("  Name matching: %d cached, %d to fetch (workers=%d)",
                 len(cached), len(to_fetch), n_workers)
 
-    # Thread-safe incremental cache writing
     lock         = threading.Lock()
     fetched      = {}
     save_counter = [0]
@@ -148,14 +113,11 @@ def _metaboanalyst_name_match(
                     fetched[result["query"]] = result
                     done += 1
                     save_counter[0] += 1
-                    if save_counter[0] % 15 == 0:    # save every 15 results
+                    if save_counter[0] % 15 == 0:
                         _flush_cache({})
                         logger.info("    … %d / %d fetched (cache saved)", done, len(to_fetch))
-
-        # Final save
         _flush_cache({})
 
-    # Merge cached + fetched; return in original order
     all_rows = {**cached, **fetched}
     rows     = [all_rows[n] for n in compound_names if n in all_rows]
     df       = pd.DataFrame(rows)
@@ -164,15 +126,7 @@ def _metaboanalyst_name_match(
     return df
 
 
-# ── KEGG pathway ORA ─────────────────────────────────────────────────────────
-
 def _get_kegg_pathways_for_compound(kegg_cid: str, organism: str = "map") -> list[str]:
-    """Return KEGG pathway IDs that contain this compound (reference map pathways).
-
-    The KEGG link API returns reference pathway IDs in the form 'path:map00220'.
-    We keep all 'map' pathways (universal reference pathways) which cover all
-    metabolic reactions regardless of organism — appropriate for metabolomics ORA.
-    """
     time.sleep(0.2)   # be polite to KEGG
     url = f"{KEGG_API}/link/pathway/cpd:{kegg_cid}"
     try:
@@ -196,7 +150,6 @@ def _get_kegg_pathways_for_compound(kegg_cid: str, organism: str = "map") -> lis
 
 
 def _get_kegg_pathway_name(pathway_id: str) -> str:
-    """Fetch the human-readable name for a KEGG pathway ID."""
     time.sleep(0.1)
     url = f"{KEGG_API}/get/{pathway_id}"
     try:
@@ -214,10 +167,6 @@ def _get_kegg_pathway_name(pathway_id: str) -> str:
 
 
 def build_compound_pathway_map(kegg_ids: list[str]) -> dict[str, list[str]]:
-    """
-    Build {kegg_id: [pathway_id, ...]} for a list of KEGG compound IDs.
-    Skips empty/null IDs.
-    """
     cpd_map = {}
     valid = [k for k in kegg_ids if k and k != "nan"]
     logger.info("  Fetching KEGG pathway membership for %d compounds…", len(valid))
@@ -234,19 +183,11 @@ def run_ora(
     bg_kegg_ids:   list[str],
     cpd_pathway_map: dict[str, list[str]],
 ) -> pd.DataFrame:
-    """
-    Over-representation analysis (ORA) using Fisher's exact test.
-
-    hit_kegg_ids : KEGG IDs of the "foreground" (significant) compounds
-    bg_kegg_ids  : KEGG IDs of ALL compounds tested (background)
-    cpd_pathway_map: {kegg_id: [pathway_id, ...]}
-    """
     hit_set = set(hit_kegg_ids)
     bg_set  = set(bg_kegg_ids)
     n_hit   = len(hit_set)
     n_bg    = len(bg_set)
 
-    # Invert map: pathway → set of compound IDs
     pathway_to_cpds = {}
     for cid, pathways in cpd_pathway_map.items():
         for p in pathways:
@@ -258,11 +199,6 @@ def run_ora(
         in_bg   = len(bg_set   & pathway_cpds)
         if in_hit == 0:
             continue
-
-        # 2×2 contingency:
-        #            In pathway  Not in pathway
-        # Hits              a           b
-        # Background        c           d
         a = in_hit
         b = n_hit  - in_hit
         c = in_bg  - in_hit      # background only (not counting hits twice)
@@ -284,19 +220,15 @@ def run_ora(
         return pd.DataFrame()
 
     df = pd.DataFrame(rows).sort_values("p_value")
-    # FDR correction
     _, q_vals, _, _ = multipletests(df["p_value"].values, method="fdr_bh")
     df["q_value"] = q_vals
     df["significant"] = df["q_value"] < 0.05
 
-    # Add pathway names
     logger.info("  Fetching pathway names for %d pathways…", len(df))
     df["pathway_name"] = df["pathway_id"].apply(_get_kegg_pathway_name)
 
     return df.sort_values("q_value").reset_index(drop=True)
 
-
-# ── Visualisation ─────────────────────────────────────────────────────────────
 
 def plot_pathway_dotplot(
     ora_df: pd.DataFrame,
@@ -304,7 +236,6 @@ def plot_pathway_dotplot(
     output_path: str,
     top_n: int = 20,
 ):
-    """Dot plot: x = -log10(p), dot size = hits in pathway, colour = q-value."""
     df = ora_df.head(top_n).copy()
     if df.empty:
         logger.warning("No pathways to plot for %s", title)
@@ -346,8 +277,6 @@ def plot_pathway_dotplot(
     logger.info("  Dot plot saved: %s", output_path)
 
 
-# ── Main pipeline ─────────────────────────────────────────────────────────────
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--timepoints",  nargs="+", default=TIMEPOINTS)
@@ -360,15 +289,12 @@ def main():
                             "pathway_analysis", "MTBL_sop")
     os.makedirs(out_root, exist_ok=True)
 
-    # ── 1. Load data ──────────────────────────────────────────────────────
     meta     = load_feature_metadata(wkdir)
     sig_dict = load_sig_analytes(wkdir, use_sig_only=args.sig_only)
 
-    # Background = all named analytes
     bg_named  = meta[meta["is_named"] == True]["annotation_name"].dropna().tolist()
     logger.info("Background (named analytes): %d compounds", len(bg_named))
 
-    # ── 2. Name → HMDB/KEGG mapping for background ────────────────────────
     cache_path = os.path.join(out_root, "background_name_mapping.csv")
     logger.info("Mapping background compound names via MetaboAnalyst…")
     bg_map = _metaboanalyst_name_match(bg_named, cache_path=cache_path, n_workers=6)
@@ -378,13 +304,11 @@ def main():
     bg_kegg_ids = bg_map["kegg_id"].dropna().tolist()
     bg_kegg_ids = [k for k in bg_kegg_ids if k and k != "nan" and k != ""]
 
-    # ── 3. Build compound → pathway map from background KEGG IDs ──────────
     logger.info("Building KEGG pathway membership map for background…")
     cpd_pathway_map = build_compound_pathway_map(bg_kegg_ids)
     with open(os.path.join(out_root, "compound_pathway_map.json"), "w") as fh:
         json.dump({k: v for k, v in cpd_pathway_map.items() if v}, fh, indent=2)
 
-    # ── 4. Per-timepoint ORA ──────────────────────────────────────────────
     all_pathway_results = {}
     union_hit_ids = set()
 
@@ -403,13 +327,10 @@ def main():
             logger.warning("  Too few named hits for ORA (n=%d), skipping.", n_hit)
             continue
 
-        # Get compound names
         hit_names  = [meta.loc[i, "annotation_name"] for i in hit_ids]
 
-        # Map hit names to KEGG IDs — reuse background cache first, only fetch truly new names
         logger.info("  Mapping hit compound names (reusing background cache)…")
         hit_cache = os.path.join(out_root, f"TP{tp}_hit_mapping.csv")
-        # Seed hit cache with any entries already present in the background cache
         bg_cache_path = os.path.join(out_root, "background_name_mapping.csv")
         if os.path.exists(bg_cache_path) and not os.path.exists(hit_cache):
             bg_df = pd.read_csv(bg_cache_path)
@@ -428,13 +349,11 @@ def main():
             logger.warning("  No KEGG IDs returned for TP %s hits.", tp)
             continue
 
-        # Add any new hit compounds to the pathway map
         new_ids = [k for k in hit_kegg_ids if k not in cpd_pathway_map]
         if new_ids:
             extra = build_compound_pathway_map(new_ids)
             cpd_pathway_map.update(extra)
 
-        # ORA
         logger.info("  Running ORA for TP %s…", tp)
         ora_df = run_ora(hit_kegg_ids, bg_kegg_ids, cpd_pathway_map)
 
@@ -442,12 +361,10 @@ def main():
             logger.warning("  No pathway overlaps found for TP %s.", tp)
             continue
 
-        # Save
         tp_dir = os.path.join(out_root, f"plasma_TP{tp}")
         os.makedirs(tp_dir, exist_ok=True)
         ora_df.to_csv(os.path.join(tp_dir, "pathway_ora_results.csv"), index=False)
 
-        # Plot
         n_sig = (ora_df["q_value"] < 0.05).sum()
         label = "sig only (q<0.05+FC)" if args.sig_only else "q<0.05"
         plot_pathway_dotplot(
@@ -460,7 +377,6 @@ def main():
         all_pathway_results[tp] = ora_df
         logger.info("  TP %s: %d pathways tested, %d significant (q<0.05)", tp, len(ora_df), n_sig)
 
-    # ── 5. Union analysis (hits across all TPs) ────────────────────────────
     if len(union_hit_ids) >= 2:
         logger.info("=== Union analysis (%d unique KEGG hit IDs across all TPs) ===",
                     len(union_hit_ids))
@@ -486,7 +402,6 @@ def main():
             all_pathway_results["union"] = ora_union
             logger.info("Union: %d pathways tested, %d significant", len(ora_union), n_sig)
 
-    # ── 6. Cross-TP heatmap: top pathways vs timepoint significance ────────
     if len(all_pathway_results) >= 2:
         _plot_cross_tp_heatmap(all_pathway_results, out_root)
 

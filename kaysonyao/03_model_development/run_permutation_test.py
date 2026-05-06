@@ -1,19 +1,3 @@
-"""
-Permutation test for MTBL_sop binary classifier results.
-
-Strategy (fast, no re-running LASSO/Optuna):
-  - Load the already-saved scaled trainval / test splits
-  - Reconstruct y_trainval from sample_splits.csv
-  - Use the tuned hyperparameters from the real run
-  - For N permutations: shuffle y_trainval, fit best model, score on X_test
-  - p-value = fraction of null PR-AUCs >= observed PR-AUC
-  - Save per-condition plots + a combined summary
-
-Usage (from kaysonyao folder):
-    python3 ../run_permutation_test.py --n-perm 1000
-    python3 ../run_permutation_test.py --n-perm 1000 --dataset MTBL_sop
-"""
-
 import argparse
 import json
 import logging
@@ -30,15 +14,7 @@ from sklearn.metrics import average_precision_score
 from sklearn.preprocessing import RobustScaler
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# Support running from /sessions/zealous-sleepy-curie or from kaysonyao/
-for _candidate in [
-    os.path.join(_SCRIPT_DIR),
-    os.path.join(_SCRIPT_DIR, "03_model_development"),
-    os.path.join(os.getcwd(), "03_model_development"),
-]:
-    if os.path.isdir(_candidate):
-        sys.path.insert(0, _candidate)
-        break
+sys.path.insert(0, _SCRIPT_DIR)
 from utilities import build_tuned_model_binary, RANDOM_STATE
 
 logging.basicConfig(
@@ -49,16 +25,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 def _load_condition(result_dir: str):
-    """
-    Load pre-saved scaled data, labels, and tuned params for one condition.
-    Returns (X_trainval, y_trainval, X_test, y_test, best_model_name, best_params)
-    or None if files are missing.
-    """
     needed = [
         "X_trainval_scaled.csv", "X_test_scaled.csv",
         "sample_splits.csv", "y_test.csv",
@@ -76,7 +43,6 @@ def _load_condition(result_dir: str):
     splits = pd.read_csv(os.path.join(result_dir, "sample_splits.csv"))
     tv_mask = splits["split"].isin(["train", "val"])
     tv_rows = splits.loc[tv_mask].set_index("SampleID")
-    # Align y_trainval to X_trainval row order
     y_tv = tv_rows.loc[X_tv.index, "label"].astype(int)
 
     with open(os.path.join(result_dir, "tuned_hyperparams.json")) as fh:
@@ -98,10 +64,6 @@ def run_permutation_test(
     n_perm: int = 1000,
     random_state: int = RANDOM_STATE,
 ) -> dict | None:
-    """
-    Run permutation test for one condition (tissue x timepoint).
-    Returns summary dict with p-value and null distribution stats.
-    """
     loaded = _load_condition(result_dir)
     if loaded is None:
         return None
@@ -158,7 +120,6 @@ def run_permutation_test(
         "✓ significant" if p_value < 0.05 else "✗ NOT significant",
     )
 
-    # ── Plot ──────────────────────────────────────────────────────────────
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.hist(null_prs, bins=40, color="#94a3b8", edgecolor="white", linewidth=0.4, label="Null distribution")
     ax.axvline(actual_pr, color="#ef4444", linewidth=2.0, label=f"Observed PR-AUC = {actual_pr:.3f}")
@@ -193,10 +154,6 @@ def run_permutation_test(
     }
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-
 def main():
     parser = argparse.ArgumentParser(description="Permutation test on saved MTBL_sop model results.")
     parser.add_argument("--dataset", default="MTBL_sop", choices=["MTBL_sop", "LIPD_sop"],
@@ -209,12 +166,10 @@ def main():
     result_root = os.path.join(wkdir, "04_results_and_figures", "models", "binary", args.dataset)
 
     conditions = []
-    # Plasma timepoints
     for tp in ["A", "B", "C", "D", "E"]:
         d = os.path.join(result_root, "plasma", tp)
         if os.path.isdir(d):
             conditions.append((d, f"plasma/{tp}"))
-    # Placenta
     d = os.path.join(result_root, "placenta", "all")
     if os.path.isdir(d):
         conditions.append((d, "placenta/all"))
@@ -233,13 +188,11 @@ def main():
         logger.error("No results produced.")
         sys.exit(1)
 
-    # ── Save combined summary ────────────────────────────────────────────
     summary_path = os.path.join(result_root, "permutation_test_summary.json")
     with open(summary_path, "w") as fh:
         json.dump(all_results, fh, indent=2)
     logger.info("Summary saved: %s", summary_path)
 
-    # ── Print table ──────────────────────────────────────────────────────
     print("\n" + "=" * 80)
     print(f"Permutation Test Summary — {args.dataset}  (n_perm={args.n_perm})")
     print("=" * 80)

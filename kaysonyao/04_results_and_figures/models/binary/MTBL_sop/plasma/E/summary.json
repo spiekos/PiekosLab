@@ -1,7 +1,7 @@
 {
   "tissue": "plasma",
   "timepoint": "E",
-  "data_path": "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_plasma/MTBL_plasma_suffix_E.csv",
+  "data_path": "/sessions/zealous-sleepy-curie/mnt/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_plasma/MTBL_plasma_suffix_E.csv",
   "outcome": "Complication",
   "complications_pooled": [
     "HDP",
@@ -24,8 +24,8 @@
     "complication": 3
   },
   "n_features_pretlasso": 43,
-  "n_features_postlasso": 4,
-  "best_model_val": "RandomForest",
+  "n_features_postlasso": 43,
+  "best_model_val": "LogisticRegression",
   "best_val_pr_auc": 1.0,
   "test_metrics": {
     "LogisticRegression": {
@@ -74,10 +74,10 @@
       "roc_auc": 1.0,
       "roc_auc_ci_low": 1.0,
       "roc_auc_ci_high": 1.0,
-      "accuracy": 1.0,
-      "precision": 1.0,
+      "accuracy": 0.8,
+      "precision": 0.75,
       "recall": 1.0,
-      "f1": 1.0,
+      "f1": 0.8571428571428571,
       "n_test": 5
     }
   }

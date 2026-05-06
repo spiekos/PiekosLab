@@ -1,32 +1,3 @@
-"""
-superset_enrichment_analysis.py
-
-Over-representation analysis (ORA) via the Enrichr REST API on the
-LASSO-selected proteins identified as important by the binary models.
-
-Outputs (under --output-dir)
------------------------------
-  enrichment/
-    {label}/
-      {library}_enrichment.csv       (all terms, q < 0.05 highlighted)
-    summary/
-      {label}_top_terms.png          (top-10 terms per database, dot-plot)
-  analysis_log.txt
-
-Requires: requests, pandas, matplotlib, scipy
-
-Usage
------
-  python 03_model_development/superset_enrichment_analysis.py
-
-  # Custom paths:
-  python 03_model_development/superset_enrichment_analysis.py \\
-      --binary-results-dir 04_results_and_figures/models/binary \\
-      --output-dir 04_results_and_figures/models/binary/superset_enrichment \\
-      --superset-timepoints A B C D \\
-      --fdr-threshold 0.05
-"""
-
 import argparse
 import datetime
 import logging
@@ -41,9 +12,6 @@ import numpy as np
 import pandas as pd
 import requests
 
-# ---------------------------------------------------------------------------
-# Path setup
-# ---------------------------------------------------------------------------
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _SCRIPT_DIR)
 
@@ -52,10 +20,6 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 
 ENRICHR_BASE  = "https://maayanlab.cloud/Enrichr"
 ENRICHR_LIBS  = [
@@ -77,18 +41,12 @@ _GENES_IDX    = 5
 _ADJP_IDX     = 6
 
 FDR_THRESHOLD = 0.05
-MIN_GENES     = 2          # minimum gene list size; warn but still query below this
+MIN_GENES     = 2
 _PNG_DPI      = 300
-_TOP_N        = 10         # terms shown per library in summary dot-plot
+_TOP_N        = 10
 
-
-# ---------------------------------------------------------------------------
-# Enrichr helpers
-# ---------------------------------------------------------------------------
 
 def _enrichr_add_list(genes: list, description: str = "") -> int | None:
-    """POST a gene list to Enrichr; returns userListId or None on failure."""
-    # Enrichr expects multipart/form-data, not URL-encoded
     files = {
         "list":        (None, "\n".join(genes)),
         "description": (None, description),
@@ -103,7 +61,6 @@ def _enrichr_add_list(genes: list, description: str = "") -> int | None:
 
 
 def _enrichr_get_results(user_list_id: int, library: str) -> pd.DataFrame | None:
-    """Fetch enrichment results for one library; returns DataFrame or None."""
     url = f"{ENRICHR_BASE}/enrich"
     params = {"userListId": user_list_id, "backgroundType": library}
     try:
@@ -141,11 +98,6 @@ def run_enrichr(
     fdr_threshold: float = FDR_THRESHOLD,
     retry_delay: float = 1.5,
 ) -> dict:
-    """
-    Run ORA for all ENRICHR_LIBS on *genes* and save per-library CSVs.
-
-    Returns dict {library_name: DataFrame}.
-    """
     os.makedirs(output_dir, exist_ok=True)
     n = len(genes)
 
@@ -186,13 +138,7 @@ def run_enrichr(
     return results
 
 
-# ---------------------------------------------------------------------------
-# Plotting
-# ---------------------------------------------------------------------------
-
 def _clean_term_label(term: str, max_len: int = 55) -> str:
-    """Shorten long GO/KEGG/Reactome term strings for axis labels."""
-    # Strip trailing GO ID like ' (GO:0006355)'
     if " (" in term:
         term = term[:term.rfind(" (")]
     # Strip leading 'REACTOME_' / 'KEGG_' prefixes (some versions)
@@ -206,33 +152,25 @@ def _clean_term_label(term: str, max_len: int = 55) -> str:
 
 def _lib_short_name(lib: str) -> str:
     mapping = {
-        "GO_Biological_Process_2023": "GO:BP",
-        "GO_Molecular_Function_2023": "GO:MF",
-        "GO_Cellular_Component_2023": "GO:CC",
-        "KEGG_2021_Human":            "KEGG",
-        "Reactome_2022":              "Reactome",
+        "GO_Biological_Process_2025": "GO:BP",
+        "GO_Molecular_Function_2025": "GO:MF",
+        "GO_Cellular_Component_2025": "GO:CC",
+        "KEGG_2026":                  "KEGG",
+        "Reactome_Pathways_2024":     "Reactome",
     }
     return mapping.get(lib, lib)
 
 
 def plot_enrichment_summary(
-    all_results: dict,        # {library: DataFrame}
+    all_results: dict,
     label: str,
     n_genes: int,
     output_dir: str,
     top_n: int = _TOP_N,
     fdr_threshold: float = FDR_THRESHOLD,
 ) -> None:
-    """
-    Dot-plot: top-N significant terms per database.
-
-    Dot size  = number of overlapping genes (derived from 'genes' column).
-    Dot color = -log10(adjusted_p_value).
-    Only significant terms (adj-p < fdr_threshold) are shown.
-    """
     os.makedirs(output_dir, exist_ok=True)
 
-    # Collect top-N significant terms per library
     plot_rows = []
     for lib, df in all_results.items():
         if df.empty:
@@ -257,10 +195,8 @@ def plot_enrichment_summary(
         return
 
     plot_df = pd.DataFrame(plot_rows)
-    # Deduplicate (same term can appear in multiple libraries)
     plot_df = plot_df.drop_duplicates(subset=["term", "library"])
 
-    # Sort by library then by significance
     lib_order   = [_lib_short_name(l) for l in ENRICHR_LIBS]
     plot_df["lib_rank"] = plot_df["library"].map(
         {l: i for i, l in enumerate(lib_order)}
@@ -325,22 +261,13 @@ def plot_enrichment_summary(
     logger.info("[%s] Dot-plot saved → %s.png", label, out_stem)
 
 
-# ---------------------------------------------------------------------------
-# Gene-set collection helpers
-# ---------------------------------------------------------------------------
-
 def _load_features(csv_path: str) -> list:
-    """Load a lasso_selected_features.csv and return gene list."""
     if not os.path.exists(csv_path):
         return []
     return pd.read_csv(csv_path)["feature"].dropna().tolist()
 
 
 def collect_gene_sets(binary_results_dir: str, timepoints: list) -> dict:
-    """
-    Return a dict of {label: [gene_list]} for each timepoint, placenta,
-    and the full superset.
-    """
     sets = {}
 
     # Per timepoint
@@ -368,10 +295,6 @@ def collect_gene_sets(binary_results_dir: str, timepoints: list) -> dict:
     return sets
 
 
-# ---------------------------------------------------------------------------
-# Main pipeline
-# ---------------------------------------------------------------------------
-
 def run_superset_enrichment(
     binary_results_dir: str,
     output_dir: str,
@@ -380,7 +303,6 @@ def run_superset_enrichment(
 ) -> None:
     os.makedirs(output_dir, exist_ok=True)
 
-    # ── logging ──────────────────────────────────────────────────────────
     log_path = os.path.join(output_dir, "analysis_log.txt")
     fh = logging.FileHandler(log_path, mode="w", encoding="utf-8")
     fh.setLevel(logging.INFO)
@@ -395,7 +317,6 @@ def run_superset_enrichment(
     logger.info("FDR thresh : %.2f (Enrichr adjusted p-value)", fdr_threshold)
     logger.info("=" * 70)
 
-    # ── collect gene sets ─────────────────────────────────────────────────
     gene_sets = collect_gene_sets(binary_results_dir, superset_timepoints)
 
     if not gene_sets:
@@ -411,7 +332,6 @@ def run_superset_enrichment(
 
     summary_dir = os.path.join(output_dir, "summary")
 
-    # ── run enrichment per gene set ───────────────────────────────────────
     for label, genes in gene_sets.items():
         label_dir = os.path.join(output_dir, label)
         logger.info("-" * 60)
@@ -433,15 +353,9 @@ def run_superset_enrichment(
     logger.info("Enrichment analysis complete. Output: %s", output_dir)
 
 
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
-
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        description=(
-            "Over-representation analysis (Enrichr) on LASSO-selected superset proteins."
-        )
+        description="Over-representation analysis (Enrichr) on LASSO-selected superset proteins."
     )
     p.add_argument(
         "--binary-results-dir",

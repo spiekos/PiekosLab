@@ -1,7 +1,7 @@
 {
   "tissue": "plasma",
   "timepoint": "C",
-  "data_path": "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_plasma/MTBL_plasma_suffix_C.csv",
+  "data_path": "/sessions/zealous-sleepy-curie/mnt/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_plasma/MTBL_plasma_suffix_C.csv",
   "outcome": "Complication",
   "complications_pooled": [
     "HDP",
@@ -55,11 +55,11 @@
       "n_test": 20
     },
     "XGBoost": {
-      "pr_auc": 0.9340829624920535,
-      "pr_auc_ci_low": 0.7988859372950283,
+      "pr_auc": 0.9515151515151516,
+      "pr_auc_ci_low": 0.8286796536796537,
       "pr_auc_ci_high": 1.0,
-      "roc_auc": 0.898989898989899,
-      "roc_auc_ci_low": 0.7360863095238097,
+      "roc_auc": 0.9292929292929293,
+      "roc_auc_ci_low": 0.7801587301587303,
       "roc_auc_ci_high": 1.0,
       "accuracy": 0.8,
       "precision": 0.8888888888888888,

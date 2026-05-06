@@ -6,12 +6,18 @@ Machine learning classification pipeline for DP3 multi-omics data. Predicts preg
 
 | Script | Description |
 |--------|-------------|
-| `utilities.py` | Shared helpers: data loading, 70/15/15 split, LASSO feature selection, CV runners, evaluation metrics, plotting |
-| `binary_classifier.py` | Binary classifiers (Control vs pooled Complication) per tissue and timepoint |
+| `utilities.py` | Shared helpers: data loading, 70/15/15 split, LASSO feature selection, CV runners, evaluation metrics, plotting, superset feature collection |
+| `binary_classifier.py` | Binary classifiers (Control vs pooled Complication) per tissue and timepoint; supports proteomics and metabolomics via `--file-prefix` |
 | `multilabel_classifier.py` | Joint multi-label classifier (HDP + FGR + sPTB simultaneously) per tissue and timepoint |
-| `superset_enrichment_analysis.py` | Enrichr pathway enrichment on the union of LASSO-selected proteomics features across all significant timepoints |
+| `run_sop_models.py` | Binary classification on SOP v4 pipeline outputs (MTBL_sop / LIPD_sop); plasma pre-filter uses cross-sectional differential results, placenta pre-filter uses CS ∪ longitudinal union |
+| `run_sop_nodiff.py` | Same as `run_sop_models.py` but skips differential pre-filtering — all analyte columns are passed directly to LASSO |
+| `run_survey_models.py` | Binary + multilabel classification on survey/environmental data (EPDS, PSS, PUQE-24, water disinfection by-products) at visits A, C, D, PP |
+| `run_permutation_test.py` | Permutation test (n=1000) on saved binary model results; validates PR-AUC significance by shuffling training labels |
+| `feature_interpretation.py` | SHAP, LIME, and Gini feature importance for trained binary models; generates combined panel plots per tissue/timepoint |
+| `superset_differential_analysis.py` | Runs differential analysis restricted to the LASSO superset (union of selected features across timepoints) |
+| `superset_enrichment_analysis.py` | Enrichr pathway enrichment (GO:BP, GO:MF, GO:CC, KEGG 2026, Reactome) on the union of LASSO-selected proteomics features across timepoints |
 | `metabolomics_enrichment_analysis.py` | KEGG REST API pathway enrichment (ORA) on significant metabolomics analytes from differential analysis |
-| `superset_differential_analysis.py`| Same differential analysis pipeline can be conducted again on the superset if necessary|
+| `run_pathway_analysis.py` | HMDB/KEGG pathway analysis for metabolomics; alternative enrichment approach using MetaboAnalyst-style name matching |
 
 ## Pipeline overview
 
@@ -211,14 +217,65 @@ Requires `optuna` (`pip install optuna`).
 
 ### `superset_enrichment_analysis.py`
 
-Runs Enrichr pathway enrichment on the union of LASSO-selected proteomics features across all plasma timepoints and placenta where the binary model achieved PR-AUC ≥ 0.6.
+Runs Enrichr pathway enrichment (GO:BP, GO:MF, GO:CC, KEGG 2026, Reactome 2024) on per-set gene lists: one per plasma timepoint, one for placenta, and a union superset. Input is `lasso_selected_features.csv` from binary classifier outputs.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--models-dir` | `04_results_and_figures/models/binary/` | Root binary model output directory |
-| `--output-dir` | `04_results_and_figures/models/binary/enrichment/` | Enrichment output directory |
-| `--gene-sets` | `GO_Biological_Process_2025 KEGG_2026 Reactome_Pathways_2024` | Enrichr databases to query |
-| `--pr-auc-threshold` | `0.6` | Minimum PR-AUC for a timepoint to contribute to the superset |
+| `--binary-results-dir` | `04_results_and_figures/models/binary/` | Root binary model output directory containing `plasma/<TP>/lasso_selected_features.csv` |
+| `--output-dir` | `04_results_and_figures/models/binary/superset_enrichment/` | Enrichment output directory |
+| `--superset-timepoints` | `A B C D` | Plasma timepoints included in the superset (E excluded by default due to LASSO regularisation collapse) |
+| `--fdr-threshold` | `0.05` | Adjusted p-value threshold for significance |
+
+### `run_sop_models.py`
+
+Binary classification on SOP v4 pipeline outputs (MTBL_sop / LIPD_sop). Plasma uses cross-sectional differential pre-filter at each timepoint; placenta uses the union of cross-sectional and longitudinal significant analytes.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--dataset` | both | `MTBL_sop` or `LIPD_sop`; if omitted, runs both |
+| `--n-trials` | `50` | Optuna trials per model |
+| `--skip-plasma` | False | Skip plasma timepoints |
+| `--skip-placenta` | False | Skip placenta |
+
+### `run_sop_nodiff.py`
+
+Same pipeline as `run_sop_models.py` but without differential pre-filtering — all analyte columns are passed to LASSO. Useful for ablation comparison.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--dataset` | both | `MTBL_sop` or `LIPD_sop` |
+| `--n-trials` | `50` | Optuna trials per model |
+| `--skip-plasma` | False | Skip plasma |
+| `--skip-placenta` | False | Skip placenta |
+
+### `run_survey_models.py`
+
+Runs binary and multilabel classification on survey/environmental datasets. Prepares model-ready matrices from cleaned survey CSVs, then passes each through the standard binary and multilabel pipelines.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--surveys` | `epds pss puqe24 water` | Survey datasets to include |
+| `--n-trials` | `10` | Optuna trials per model (lower than omics default) |
+
+### `run_permutation_test.py`
+
+Validates trained binary model PR-AUC by permuting training labels 1000 times and comparing the null distribution to the observed score.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--dataset` | `MTBL_sop` | Dataset whose saved results to test (`MTBL_sop` or `LIPD_sop`) |
+| `--n-perm` | `1000` | Number of permutations per condition |
+
+### `feature_interpretation.py`
+
+Generates SHAP, LIME, and Gini importance plots for trained binary models, optionally restricted to the LASSO superset. Produces combined panel plots per tissue/timepoint.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--dataset` | `proteomics` | Dataset name (determines input paths) |
+| `--timepoints` | `A B C D E` | Plasma timepoints to interpret |
+| `--skip-placenta` | False | Skip placenta interpretation |
+| `--n-lime-samples` | `500` | LIME neighbourhood sample size |
 
 ### `metabolomics_enrichment_analysis.py`
 

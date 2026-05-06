@@ -1,26 +1,3 @@
-"""
-Feature interpretation (Gini / SHAP / LIME) for the best binary model per timepoint.
-
-Features used: union of LASSO-selected features across ALL timepoints + placenta
-(superset), so each timepoint's model is re-fitted on the full shared feature set.
-This lets you compare the importance trajectory of any analyte across timepoints,
-even when it was only selected by LASSO at one of them.
-
-Each output CSV is annotated with log2_fold_change and direction (up/down in
-complications vs controls) pulled from the differential analysis results.
-
-Artifacts needed per timepoint (produced by binary_classifier.py):
-    summary.json                 -> data_path, complications_pooled
-    sample_splits.csv            -> exact train/val/test SampleIDs
-    tuned_hyperparams.json       -> best model hyperparameters
-    lasso_selected_features.csv  -> contributes to the cross-timepoint superset
-
-Usage:
-    python 03_model_development/feature_interpretation.py [--binary-results-dir DIR]
-        [--timepoints A B C] [--sig-analytes-dir DIR]
-        [--shap-bg-start 100] [--shap-bg-max 1000]
-"""
-
 import json
 import os
 import sys
@@ -47,6 +24,7 @@ from utilities import (
     get_analyte_columns,
     normalise_group_labels,
     build_tuned_model_binary,
+    collect_superset_features,
 )
 
 logging.basicConfig(
@@ -55,31 +33,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Superset helpers
-# ---------------------------------------------------------------------------
-
-def collect_superset_features(base_dir: str, timepoints: list) -> list:
-    """Union of LASSO-selected features across all plasma timepoints and placenta."""
-    union = set()
-    for tp in timepoints:
-        p = os.path.join(base_dir, "plasma", tp, "lasso_selected_features.csv")
-        if os.path.exists(p):
-            union.update(pd.read_csv(p)["feature"].tolist())
-    p = os.path.join(base_dir, "placenta", "all", "lasso_selected_features.csv")
-    if os.path.exists(p):
-        union.update(pd.read_csv(p)["feature"].tolist())
-    return sorted(union)
-
 
 def _build_superset_data(results_dir: str, data_csv: str,
                          superset_features: list, complications: list):
-    """
-    Reload raw data, intersect with superset features, and reconstruct
-    the exact train+val / test split recorded in sample_splits.csv.
-
-    Returns (X_trainval, X_test, y_trainval, y_test, feat_cols).
-    """
     df = load_data(data_csv)
     df = normalise_group_labels(df)
 
@@ -110,15 +66,10 @@ def _build_superset_data(results_dir: str, data_csv: str,
             feat_cols)
 
 
-# ---------------------------------------------------------------------------
-# Fold-change annotation
-# ---------------------------------------------------------------------------
-
 _FC_COLS = ("log2_fold_change", "logFC", "log2FC", "log2FoldChange",
             "log_fold_change", "fold_change")
 
 def load_fold_changes(diff_results_csv: str) -> dict:
-    """Return {analyte: log2_fc} from a differential-results CSV. Returns {} on failure."""
     if not diff_results_csv or not os.path.exists(diff_results_csv):
         return {}
     df = pd.read_csv(diff_results_csv, index_col=0)
@@ -131,10 +82,6 @@ def load_fold_changes(diff_results_csv: str) -> dict:
 
 
 def annotate_with_fc(series: pd.Series, fold_changes: dict) -> pd.DataFrame:
-    """
-    Attach log2_fold_change and direction (up / down / unknown) to an
-    importance Series. 'up' means higher in complications than controls.
-    """
     df = series.rename("importance").to_frame()
     df["log2_fold_change"] = df.index.map(fold_changes)
     df["direction"] = df["log2_fold_change"].apply(
@@ -144,10 +91,6 @@ def annotate_with_fc(series: pd.Series, fold_changes: dict) -> pd.DataFrame:
     )
     return df
 
-
-# ---------------------------------------------------------------------------
-# 1. Gini / coefficient importance
-# ---------------------------------------------------------------------------
 
 def compute_gini_importance(model, feature_names: list) -> pd.Series:
     if hasattr(model, "coef_"):
@@ -176,12 +119,7 @@ def plot_gini(importance: pd.Series, title: str, output_path: str, top_n: int = 
     plt.close(fig)
 
 
-# ---------------------------------------------------------------------------
-# 2. SHAP
-# ---------------------------------------------------------------------------
-
 def _extract_shap_matrix(shap_result, n_features: int) -> np.ndarray:
-    """Normalise any SHAP output format to (n_samples, n_features)."""
     vals = shap_result.values if hasattr(shap_result, "values") else shap_result
     if isinstance(vals, list):          # KernelExplainer -> [class0, class1]
         vals = vals[1] if len(vals) == 2 else vals[0]
@@ -282,13 +220,8 @@ def run_shap(
     return mean_abs
 
 
-# ---------------------------------------------------------------------------
-# 3. LIME - num_samples stability tuning
-# ---------------------------------------------------------------------------
-
 def _lime_explain(lime_exp, predict_fn, inst: np.ndarray,
                   feat_idx: dict, n_features: int, ns: int) -> np.ndarray:
-    """Explain one instance. feat_idx and n_features are precomputed by the caller."""
     exp = lime_exp.explain_instance(inst, predict_fn,
                                     num_features=n_features, num_samples=ns, labels=(1,))
     vec = np.zeros(n_features)
@@ -301,7 +234,6 @@ def _lime_explain(lime_exp, predict_fn, inst: np.ndarray,
 def _lime_tune(lime_exp, predict_fn, X_test_sc: np.ndarray,
                feat_idx: dict, n_features: int,
                candidates: list) -> tuple:
-    """Tune num_samples via Spearman rho stability. Returns (chosen_ns, probe_idx, refs, rhos)."""
     probe_idx = np.linspace(0, len(X_test_sc) - 1,
                             min(3, len(X_test_sc)), dtype=int)
     ns_max = max(candidates)
@@ -327,7 +259,6 @@ def _lime_tune(lime_exp, predict_fn, X_test_sc: np.ndarray,
 
 
 def _plot_stability_curve(candidates, rhos, chosen_ns, output_path):
-    """Plot LIME stability curve from precomputed rhos (no LIME re-runs)."""
     # rhos may be shorter than candidates when _lime_tune exits early on success
     evaluated = sorted(candidates)[:len(rhos)]
     fig, ax = plt.subplots(figsize=(6, 4))
@@ -411,10 +342,6 @@ def run_lime(
     return mean_abs
 
 
-# ---------------------------------------------------------------------------
-# Combined panel plot
-# ---------------------------------------------------------------------------
-
 def plot_combined(gini, shap_vals, lime_vals, title, output_path, top_n=20):
     panels  = [(s, l, c) for s, l, c in [
         (gini,      "Gini/Coef", "#1f77b4"),
@@ -440,10 +367,6 @@ def plot_combined(gini, shap_vals, lime_vals, title, output_path, top_n=20):
     plt.close(fig)
 
 
-# ---------------------------------------------------------------------------
-# Per-(tissue, timepoint) driver
-# ---------------------------------------------------------------------------
-
 def interpret_one(tissue, timepoint, results_dir, output_dir,
                   best_model_name, bg_start, bg_max,
                   superset_features, data_csv, complications, fold_changes):
@@ -455,7 +378,6 @@ def interpret_one(tissue, timepoint, results_dir, output_dir,
         logger.error("%s data_csv not found (%s) - re-run binary_classifier.py.", tag, data_csv)
         return
 
-    # Reconstruct superset data using the original split indices
     try:
         X_tv_raw, X_te_raw, y_trainval, y_test, feat_cols = _build_superset_data(
             results_dir, data_csv, superset_features, complications
@@ -467,12 +389,10 @@ def interpret_one(tissue, timepoint, results_dir, output_dir,
     logger.info("%s  trainval=%d  test=%d  features=%d",
                 tag, len(X_tv_raw), len(X_te_raw), len(feat_cols))
 
-    # Scale on superset trainval
     scaler        = RobustScaler()
     X_trainval_sc = scaler.fit_transform(X_tv_raw)
     X_test_sc     = scaler.transform(X_te_raw)
 
-    # Rebuild and retrain best model on superset with its original tuned params
     hp_path = os.path.join(results_dir, "tuned_hyperparams.json")
     if not os.path.exists(hp_path):
         logger.error("%s tuned_hyperparams.json missing - skipping.", tag)
@@ -486,7 +406,6 @@ def interpret_one(tissue, timepoint, results_dir, output_dir,
 
     os.makedirs(output_dir, exist_ok=True)
 
-    # 1. Gini
     logger.info("%s  Gini ...", tag)
     gini = compute_gini_importance(model, feat_cols)
     if not gini.empty:
@@ -500,29 +419,22 @@ def interpret_one(tissue, timepoint, results_dir, output_dir,
     else:
         logger.warning("%s  Model has no Gini/coef_ attribute.", tag)
 
-    # 2. SHAP
     logger.info("%s  SHAP (bg_start=%d, bg_max=%d) ...", tag, bg_start, bg_max)
     shap_result = run_shap(model, best_model_name,
                            X_trainval_sc, X_test_sc, feat_cols,
                            output_dir, fold_changes,
                            bg_start=bg_start, bg_max=bg_max)
 
-    # 3. LIME
     logger.info("%s  LIME (stability tuning) ...", tag)
     lime_result = run_lime(model, X_trainval_sc, X_test_sc,
                            feat_cols, output_dir, fold_changes)
 
-    # Combined panel
     plot_combined(gini if not gini.empty else None, shap_result, lime_result,
                   title=f"{best_model_name} | {tissue} {timepoint}",
                   output_path=os.path.join(output_dir, "combined_importance.png"))
 
     logger.info("%s  Done -> %s", tag, output_dir)
 
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 
 def main():
     wkdir = os.getcwd()

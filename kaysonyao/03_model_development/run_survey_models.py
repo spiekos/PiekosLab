@@ -1,30 +1,3 @@
-"""
-Run the existing binary and multi-label model pipelines on survey data.
-
-This wrapper reshapes cleaned survey files into model-ready wide matrices and
-then reuses the same modeling functions used for omics data.
-
-Surveys included:
-  - EPDS
-  - PSS
-  - PUQE24
-  - Water
-
-Diet is intentionally excluded because it remains raw categorical strings and
-has not yet been numerically encoded.
-
-Outputs
--------
-Model-ready inputs:
-  data/cleaned/survey/model_ready/<survey>/
-    normalized_sliced_by_suffix/   (EPDS / PSS / PUQE24 per visit)
-    normalized_full_results/       (water)
-
-Model results:
-  04_results_and_figures/models/binary/survey/<survey>/<timepoint or all>/
-  04_results_and_figures/models/multilabel/survey/<survey>/<timepoint or all>/
-"""
-
 from __future__ import annotations
 
 import argparse

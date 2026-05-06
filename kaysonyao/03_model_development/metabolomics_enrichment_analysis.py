@@ -1,37 +1,3 @@
-"""
-metabolomics_enrichment_analysis.py
-
-Over-representation analysis (ORA) via KEGG REST API on the significant
-metabolites identified by the longitudinal and cross-sectional differential
-analyses.
-
-Efficient KEGG workflow (minimises API calls)
----------------------------------------------
-  For each metabolite set:
-    1. Map compound names to KEGG IDs  (1 call per compound).
-    2. Get all KEGG human pathways for mapped compounds  (1 call per compound).
-    3. For each pathway that has ≥1 query compound, fetch its full compound
-       list from KEGG (1 call per pathway — universe comes from KEGG, not
-       our dataset).
-    4. Hypergeometric ORA:
-         N = total unique KEGG compounds across all relevant HSA pathways
-         K = compounds in pathway k (from KEGG)
-         n = query compounds mapped to KEGG
-         k = query compounds in pathway k
-    5. BH-FDR; dot-plot of top-N by combined score (−log10p × enrichment ratio).
-
-Results are cached to avoid redundant API calls on re-runs.
-
-Usage
------
-  python 03_model_development/metabolomics_enrichment_analysis.py
-
-  python 03_model_development/metabolomics_enrichment_analysis.py \\
-      --diff-results-dir  04_results_and_figures/differential_analysis/metabolomics \\
-      --output-dir        04_results_and_figures/models/binary/metabolomics/enrichment \\
-      --top-n             15
-"""
-
 import argparse
 import datetime
 import glob
@@ -61,10 +27,6 @@ REQUEST_PAUSE = 0.4       # ≤3 requests/second (KEGG policy)
 FDR_THRESHOLD = 0.05
 
 
-# ---------------------------------------------------------------------------
-# Metabolite name utilities
-# ---------------------------------------------------------------------------
-
 def clean_name(raw: str) -> str:
     """Strip _POS / _NEG polarity suffix."""
     return re.sub(r"[_ ](POS|NEG)$", "", raw, flags=re.IGNORECASE).strip()
@@ -82,10 +44,6 @@ def is_identified(name: str) -> bool:
         and not _BRACKET.match(name)
     )
 
-
-# ---------------------------------------------------------------------------
-# KEGG REST helpers (with simple cache)
-# ---------------------------------------------------------------------------
 
 def _kegg_get(endpoint: str, cache: dict, retries: int = 3) -> str | None:
     if endpoint in cache:
@@ -108,28 +66,15 @@ def _kegg_get(endpoint: str, cache: dict, retries: int = 3) -> str | None:
 
 
 def _simplify_name(name: str) -> str | None:
-    """Generate a simplified fallback name for KEGG search.
-
-    Removes D-(+)-, L-(+)-, stereochemistry prefixes and replaces
-    Greek letters with ASCII equivalents so that e.g.
-    'D-(+)-Maltose' → 'Maltose' and 'α-Lactose' → 'alpha-Lactose'.
-    Returns None if no simplification is possible.
-    """
-    # Replace Greek letters with ASCII names
     greek = {"α": "alpha", "β": "beta", "γ": "gamma", "δ": "delta",
              "Α": "alpha", "Β": "beta", "Γ": "gamma", "Δ": "delta"}
     simplified = name
     for g, rep in greek.items():
         simplified = simplified.replace(g, rep)
-
-    # Strip stereo/configuration prefix patterns like D-(+)-, L-(-)-
     simplified = re.sub(r"^[DL]-\([+\-±]\)-", "", simplified)
     simplified = re.sub(r"^[DL]-\(\+\)-", "", simplified)
-
     if simplified != name:
         return simplified.strip()
-
-    # If name contains parentheses stereochemistry in the middle, strip it
     base = re.sub(r"\s*\([+\-±]\)", "", name).strip()
     if base != name:
         return base
@@ -138,10 +83,6 @@ def _simplify_name(name: str) -> str | None:
 
 
 def map_name_to_kegg_id(name: str, cache: dict) -> str | None:
-    """Return first KEGG compound ID matching *name*.
-
-    Falls back to a simplified version of the name if the exact match fails.
-    """
     def _first_cpd(text: str) -> str | None:
         if not text:
             return None
@@ -172,12 +113,6 @@ def map_name_to_kegg_id(name: str, cache: dict) -> str | None:
 
 
 def get_hsa_pathways(cpd_id: str, cache: dict) -> list[str]:
-    """Return KEGG reference pathway IDs for a compound.
-
-    KEGG's compound→pathway link endpoint returns 'path:map####' IDs
-    (reference pathways), not 'path:hsa####'.  The 'hsa####' variants
-    return empty compound lists, so we use 'map####' throughout.
-    """
     text = _kegg_get(f"link/pathway/{cpd_id}", cache)
     time.sleep(REQUEST_PAUSE)
     if not text:
@@ -190,7 +125,6 @@ def get_hsa_pathways(cpd_id: str, cache: dict) -> list[str]:
 
 
 def get_pathway_compounds(path_id: str, cache: dict) -> set[str]:
-    """Return all compound IDs in a KEGG pathway."""
     text = _kegg_get(f"link/compound/{path_id}", cache)
     time.sleep(REQUEST_PAUSE)
     if not text:
@@ -204,7 +138,6 @@ def get_pathway_compounds(path_id: str, cache: dict) -> set[str]:
 
 
 def get_pathway_name(path_id: str, cache: dict) -> str:
-    """Human-readable KEGG pathway name."""
     text = _kegg_get(f"list/{path_id}", cache)
     time.sleep(REQUEST_PAUSE)
     if not text:
@@ -215,17 +148,12 @@ def get_pathway_name(path_id: str, cache: dict) -> str:
     return path_id
 
 
-# ---------------------------------------------------------------------------
-# ORA
-# ---------------------------------------------------------------------------
-
 def run_ora(
     query_cpds: set[str],
     path_to_cpds: dict[str, set[str]],
     all_bg_cpds: set[str],
     cache: dict,
 ) -> pd.DataFrame:
-    """Hypergeometric ORA using KEGG pathway compound universe."""
     N = len(all_bg_cpds)
     n = len(query_cpds & all_bg_cpds)
     if n == 0:
@@ -267,10 +195,6 @@ def run_ora(
     return df
 
 
-# ---------------------------------------------------------------------------
-# Plotting
-# ---------------------------------------------------------------------------
-
 def plot_dot(df: pd.DataFrame, label: str, out_path: str, top_n: int = 15) -> None:
     if df.empty:
         return
@@ -306,10 +230,6 @@ def plot_dot(df: pd.DataFrame, label: str, out_path: str, top_n: int = 15) -> No
     plt.close()
     logger.info("Plot saved → %s", out_path)
 
-
-# ---------------------------------------------------------------------------
-# Metabolite set collection
-# ---------------------------------------------------------------------------
 
 def collect_metabolite_sets(diff_dir: str) -> dict[str, list[str]]:
     sets: dict[str, list[str]] = {}
@@ -352,10 +272,6 @@ def collect_metabolite_sets(diff_dir: str) -> dict[str, list[str]]:
     return sets
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-
 def run_metabolomics_enrichment(
     diff_results_dir: str,
     output_dir: str,
@@ -373,13 +289,11 @@ def run_metabolomics_enrichment(
     logger.info("Date/time : %s", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     logger.info("=" * 70)
 
-    # ── collect metabolite sets ───────────────────────────────────────────
     met_sets = collect_metabolite_sets(diff_results_dir)
     if not met_sets:
         logger.error("No significant metabolites found under %s.", diff_results_dir)
         return
 
-    # ── deduplicate all query names across sets ───────────────────────────
     all_raw  = sorted({a for lst in met_sets.values() for a in lst})
     all_clean = {a: clean_name(a) for a in all_raw}
     all_identified = {a: c for a, c in all_clean.items() if is_identified(c)}
@@ -388,7 +302,6 @@ def run_metabolomics_enrichment(
         named = [all_identified[a] for a in analytes if a in all_identified]
         logger.info("Set %-32s : %d analytes → %d identified", label, len(analytes), len(named))
 
-    # ── in-memory API cache ───────────────────────────────────────────────
     cache_path = os.path.join(output_dir, "kegg_api_cache.json")
     api_cache: dict = {}
     if os.path.exists(cache_path):
@@ -400,7 +313,6 @@ def run_metabolomics_enrichment(
         with open(cache_path, "w") as f:
             json.dump(api_cache, f)
 
-    # ── map all identified analytes to KEGG IDs ───────────────────────────
     unique_identified_names = sorted({c for c in all_identified.values()})
     logger.info("Mapping %d unique identified compound names to KEGG …", len(unique_identified_names))
 
@@ -421,14 +333,12 @@ def run_metabolomics_enrichment(
         logger.error("No compounds mapped to KEGG — cannot run ORA.")
         return
 
-    # ── for each mapped compound, get HSA pathways ────────────────────────
     query_cpd_ids = set(name_to_cpd.values())
     cpd_to_paths: dict[str, list[str]] = {}
     for cpd in sorted(query_cpd_ids):
         cpd_to_paths[cpd] = get_hsa_pathways(cpd, api_cache)
     _save_cache()
 
-    # ── for each relevant pathway, get its full compound list ─────────────
     relevant_paths = sorted({p for paths in cpd_to_paths.values() for p in paths})
     logger.info("Fetching compound lists for %d relevant HSA pathways …", len(relevant_paths))
 
@@ -437,11 +347,9 @@ def run_metabolomics_enrichment(
         path_to_cpds[pid] = get_pathway_compounds(pid, api_cache)
     _save_cache()
 
-    # Background = union of all compounds in relevant pathways
     all_bg_cpds = {c for cpds in path_to_cpds.values() for c in cpds}
     logger.info("KEGG universe: %d unique compounds across %d pathways", len(all_bg_cpds), len(relevant_paths))
 
-    # ── ORA per set ───────────────────────────────────────────────────────
     summary_dir = os.path.join(output_dir, "summary")
     os.makedirs(summary_dir, exist_ok=True)
 
@@ -482,10 +390,6 @@ def run_metabolomics_enrichment(
     logger.info("=" * 70)
     logger.info("Metabolomics enrichment complete.")
 
-
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
 
 def _build_parser() -> argparse.ArgumentParser:
     wkdir = os.getcwd()

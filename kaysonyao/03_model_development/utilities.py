@@ -1,19 +1,6 @@
-"""
-Shared utilities for the DP3 proteomics modeling pipeline.
-
-Provides data loading, feature selection (LASSO), train/val/test splitting,
-cross-validation helpers, and evaluation metrics used by:
- - binary_classifier.py   (per-outcome binary models)
- - multilabel_classifier.py  (joint multi-label models)
-
-Run all scripts from the project root so that os.getcwd() resolves correctly.
-"""
-
-# Standard library
 import logging
 import os
 
-# Third-party
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -40,10 +27,6 @@ from xgboost import XGBClassifier
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Constants (mirror 02_exploratory_analysis/utilities.py)
-# ---------------------------------------------------------------------------
-
 _METADATA_COLS = [
     "SubjectID", "Group", "Subgroup", "Batch", "GestAgeDelivery", "SampleGestAge",
     "MetadataCanonicalID",  # audit field added by sop_omics_pipeline
@@ -56,37 +39,16 @@ TIMEPOINTS = ["A", "B", "C", "D", "E"]
 N_CV_FOLDS = 10
 RANDOM_STATE = 42
 
-# ---------------------------------------------------------------------------
-# Data helpers
-# ---------------------------------------------------------------------------
 
 def load_data(path: str) -> pd.DataFrame:
-    """Load cleaned wide-format CSV (index=SampleID, columns=metadata+analytes)."""
     return pd.read_csv(path, index_col=0)
+
 
 def load_significant_analytes(
     diff_results_csv: str,
     q_threshold: float = 0.05,
 ) -> list | None:
-    """
-    Load significant analyte IDs from a differential-analysis results CSV.
-
-    Reads the full ``_differential_results.csv`` (all tested analytes with
-    q-values) and returns those whose ``q_value`` is below *q_threshold*.
-    The fold-change criterion used when generating ``_significant_analytes.csv``
-    is intentionally omitted here; the downstream elastic-net regularisation
-    handles effect-size filtering.
-
-    Parameters
-   ----------
-    diff_results_csv : path to ``<comparison>_differential_results.csv``
-    q_threshold      : FDR q-value cut-off (default 0.05)
-
-    Returns
-    -------
-    list of str  - analyte names, or None if the file is missing / no analytes
-                   survive the threshold.
-    """
+    """Return analyte names with q_value < q_threshold, or None if unavailable."""
     if not os.path.exists(diff_results_csv):
         return None
     df = pd.read_csv(diff_results_csv, index_col=0)
@@ -98,19 +60,28 @@ def load_significant_analytes(
     return analytes if analytes else None
 
 def get_analyte_columns(df: pd.DataFrame) -> list:
-    """Return analyte (feature) column names by excluding metadata columns."""
     return [c for c in df.columns if c not in _METADATA_COLS]
 
+
 def normalise_group_labels(df: pd.DataFrame) -> pd.DataFrame:
-    """Normalise Group column capitalisation (e.g. 'sptb' -> 'sPTB')."""
     df = df.copy()
     if "Group" in df.columns:
         df["Group"] = df["Group"].replace(_GROUP_LABEL_MAP)
     return df
 
-# ---------------------------------------------------------------------------
-# Train / val / test split
-# ---------------------------------------------------------------------------
+
+def collect_superset_features(base_dir: str, timepoints: list) -> list:
+    """Union of LASSO-selected features across given plasma timepoints and placenta."""
+    union = set()
+    for tp in timepoints:
+        p = os.path.join(base_dir, "plasma", tp, "lasso_selected_features.csv")
+        if os.path.exists(p):
+            union.update(pd.read_csv(p)["feature"].tolist())
+    p = os.path.join(base_dir, "placenta", "all", "lasso_selected_features.csv")
+    if os.path.exists(p):
+        union.update(pd.read_csv(p)["feature"].tolist())
+    return sorted(union)
+
 
 def split_70_15_15(
     X: pd.DataFrame,
@@ -118,13 +89,6 @@ def split_70_15_15(
     stratify: bool = True,
     random_state: int = RANDOM_STATE,
 ):
-    """
-    Stratified 70 / 15 / 15 split.
-
-    Returns
-    -------
-    X_train, X_val, X_test, y_train, y_val, y_test
-    """
     from sklearn.model_selection import train_test_split
 
     strat = y if stratify else None
@@ -139,9 +103,6 @@ def split_70_15_15(
     )
     return X_train, X_val, X_test, y_train, y_val, y_test
 
-# ---------------------------------------------------------------------------
-# Correlation matrix
-# ---------------------------------------------------------------------------
 
 def plot_correlation_matrix(
     X: pd.DataFrame,
@@ -149,12 +110,6 @@ def plot_correlation_matrix(
     title: str = "Feature correlation matrix",
     max_features: int = 100,
 ) -> None:
-    """
-    Compute and save a Pearson correlation heatmap of the feature matrix.
-
-    If X has more than *max_features* columns only the first *max_features*
-    columns are plotted (post-LASSO selection this is rarely an issue).
-    """
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     X_plot = X.iloc[:, :max_features]
     corr = X_plot.corr(method="pearson")
@@ -180,9 +135,6 @@ def plot_correlation_matrix(
     plt.close(fig)
     logger.info("Correlation matrix saved -> %s", output_path)
 
-# ---------------------------------------------------------------------------
-# LASSO feature selection
-# ---------------------------------------------------------------------------
 
 def lasso_feature_selection_binary(
     X_train: pd.DataFrame,
@@ -190,10 +142,7 @@ def lasso_feature_selection_binary(
     cv: int = N_CV_FOLDS,
     random_state: int = RANDOM_STATE,
 ) -> list:
-    """
-    Elastic-net logistic regression CV (l1_ratios 0.1..1.0) for binary feature selection.
-    Returns column names with non-zero coefficients at the CV-chosen (ratio, C).
-    """
+    """Elastic-net logistic regression CV for binary feature selection."""
     scaler = RobustScaler()
     X_scaled = scaler.fit_transform(X_train)
 
@@ -234,23 +183,14 @@ def lasso_feature_selection_binary(
     )
     return selected
 
+
 def lasso_feature_selection_multilabel(
     X_train: pd.DataFrame,
     Y_train: pd.DataFrame,
     cv: int = N_CV_FOLDS,
     random_state: int = RANDOM_STATE,
 ) -> list:
-    """
-    Multi-task elastic-net CV to select a shared feature set for all outcomes jointly.
-
-    MultiTaskElasticNetCV searches over an l1_ratio grid [0.1, 0.5, 0.7, 0.9, 1.0],
-    mixing L1 (group sparsity across outcomes) with L2 (retains correlated features).
-    A feature is kept if its coefficient is non-zero for ANY outcome.
-
-    Returns
-    -------
-    selected_features : list of str
-    """
+    """Multi-task elastic-net CV for joint feature selection across all outcomes."""
     scaler = RobustScaler()
     X_scaled = scaler.fit_transform(X_train)
 
@@ -272,87 +212,39 @@ def lasso_feature_selection_multilabel(
     )
     return selected
 
-# ---------------------------------------------------------------------------
-# Base models
-# ---------------------------------------------------------------------------
 
-def get_base_models_binary(random_state: int = RANDOM_STATE) -> dict:
-    """
-    Return a dict of {name: estimator} for binary classification.
-
-    All sklearn models use class_weight='balanced'.
-    XGBoost scale_pos_weight is set dynamically per dataset (see binary_classifier.py).
-    """
+def get_base_models(random_state: int = RANDOM_STATE) -> dict:
+    """Return {name: estimator} for LogisticRegression, RandomForest, XGBoost, SVM."""
     return {
         "LogisticRegression": LogisticRegression(
-            l1_ratio=0,            # pure L2; replaces deprecated penalty='l2'
-            solver="lbfgs",
-            class_weight="balanced",
-            max_iter=2000,
-            random_state=random_state,
+            l1_ratio=0, solver="lbfgs", class_weight="balanced",
+            max_iter=2000, random_state=random_state,
         ),
         "RandomForest": RandomForestClassifier(
-            n_estimators=300,
-            class_weight="balanced",
-            random_state=random_state,
-            n_jobs=-1,
+            n_estimators=300, class_weight="balanced",
+            random_state=random_state, n_jobs=-1,
         ),
         "XGBoost": XGBClassifier(
-            n_estimators=300,
-            use_label_encoder=False,
-            eval_metric="logloss",
-            random_state=random_state,
-            n_jobs=-1,
-            verbosity=0,
+            n_estimators=300, eval_metric="logloss",
+            random_state=random_state, n_jobs=-1, verbosity=0,
         ),
         "SVM": SVC(
-            kernel="rbf",
-            class_weight="balanced",
-            probability=True,
-            random_state=random_state,
+            kernel="rbf", class_weight="balanced",
+            probability=True, random_state=random_state,
         ),
     }
 
-def get_base_models_multilabel(random_state: int = RANDOM_STATE) -> dict:
-    """
-    Return base estimators for multi-label classification (wrapped in MultiOutputClassifier).
-    """
-    return {
-        "LogisticRegression": LogisticRegression(
-            l1_ratio=0,            # pure L2; replaces deprecated penalty='l2'
-            solver="lbfgs",
-            class_weight="balanced",
-            max_iter=2000,
-            random_state=random_state,
-        ),
-        "RandomForest": RandomForestClassifier(
-            n_estimators=300,
-            class_weight="balanced",
-            random_state=random_state,
-            n_jobs=-1,
-        ),
-        "XGBoost": XGBClassifier(
-            n_estimators=300,
-            use_label_encoder=False,
-            eval_metric="logloss",
-            random_state=random_state,
-            n_jobs=-1,
-            verbosity=0,
-        ),
-        "SVM": SVC(
-            kernel="rbf",
-            class_weight="balanced",
-            probability=True,
-            random_state=random_state,
-        ),
-    }
 
-# ---------------------------------------------------------------------------
-# Optuna TPE hyperparameter tuning
-# ---------------------------------------------------------------------------
+# Keep aliases for backwards compatibility with callers
+get_base_models_binary    = get_base_models
+get_base_models_multilabel = get_base_models
 
-def _build_model_from_trial_binary(trial, model_name: str, y_train, random_state: int):
-    """Instantiate a model from an Optuna trial for binary classification."""
+
+def _build_model_from_trial(trial, model_name: str, random_state: int, y_train=None):
+    """Instantiate a model from an Optuna trial.
+
+    y_train is used only for XGBoost scale_pos_weight; pass None for multilabel.
+    """
     if model_name == "LogisticRegression":
         return LogisticRegression(
             C=trial.suggest_float("C", 1e-3, 100.0, log=True),
@@ -360,11 +252,9 @@ def _build_model_from_trial_binary(trial, model_name: str, y_train, random_state
             max_iter=5000, random_state=random_state,
         )
     elif model_name == "RandomForest":
+        # max_depth bounded at 15 to prevent overfitting on small omics datasets
         return RandomForestClassifier(
             n_estimators=trial.suggest_int("n_estimators", 100, 500),
-            # max_depth=None (unbounded) is excluded: it guarantees zero training
-            # error (pure leaves) in every tree, leading to overfitting on small
-            # omics datasets. Values ≤ 15 encourage generalization.
             max_depth=trial.suggest_int("max_depth", 2, 15),
             min_samples_split=trial.suggest_int("min_samples_split", 2, 20),
             min_samples_leaf=trial.suggest_int("min_samples_leaf", 1, 10),
@@ -372,7 +262,10 @@ def _build_model_from_trial_binary(trial, model_name: str, y_train, random_state
             class_weight="balanced", random_state=random_state, n_jobs=-1,
         )
     elif model_name == "XGBoost":
-        spw = float((y_train == 0).sum()) / max(float((y_train == 1).sum()), 1.0)
+        spw = (
+            float((y_train == 0).sum()) / max(float((y_train == 1).sum()), 1.0)
+            if y_train is not None else 1.0
+        )
         return XGBClassifier(
             n_estimators=trial.suggest_int("n_estimators", 50, 500),
             max_depth=trial.suggest_int("max_depth", 2, 8),
@@ -396,50 +289,10 @@ def _build_model_from_trial_binary(trial, model_name: str, y_train, random_state
     else:
         raise ValueError(f"Unknown model name: {model_name}")
 
-def _build_model_from_trial_multilabel(trial, model_name: str, random_state: int):
-    """Instantiate a base model from an Optuna trial for multi-label classification.
 
-    No scale_pos_weight for XGBoost - each output head is fitted independently
-    by MultiOutputClassifier so class imbalance is handled per-outcome at fit time.
-    """
-    if model_name == "LogisticRegression":
-        return LogisticRegression(
-            C=trial.suggest_float("C", 1e-3, 100.0, log=True),
-            l1_ratio=0, solver="lbfgs", class_weight="balanced",
-            max_iter=5000, random_state=random_state,
-        )
-    elif model_name == "RandomForest":
-        return RandomForestClassifier(
-            n_estimators=trial.suggest_int("n_estimators", 100, 500),
-            # max_depth=None excluded for same overfitting reasons as binary builder.
-            max_depth=trial.suggest_int("max_depth", 2, 15),
-            min_samples_split=trial.suggest_int("min_samples_split", 2, 20),
-            min_samples_leaf=trial.suggest_int("min_samples_leaf", 1, 10),
-            max_features=trial.suggest_categorical("max_features", ["sqrt", "log2"]),
-            class_weight="balanced", random_state=random_state, n_jobs=-1,
-        )
-    elif model_name == "XGBoost":
-        return XGBClassifier(
-            n_estimators=trial.suggest_int("n_estimators", 50, 500),
-            max_depth=trial.suggest_int("max_depth", 2, 8),
-            learning_rate=trial.suggest_float("learning_rate", 1e-3, 0.5, log=True),
-            subsample=trial.suggest_float("subsample", 0.5, 1.0),
-            colsample_bytree=trial.suggest_float("colsample_bytree", 0.5, 1.0),
-            min_child_weight=trial.suggest_int("min_child_weight", 1, 10),
-            gamma=trial.suggest_float("gamma", 0.0, 5.0),
-            reg_alpha=trial.suggest_float("reg_alpha", 1e-5, 1.0, log=True),
-            reg_lambda=trial.suggest_float("reg_lambda", 1e-5, 1.0, log=True),
-            eval_metric="logloss", random_state=random_state, n_jobs=-1, verbosity=0,
-        )
-    elif model_name == "SVM":
-        return SVC(
-            C=trial.suggest_float("C", 1e-2, 100.0, log=True),
-            gamma=trial.suggest_categorical("gamma", ["scale", "auto"]),
-            kernel="rbf", class_weight="balanced",
-            probability=True, random_state=random_state,
-        )
-    else:
-        raise ValueError(f"Unknown model name: {model_name}")
+# Aliases kept for callers that reference the old names
+_build_model_from_trial_binary     = _build_model_from_trial
+_build_model_from_trial_multilabel = lambda trial, name, rs: _build_model_from_trial(trial, name, rs, y_train=None)
 
 def tune_hyperparams_binary(
     model_name: str,
@@ -450,30 +303,15 @@ def tune_hyperparams_binary(
     n_trials: int = 50,
     random_state: int = RANDOM_STATE,
 ) -> tuple:
-    """
-    Optuna TPE search for binary classification.
-
-    Trains on X_train, scores PR-AUC on X_val for each trial.
-    Scaling is applied inside the objective so the scaler is fit only on X_train.
-
-    Returns
-    -------
-    best_params : dict
-    best_val_pr_auc : float
-    """
-    try:
-        import optuna
-    except ImportError:
-        raise ImportError("optuna is required for hyperparameter tuning: pip install optuna")
-
+    import optuna
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-    scaler = RobustScaler()
+    scaler  = RobustScaler()
     X_tr_s  = scaler.fit_transform(X_train)
     X_val_s = scaler.transform(X_val)
 
     def objective(trial):
-        model = _build_model_from_trial_binary(trial, model_name, y_train, random_state)
+        model = _build_model_from_trial(trial, model_name, random_state, y_train)
         model.fit(X_tr_s, y_train)
         y_prob = model.predict_proba(X_val_s)[:, 1]
         return average_precision_score(y_val, y_prob)
@@ -483,11 +321,8 @@ def tune_hyperparams_binary(
         sampler=optuna.samplers.TPESampler(seed=random_state),
     )
     study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
-
-    logger.info(
-        "  [Optuna/%s] best val PR-AUC=%.4f  params=%s",
-        model_name, study.best_value, study.best_params,
-    )
+    logger.info("  [Optuna/%s] best val PR-AUC=%.4f  params=%s",
+                model_name, study.best_value, study.best_params)
     return study.best_params, float(study.best_value)
 
 def tune_hyperparams_multilabel(
@@ -499,42 +334,27 @@ def tune_hyperparams_multilabel(
     n_trials: int = 50,
     random_state: int = RANDOM_STATE,
 ) -> tuple:
-    """
-    Optuna TPE search for multi-label classification.
-
-    Objective = macro-average PR-AUC across all outcomes on X_val.
-
-    Returns
-    -------
-    best_params : dict
-    best_val_macro_pr_auc : float
-    """
-    try:
-        import optuna
-    except ImportError:
-        raise ImportError("optuna is required for hyperparameter tuning: pip install optuna")
-
+    import optuna
     from sklearn.multioutput import MultiOutputClassifier
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-    scaler = RobustScaler()
-    X_tr_s  = scaler.fit_transform(X_train)
-    X_val_s = scaler.transform(X_val)
+    scaler        = RobustScaler()
+    X_tr_s        = scaler.fit_transform(X_train)
+    X_val_s       = scaler.transform(X_val)
     outcome_names = list(Y_train.columns)
 
     def objective(trial):
-        base = _build_model_from_trial_multilabel(trial, model_name, random_state)
+        base  = _build_model_from_trial(trial, model_name, random_state)
         model = MultiOutputClassifier(base, n_jobs=1)
         model.fit(X_tr_s, Y_train)
         Y_prob = model.predict_proba(X_val_s)
         scores = []
-        for i, _ in enumerate(outcome_names):
-            prob = Y_prob[i][:, 1]
+        for i in range(len(outcome_names)):
             try:
-                scores.append(average_precision_score(Y_val.iloc[:, i], prob))
+                scores.append(average_precision_score(Y_val.iloc[:, i], Y_prob[i][:, 1]))
             except ValueError:
-                pass   # only one class in val - skip this outcome
+                pass
         return float(np.mean(scores)) if scores else 0.0
 
     study = optuna.create_study(
@@ -542,11 +362,8 @@ def tune_hyperparams_multilabel(
         sampler=optuna.samplers.TPESampler(seed=random_state),
     )
     study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
-
-    logger.info(
-        "  [Optuna/%s] best val macro PR-AUC=%.4f  params=%s",
-        model_name, study.best_value, study.best_params,
-    )
+    logger.info("  [Optuna/%s] best val macro PR-AUC=%.4f  params=%s",
+                model_name, study.best_value, study.best_params)
     return study.best_params, float(study.best_value)
 
 def build_tuned_model_binary(
@@ -555,7 +372,7 @@ def build_tuned_model_binary(
     y_train=None,
     random_state: int = RANDOM_STATE,
 ):
-    """Instantiate a fresh binary model from tuned hyperparameters. y_train sets XGBoost scale_pos_weight."""
+    """Instantiate a binary model from saved hyperparameters. y_train sets XGBoost scale_pos_weight."""
     if model_name == "LogisticRegression":
         return LogisticRegression(
             C=params["C"], l1_ratio=0, solver="lbfgs",
@@ -596,21 +413,16 @@ def build_tuned_model_binary(
     else:
         raise ValueError(f"Unknown model name: {model_name}")
 
+
 def build_tuned_model_multilabel(
     model_name: str,
     params: dict,
     random_state: int = RANDOM_STATE,
 ):
-    """
-    Instantiate a fresh unfitted MultiOutputClassifier from tuned hyperparameters.
-    """
     from sklearn.multioutput import MultiOutputClassifier
     base = build_tuned_model_binary(model_name, params, y_train=None, random_state=random_state)
     return MultiOutputClassifier(base, n_jobs=1)
 
-# ---------------------------------------------------------------------------
-# Cross-validation
-# ---------------------------------------------------------------------------
 
 def run_cv_binary(
     model,
@@ -619,11 +431,6 @@ def run_cv_binary(
     n_splits: int = N_CV_FOLDS,
     random_state: int = RANDOM_STATE,
 ) -> dict:
-    """
-    Stratified k-fold CV for a binary model.
-
-    Returns dict with mean +/- std for PR-AUC, ROC-AUC, F1, Accuracy.
-    """
     # Cap folds to smallest class size - avoids ValueError when n < n_splits
     min_class = int(y.value_counts().min())
     n_splits_actual = max(2, min(n_splits, min_class))
@@ -662,6 +469,7 @@ def run_cv_binary(
         "acc_std":      float(np.std(accs)),
     }
 
+
 def run_cv_multilabel(
     model,
     X: pd.DataFrame,
@@ -669,12 +477,6 @@ def run_cv_multilabel(
     n_splits: int = N_CV_FOLDS,
     random_state: int = RANDOM_STATE,
 ) -> dict:
-    """
-    K-fold CV for a multi-label model.
-
-    Returns dict with mean +/- std PR-AUC and ROC-AUC averaged across outcomes,
-    plus per-outcome breakdown.
-    """
     cv = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
     scaler = RobustScaler()
 
@@ -722,9 +524,6 @@ def run_cv_multilabel(
     }
     return results
 
-# ---------------------------------------------------------------------------
-# Final evaluation on held-out test set
-# ---------------------------------------------------------------------------
 
 def _bootstrap_auc_ci(
     y_true: np.ndarray,
@@ -734,12 +533,6 @@ def _bootstrap_auc_ci(
     ci: float = 0.95,
     random_state: int = RANDOM_STATE,
 ) -> tuple[float, float]:
-    """
-    Percentile bootstrap 95% CI for a scoring metric (e.g. average_precision_score).
-
-    Skips bootstrap samples where only one class is present (returns NaN for
-    those draws). If fewer than 20 valid draws are obtained, returns (nan, nan).
-    """
     rng = np.random.default_rng(random_state)
     n   = len(y_true)
     scores = []
@@ -766,13 +559,6 @@ def evaluate_binary(
     y_test: pd.Series,
     n_boot: int = 1000,
 ) -> dict:
-    """
-    Fit on training data and evaluate on test set.
-
-    Returns metrics dict including bootstrapped 95% CI for PR-AUC and ROC-AUC.
-    Bootstrap CIs are especially informative when the test set is small (n < 50);
-    a wide CI signals that the point estimate should not be over-interpreted.
-    """
     scaler = RobustScaler()
     X_tr_s  = scaler.fit_transform(X_train)
     X_te_s  = scaler.transform(X_test)
@@ -802,6 +588,7 @@ def evaluate_binary(
         "n_test":    int(len(yt)),
     }, scaler
 
+
 def evaluate_multilabel(
     model,
     X_train: pd.DataFrame,
@@ -809,7 +596,6 @@ def evaluate_multilabel(
     X_test: pd.DataFrame,
     Y_test: pd.DataFrame,
 ) -> dict:
-    """Fit on training data and evaluate multi-label model on test set."""
     scaler = RobustScaler()
     X_tr_s  = scaler.fit_transform(X_train)
     X_te_s  = scaler.transform(X_test)
@@ -833,9 +619,6 @@ def evaluate_multilabel(
         }
     return results, scaler
 
-# ---------------------------------------------------------------------------
-# Plotting helpers
-# ---------------------------------------------------------------------------
 
 def plot_pr_curve(
     y_true: np.ndarray,
@@ -859,6 +642,7 @@ def plot_pr_curve(
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
+
 def plot_roc_curve(
     y_true: np.ndarray,
     y_score: np.ndarray,
@@ -881,6 +665,7 @@ def plot_roc_curve(
     plt.tight_layout()
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
+
 
 def save_feature_importance(
     feature_names: list,

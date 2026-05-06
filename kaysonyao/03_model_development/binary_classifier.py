@@ -1,56 +1,13 @@
-"""
-Binary classification pipeline for DP3 proteomics data.
-
-For each tissue (plasma / placenta) x timepoint, predict any pregnancy complication
-(Control=0 vs pooled Complication=1, where Complication = HDP + FGR + sPTB).
-
-Steps per tissue x timepoint:
-  1. Load cleaned data; label Control=0, any of HDP/FGR/sPTB=1 (Complication)
-  2. 70 / 15 / 15 stratified train / val / test split
-  3. Pearson correlation matrix of training features (saved as PNG)
-  4. LASSO (L1 LogisticRegressionCV) feature selection on training set
-  5. Optuna TPE hyperparameter tuning for each model: train on X_train, score PR-AUC on X_val
-  6. 10-fold stratified CV on {LogisticRegression, RandomForest, XGBoost, SVM} with tuned params
-  7. Best model (by val PR-AUC from tuning) retrained on train+val, evaluated on test set
-  8. All results written to 04_results_and_figures/models/binary/<tissue>/<timepoint>/
-
-Compare with multilabel_classifier.py which predicts each specific outcome separately.
-
-Usage
------
-Run from the project root:
-
-    python 03_model_development/binary_classifier.py [OPTIONS]
-
-Options
--------
---plasma-dir    DIR   Directory with per-timepoint plasma CSVs
-                      [default: data/cleaned/proteomics/normalized_sliced_by_suffix/]
---placenta-csv  FILE  Path to placenta CSV
-                      [default: data/cleaned/proteomics/normalized_full_results/
-                                proteomics_placenta_cleaned_with_metadata.csv]
---output-dir    DIR   Root output directory
-                      [default: 04_results_and_figures/models/binary/]
---timepoints    A B   Which plasma timepoints to run (default: A B C D E)
---complications ...   Which outcome labels to pool as "Complication" (default: HDP FGR sPTB)
---n-trials      INT   Optuna trials per model (default: 50)
---skip-plasma         Skip plasma analysis
---skip-placenta       Skip placenta analysis
-"""
-
-# Standard library
 import argparse
 import json
 import logging
 import os
 import sys
 
-# Third-party
 import joblib
 import numpy as np
 import pandas as pd
 
-# Local
 sys.path.insert(0, os.path.dirname(__file__))
 from utilities import (
     OUTCOMES,
@@ -63,7 +20,7 @@ from utilities import (
     split_70_15_15,
     plot_correlation_matrix,
     lasso_feature_selection_binary,
-    get_base_models_binary,
+    get_base_models,
     tune_hyperparams_binary,
     build_tuned_model_binary,
     run_cv_binary,
@@ -80,20 +37,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def _make_complication_labels(
     df: pd.DataFrame,
     complications: list,
 ) -> pd.Series | None:
-    """
-    Return a binary label Series: Control=0, Complication=1.
-    Any sample whose Group is in *complications* is labelled 1.
-    Samples with other Group values are dropped.
-    Returns None if either class has fewer than 5 samples.
-    """
     keep = set(["Control"] + complications)
     mask = df["Group"].isin(keep)
     sub  = df.loc[mask, "Group"]
@@ -109,8 +57,8 @@ def _make_complication_labels(
     logger.info("  Labels: Control=%d  Complication=%d", n_ctrl, n_compl)
     return y
 
+
 def _get_feature_importance(model_name: str, model) -> np.ndarray | None:
-    """Extract feature importances or coefficients from a fitted model."""
     if hasattr(model, "coef_"):
         return model.coef_.ravel()
     if hasattr(model, "feature_importances_"):
@@ -118,13 +66,9 @@ def _get_feature_importance(model_name: str, model) -> np.ndarray | None:
     return None
 
 def _class_dist(y: pd.Series) -> dict:
-    """Return Control/Complication counts for a label Series."""
     vc = y.value_counts()
     return {"control": int(vc.get(0, 0)), "complication": int(vc.get(1, 0))}
 
-# ---------------------------------------------------------------------------
-# Core per-dataset runner
-# ---------------------------------------------------------------------------
 
 def run_binary_pipeline(
     df: pd.DataFrame,
@@ -136,18 +80,6 @@ def run_binary_pipeline(
     sig_analytes: list | None = None,
     data_path: str = "",
 ) -> dict | None:
-    """
-    Full binary classification pipeline for one (tissue, timepoint).
-
-    Labels: Control=0, pooled Complication (HDP/FGR/sPTB)=1.
-    Hyperparameters are tuned via Optuna TPE using the val set (PR-AUC objective).
-
-    Parameters
-   ----------
-    sig_analytes : optional pre-filter list of analyte names from differential analysis.
-                   When provided, only those columns are used as features.
-                   If None or empty, all analyte columns are used (fallback).
-    """
     os.makedirs(output_dir, exist_ok=True)
     tag = f"[{tissue} | tp={timepoint} | Control vs Complication]"
     logger.info("%s Starting binary pipeline.", tag)
@@ -191,24 +123,10 @@ def run_binary_pipeline(
         tag, len(y_train), len(y_val), len(y_test),
     )
 
-    # 2b. Median imputation for any remaining NaN values.
-    #     Check all three splits — val/test can have NaN in columns that were
-    #     clean in training (e.g. when only 1-2 features survive LASSO and the
-    #     split is small). Fit medians on X_train only; apply to all splits.
-    any_nan = (
-        X_train.isna().any().any()
-        or X_val.isna().any().any()
-        or X_test.isna().any().any()
-    )
-    if any_nan:
-        nan_cols = (
-            X_train.columns[X_train.isna().any()].tolist()
-            + [c for c in X_val.columns if X_val[c].isna().any() and c not in X_train.columns[X_train.isna().any()]]
-        )
-        logger.info(
-            "%s Imputing with training-set medians (NaN in at least one split, %d affected features).",
-            tag, len(set(nan_cols)),
-        )
+    # Median imputation on training-set medians; covers NaN in any split
+    if X_train.isna().any().any() or X_val.isna().any().any() or X_test.isna().any().any():
+        n_affected = (X_train.isna().any() | X_val.isna().any() | X_test.isna().any()).sum()
+        logger.info("%s Imputing training-set medians (%d features affected).", tag, n_affected)
         train_medians = X_train.median(skipna=True)
         X_train = X_train.fillna(train_medians)
         X_val   = X_val.fillna(train_medians)
@@ -255,7 +173,7 @@ def run_binary_pipeline(
     )
 
     # 5. Optuna TPE tuning on val set
-    model_names = list(get_base_models_binary().keys())
+    model_names = list(get_base_models().keys())
     logger.info("%s Optuna tuning (%d trials/model) ...", tag, n_trials)
 
     tuned_params     = {}
@@ -380,9 +298,6 @@ def run_binary_pipeline(
     logger.info("%s Done.", tag)
     return summary
 
-# ---------------------------------------------------------------------------
-# Plasma / placenta loops
-# ---------------------------------------------------------------------------
 
 def run_plasma(
     plasma_dir: str,
@@ -461,9 +376,6 @@ def run_placenta(
     )
     return [result] if result else []
 
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
 
 def _build_parser() -> argparse.ArgumentParser:
     wkdir = os.getcwd()

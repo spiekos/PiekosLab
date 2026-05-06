@@ -1,20 +1,5 @@
-"""
-Binary classification pipeline for SOP v4 pipeline outputs (MTBL_sop / LIPD_sop).
-
-Mirrors binary_classifier.py but points to:
-  - data/cleaned/sop_omics_pipeline_v2/{tissue}/
-  - 04_results_and_figures/differential_analysis/{dataset}/
-  - 04_results_and_figures/models/binary/{dataset}/
-
-Usage (from kaysonyao folder):
-    python 03_model_development/run_sop_models.py --dataset MTBL_sop
-    python 03_model_development/run_sop_models.py --dataset LIPD_sop
-    python 03_model_development/run_sop_models.py              # both
-    python 03_model_development/run_sop_models.py --dataset MTBL_sop --n-trials 30
-    python 03_model_development/run_sop_models.py --dataset MTBL_sop --skip-placenta
-"""
-
 import argparse
+import glob
 import json
 import logging
 import os
@@ -39,6 +24,21 @@ COMPLICATIONS = ["HDP", "FGR", "sPTB"]
 TIMEPOINTS    = ["A", "B", "C", "D", "E"]
 
 
+def load_longitudinal_analytes(long_dir: str, q_threshold: float = 0.05) -> list | None:
+    pattern = os.path.join(long_dir, "*_longitudinal_results.csv")
+    result_files = glob.glob(pattern)
+    if not result_files:
+        return None
+
+    all_analytes: set[str] = set()
+    for csv_path in result_files:
+        hits = load_significant_analytes(csv_path, q_threshold=q_threshold)
+        if hits:
+            all_analytes.update(hits)
+
+    return sorted(all_analytes) if all_analytes else None
+
+
 def run_dataset(
     dataset: str,
     wkdir: str,
@@ -57,7 +57,6 @@ def run_dataset(
     logger.info("=== %s | n_trials=%d ===", dataset, n_trials)
     all_summaries = []
 
-    # ── Plasma ────────────────────────────────────────────────────────────────
     if not skip_plasma:
         logger.info("--- PLASMA ---")
         for tp in TIMEPOINTS:
@@ -69,14 +68,13 @@ def run_dataset(
             df = normalise_group_labels(load_data(csv_path))
             logger.info("Plasma TP %s: %d samples x %d cols", tp, *df.shape)
 
-            # Load significant analytes from differential analysis (q < 0.05 filter)
             sig_csv = os.path.join(
                 diff_root, "plasma", "cross_sectional", tp,
                 "Control_vs_Complication_differential_results.csv",
             )
             sig_analytes = load_significant_analytes(sig_csv)
             if sig_analytes:
-                logger.info("Plasma TP %s: %d significant analytes loaded (q<0.05).", tp, len(sig_analytes))
+                logger.info("Plasma TP %s: %d CS analytes loaded for ML (q<0.05).", tp, len(sig_analytes))
             else:
                 logger.warning("Plasma TP %s: no diff results found — using all features.", tp)
 
@@ -88,7 +86,6 @@ def run_dataset(
             if result:
                 all_summaries.append(result)
 
-    # ── Placenta ──────────────────────────────────────────────────────────────
     if not skip_placenta and has_placenta:
         logger.info("--- PLACENTA ---")
         placenta_csv = os.path.join(placenta_dir, f"{tissue}_placenta_cleaned_with_metadata.csv")
@@ -98,14 +95,22 @@ def run_dataset(
             df = normalise_group_labels(load_data(placenta_csv))
             logger.info("Placenta: %d samples x %d cols", *df.shape)
 
-            sig_csv = os.path.join(
+            cs_csv = os.path.join(
                 diff_root, "placenta", "cross_sectional",
                 "Control_vs_Complication_differential_results.csv",
             )
-            sig_analytes = load_significant_analytes(sig_csv)
-            if sig_analytes:
-                logger.info("Placenta: %d significant analytes loaded (q<0.05).", len(sig_analytes))
-            else:
+            cs_analytes   = load_significant_analytes(cs_csv) or []
+            long_dir      = os.path.join(diff_root, "placenta", "longitudinal")
+            long_analytes = load_longitudinal_analytes(long_dir) or []
+
+            union        = sorted(set(cs_analytes) | set(long_analytes)) or None
+            sig_analytes = union
+
+            logger.info(
+                "Placenta: pre-filter = %d CS + %d longitudinal → %d unique analytes (q<0.05).",
+                len(cs_analytes), len(long_analytes), len(union) if union else 0,
+            )
+            if not union:
                 logger.warning("Placenta: no diff results found — using all features.")
 
             out_dir = os.path.join(output_root, "placenta", "all")
@@ -116,7 +121,6 @@ def run_dataset(
             if result:
                 all_summaries.append(result)
 
-    # ── Save combined summary ─────────────────────────────────────────────────
     if all_summaries:
         summary_path = os.path.join(output_root, "all_summaries.json")
         os.makedirs(output_root, exist_ok=True)

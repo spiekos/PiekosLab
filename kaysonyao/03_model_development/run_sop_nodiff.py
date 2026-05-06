@@ -1,16 +1,3 @@
-"""
-Run the SOP binary classifier WITHOUT differential analysis pre-filtering.
-
-All post-dedup / post-QC features are fed directly into LASSO → model.
-Results are saved to 04_results_and_figures/models/binary/MTBL_sop_nodiff/
-so they can be compared side-by-side with the filtered run (MTBL_sop/).
-
-Usage (from kaysonyao/ folder):
-    python 03_model_development/run_sop_nodiff.py
-    python 03_model_development/run_sop_nodiff.py --n-trials 30
-    python 03_model_development/run_sop_nodiff.py --skip-placenta
-"""
-
 import argparse
 import json
 import logging
@@ -19,7 +6,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from binary_classifier import run_binary_pipeline
-from utilities import load_data, normalise_group_labels
+from utilities import load_data, normalise_group_labels, get_analyte_columns
 
 logging.basicConfig(
     level=logging.INFO,
@@ -60,14 +47,9 @@ def main():
                 continue
 
             df = normalise_group_labels(load_data(csv_path))
-            n_features = sum(
-                1 for c in df.columns
-                if c not in ("SampleID", "SubjectID", "Group", "Subgroup",
-                             "Batch", "GestAgeDelivery", "SampleGestAge")
-            )
             logger.info(
                 "Plasma TP %s: %d samples × %d analyte cols (no diff filter)",
-                tp, len(df), n_features,
+                tp, len(df), len(get_analyte_columns(df)),
             )
 
             out_dir = os.path.join(output_root, "plasma", tp)

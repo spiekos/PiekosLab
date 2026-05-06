@@ -1,7 +1,7 @@
 {
   "tissue": "plasma",
   "timepoint": "D",
-  "data_path": "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_plasma/MTBL_plasma_suffix_D.csv",
+  "data_path": "/sessions/zealous-sleepy-curie/mnt/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_plasma/MTBL_plasma_suffix_D.csv",
   "outcome": "Complication",
   "complications_pooled": [
     "HDP",
@@ -24,7 +24,7 @@
     "complication": 8
   },
   "n_features_pretlasso": 49,
-  "n_features_postlasso": 48,
+  "n_features_postlasso": 49,
   "best_model_val": "LogisticRegression",
   "best_val_pr_auc": 1.0,
   "test_metrics": {
@@ -55,16 +55,16 @@
       "n_test": 17
     },
     "XGBoost": {
-      "pr_auc": 1.0,
-      "pr_auc_ci_low": 0.9999999999999998,
+      "pr_auc": 0.959375,
+      "pr_auc_ci_low": 0.8333333333333333,
       "pr_auc_ci_high": 1.0,
-      "roc_auc": 1.0,
-      "roc_auc_ci_low": 1.0,
+      "roc_auc": 0.9583333333333333,
+      "roc_auc_ci_low": 0.8426190476190478,
       "roc_auc_ci_high": 1.0,
-      "accuracy": 0.8235294117647058,
-      "precision": 0.7272727272727273,
+      "accuracy": 0.8823529411764706,
+      "precision": 0.8,
       "recall": 1.0,
-      "f1": 0.8421052631578947,
+      "f1": 0.8888888888888888,
       "n_test": 17
     },
     "SVM": {

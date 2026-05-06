@@ -1,52 +1,12 @@
-"""
-Multi-label classification pipeline for DP3 proteomics data.
-
-For each tissue (plasma / placenta) x timepoint, jointly predict HDP / FGR / sPTB:
-  1. Load cleaned data; keep Control + all complication rows; encode as binary columns
-  2. 70 / 15 / 15 train / val / test split (no stratification - multi-label)
-  3. Pearson correlation matrix of training features (saved as PNG)
-  4. Multi-task LASSO (MultiTaskLassoCV) for joint feature selection
-  5. Optuna TPE hyperparameter tuning for each model: train on X_train, score
-     macro-average PR-AUC on X_val across all outcomes
-  6. 10-fold KFold CV on {LogisticRegression, RandomForest, XGBoost, SVM}
-     (wrapped in MultiOutputClassifier) with tuned hyperparameters
-  7. Best model (by val macro PR-AUC from tuning) retrained on train+val, evaluated on test
-  8. All results written to 04_results_and_figures/models/multilabel/<tissue>/<timepoint>/
-
-Usage
------
-Run from the project root:
-
-    python 03_model_development/multilabel_classifier.py [OPTIONS]
-
-Options
--------
---plasma-dir    DIR   Directory with per-timepoint plasma CSVs
-                      [default: data/cleaned/proteomics/normalized_sliced_by_suffix/]
---placenta-csv  FILE  Path to placenta CSV
-                      [default: data/cleaned/proteomics/normalized_full_results/
-                                proteomics_placenta_cleaned_with_metadata.csv]
---output-dir    DIR   Root output directory
-                      [default: 04_results_and_figures/models/multilabel/]
---timepoints    A B   Which plasma timepoints to run (default: A B C D E)
---outcomes      ...   Which outcomes to model jointly (default: HDP FGR sPTB)
---n-trials      INT   Optuna trials per model (default: 50)
---skip-plasma         Skip plasma analysis
---skip-placenta       Skip placenta analysis
-"""
-
-# Standard library
 import argparse
 import json
 import logging
 import os
 import sys
 
-# Third-party
 import numpy as np
 import pandas as pd
 
-# Local
 sys.path.insert(0, os.path.dirname(__file__))
 from utilities import (
     OUTCOMES,
@@ -75,20 +35,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 def _build_multilabel_targets(
     df: pd.DataFrame,
     outcomes: list,
 ) -> pd.DataFrame | None:
-    """
-    Construct a binary indicator DataFrame (0/1) for each outcome column.
-    Rows whose Group is not in {Control} union outcomes are dropped.
-
-    Returns None if any outcome has fewer than 5 positive samples.
-    """
     keep_groups = set(["Control"] + outcomes)
     mask = df["Group"].isin(keep_groups)
     sub  = df.loc[mask]
@@ -105,10 +55,6 @@ def _build_multilabel_targets(
 
     return Y
 
-# ---------------------------------------------------------------------------
-# Core per-dataset runner
-# ---------------------------------------------------------------------------
-
 def run_multilabel_pipeline(
     df: pd.DataFrame,
     tissue: str,
@@ -118,28 +64,6 @@ def run_multilabel_pipeline(
     n_trials: int = 50,
     sig_analytes: list | None = None,
 ) -> dict | None:
-    """
-    Run the multi-label classification pipeline for one (tissue, timepoint).
-
-    Hyperparameters are tuned via Optuna TPE using the val set
-    (macro-average PR-AUC across all outcomes as the objective).
-
-    Parameters
-   ----------
-    df           : cleaned wide-format DataFrame
-    tissue       : 'plasma' or 'placenta'
-    timepoint    : timepoint label, e.g. 'A'; use 'all' for placenta
-    outcomes     : list of outcome strings, e.g. ['HDP', 'FGR', 'sPTB']
-    output_dir   : where to save results
-    n_trials     : number of Optuna trials per model
-    sig_analytes : optional pre-filter list of analyte names from differential analysis.
-                   When provided, only those columns are used as features.
-                   If None or empty, all analyte columns are used (fallback).
-
-    Returns
-   -------
-    summary dict or None if skipped
-    """
     os.makedirs(output_dir, exist_ok=True)
     tag = f"[{tissue} | tp={timepoint} | multilabel]"
     logger.info("%s Starting multi-label pipeline. Outcomes: %s", tag, outcomes)
@@ -379,10 +303,6 @@ def run_multilabel_pipeline(
     logger.info("%s Done.", tag)
     return summary
 
-# ---------------------------------------------------------------------------
-# Plasma loop
-# ---------------------------------------------------------------------------
-
 def run_plasma(
     plasma_dir: str,
     output_root: str,
@@ -428,10 +348,6 @@ def run_plasma(
 
     return summaries
 
-# ---------------------------------------------------------------------------
-# Placenta loop
-# ---------------------------------------------------------------------------
-
 def run_placenta(
     placenta_csv: str,
     output_root: str,
@@ -463,10 +379,6 @@ def run_placenta(
         df, "placenta", "all", outcomes, out_dir, n_trials, sig_analytes
     )
     return [result] if result else []
-
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
 
 def _build_parser() -> argparse.ArgumentParser:
     wkdir = os.getcwd()
