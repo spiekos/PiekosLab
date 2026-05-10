@@ -111,6 +111,10 @@ import os
 import re
 import sys
 from collections import defaultdict
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA as _PCA
 
 import numpy as np
 import pandas as pd
@@ -147,15 +151,6 @@ def _generate_pca_plots(
     Save side-by-side pre/post ComBat PCA plots colored by batch and by group.
     Matches the pattern used in proteomics_diagnostics.plot_pca_pre_post_comparison.
     """
-    try:
-        import matplotlib
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-        from sklearn.decomposition import PCA as _PCA
-    except ImportError:
-        logger.warning("matplotlib or scikit-learn not installed — PCA plots skipped.")
-        return
-
     os.makedirs(out_dir, exist_ok=True)
 
     def _prep(X: pd.DataFrame) -> pd.DataFrame:

@@ -1542,3 +1542,156 @@ def plot_longitudinal_boxplots(
 
     logger.info("Longitudinal boxplots saved -> %s", output_dir)
 
+
+# ---------------------------------------------------------------------------
+# MetaboAnalyst-compatible export
+# ---------------------------------------------------------------------------
+
+def _parse_mz_rt_from_unk_id(feature_id: str) -> tuple[float | None, float | None]:
+    """Extract m/z and RT from unnamed feature IDs like unk_p3535_POS_226.1283_RT4.74."""
+    mz_match = re.search(r"_(\d+\.\d+)_RT(\d+\.\d+)", feature_id)
+    if mz_match:
+        return float(mz_match.group(1)), float(mz_match.group(2))
+    return None, None
+
+
+def write_metaboanalyst_export(
+    output_dir: str,
+    label: str,
+    feature_meta: pd.DataFrame,
+    results_suffix: str = "_differential_results.csv",
+    metaboanalyst_dir: str | None = None,
+) -> None:
+    """Write a MetaboAnalyst-compatible peak list for one differential comparison.
+
+    Reads ``{label}{results_suffix}`` from *output_dir*, joins with *feature_meta*
+    to obtain m/z and RT, then writes:
+
+    ``{label}_metaboanalyst.txt`` into *metaboanalyst_dir* (defaults to *output_dir*
+    when not supplied).
+
+    Format preference:
+      - Format 2 (4 cols): ``m.z rt p.value t.score`` when RT is available for
+        all significant features.
+      - Format 1 (3 cols): ``m.z p.value t.score`` as fallback.
+
+    ``t.score`` is set to the log2 fold-change (``fold_change`` for cross-sectional,
+    ``log2fc`` for longitudinal), which carries directionality for MetaboAnalyst's
+    mummichog / MS Peaks to Pathway enrichment.  ``p.value`` is the raw p-value.
+
+    Features whose m/z cannot be resolved are logged and excluded from the output.
+    """
+    write_dir = metaboanalyst_dir if metaboanalyst_dir is not None else output_dir
+    os.makedirs(write_dir, exist_ok=True)
+    diff_path = os.path.join(output_dir, f"{label}{results_suffix}")
+    if not os.path.exists(diff_path):
+        logger.warning("MetaboAnalyst export: differential results not found: %s", diff_path)
+        return
+
+    diff = pd.read_csv(diff_path, index_col=0)
+    if diff.empty:
+        logger.info("MetaboAnalyst export [%s]: no results — skipping.", label)
+        return
+
+    # MetaboAnalyst mummichog requires ALL tested features (not just significant ones)
+    # so it can compute pathway enrichment against the correct background.
+    all_feat = diff.copy()
+
+    # Resolve the directional score column: cross-sectional uses 'fold_change',
+    # longitudinal uses 'log2fc'.
+    if "fold_change" in all_feat.columns:
+        t_score_col = "fold_change"
+    elif "log2fc" in all_feat.columns:
+        t_score_col = "log2fc"
+    else:
+        logger.warning(
+            "MetaboAnalyst export [%s]: no fold-change column found — t.score will be 0.", label
+        )
+        t_score_col = None
+
+    rows = []
+    n_no_mz = 0
+    n_no_rt = 0
+
+    for feat_id in all_feat.index:
+        p_val = all_feat.at[feat_id, "p_value"]
+        t_score = all_feat.at[feat_id, t_score_col] if t_score_col else 0.0
+
+        # Resolve m/z and RT from feature_meta (primary) or unk ID parsing (fallback)
+        mz, rt = None, None
+        if feat_id in feature_meta.index:
+            row = feature_meta.loc[feat_id]
+            mz_val = row.get("mz")
+            rt_val = row.get("rt")
+            mz = float(mz_val) if pd.notna(mz_val) else None
+            rt = float(rt_val) if pd.notna(rt_val) else None
+        else:
+            # Fallback: parse from unk_*_<mz>_RT<rt> ID format
+            mz, rt = _parse_mz_rt_from_unk_id(feat_id)
+
+        if mz is None:
+            n_no_mz += 1
+            continue  # silently skip; summary warning printed at end
+
+        if rt is None:
+            n_no_rt += 1
+
+        rows.append({"feature_id": feat_id, "m.z": mz, "r.t": rt, "p.value": p_val, "t.score": t_score})
+
+    if not rows:
+        logger.warning(
+            "MetaboAnalyst export [%s]: no features with resolvable m/z — skipping.", label
+        )
+        return
+
+    export_df = pd.DataFrame(rows).set_index("feature_id")
+
+    # Drop rows where p-value is missing (can happen for features that couldn't be tested)
+    before_drop = len(export_df)
+    export_df = export_df.dropna(subset=["p.value"])
+    if len(export_df) < before_drop:
+        logger.info(
+            "MetaboAnalyst export [%s]: dropped %d features with NaN p-value.",
+            label, before_drop - len(export_df),
+        )
+
+    # Clamp p-values to [1e-10, 1.0] — MetaboAnalyst rejects values outside (0, 1].
+    # Values below 1e-10 are floored (they format to 0.0000000000 at 10 d.p. otherwise).
+    export_df["p.value"] = export_df["p.value"].clip(lower=1e-10, upper=1.0)
+
+    # Format numeric columns as fixed-point strings: MetaboAnalyst's parser does not
+    # handle Python scientific notation (e.g. 1.15e-16 or -9.22e-05).
+    export_df["p.value"]  = export_df["p.value"].apply(lambda v: f"{v:.10f}")
+    export_df["t.score"]  = export_df["t.score"].apply(lambda v: f"{v:.10f}")
+    export_df["m.z"]      = export_df["m.z"].apply(lambda v: f"{v:.5f}")
+
+    # Use format 2 (with RT) if RT is available for all included features
+    all_have_rt = export_df["r.t"].notna().all()
+    out_path = os.path.join(write_dir, f"{label}_metaboanalyst.txt")
+
+    if all_have_rt:
+        out_cols = ["m.z", "r.t", "p.value", "t.score"]
+        fmt_used = 2
+    else:
+        out_cols = ["m.z", "p.value", "t.score"]
+        fmt_used = 1
+
+    # Write with quoted column headers as required by MetaboAnalyst
+    header_line = " ".join(f'"{c}"' for c in out_cols)
+    data_lines = export_df[out_cols].to_csv(sep=" ", index=False, header=False)
+    with open(out_path, "w") as _f:
+        _f.write(header_line + "\n" + data_lines)
+
+    n_sig = int(diff["significant"].sum()) if "significant" in diff.columns else "?"
+    logger.info(
+        "MetaboAnalyst export [%s]: %d total features written (format %d%s; %s significant) → %s",
+        label, len(export_df), fmt_used,
+        f"; {n_no_rt} missing RT" if fmt_used == 1 and n_no_rt else "",
+        n_sig,
+        out_path,
+    )
+    if n_no_mz:
+        logger.warning(
+            "MetaboAnalyst export [%s]: %d feature(s) excluded (no resolvable m/z).", label, n_no_mz
+        )
+

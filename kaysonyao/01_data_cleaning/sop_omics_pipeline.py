@@ -147,6 +147,9 @@ class PipelineArtifacts:
     istd_names: dict[str, list[str]] = field(default_factory=dict)
     # polarity -> batch -> count of biological samples at pipeline entry
     initial_sample_counts: dict[str, dict[str, int]] = field(default_factory=dict)
+    # Comprehensive per-entity drop log (written to CSV; never printed to terminal).
+    # Each row captures one dropped feature or sample with full context.
+    drop_log: list[dict] = field(default_factory=list)
 
 
 def _bh_fdr(p_values: pd.Series) -> pd.Series:
@@ -170,6 +173,49 @@ def _bh_fdr(p_values: pd.Series) -> pd.Series:
     out = pd.Series(np.nan, index=p.index, dtype=float)
     out.loc[valid] = q[np.argsort(order)]
     return out
+
+
+def _record_drop(
+    artifacts: PipelineArtifacts,
+    entity_type: str,
+    entity_id: str,
+    step: int,
+    step_name: str,
+    polarity: str,
+    reason: str,
+    *,
+    annotation_name: str = "",
+    formula: str = "",
+    mz: float | None = None,
+    rt_min: float | None = None,
+    metric_value: float | None = None,
+    metric_threshold: float | None = None,
+    batch: str = "",
+    timepoint: str = "",
+    dedup_phase: str = "",
+    representative_feature: str = "",
+) -> None:
+    """Append one drop event to artifacts.drop_log.  Never prints or logs."""
+    artifacts.drop_log.append(
+        {
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "step": step,
+            "step_name": step_name,
+            "polarity": polarity,
+            "reason": reason,
+            "annotation_name": annotation_name,
+            "formula": formula,
+            "mz": mz,
+            "rt_min": rt_min,
+            "metric_value": metric_value,
+            "metric_threshold": metric_threshold,
+            "batch": batch,
+            "timepoint": timepoint,
+            "dedup_phase": dedup_phase,
+            "representative_feature": representative_feature,
+        }
+    )
 
 
 def _normalise_name(value: str) -> str:
@@ -204,18 +250,22 @@ def _metadata_alias_candidates(sample_id: str) -> list[str]:
 
 def _extract_injection_order_value(*values: str) -> float:
     patterns = [
+        # F-notation: (F3) or F3
         r"\(F\s*([0-9]+)\)",
         r"\bF\s*([0-9]+)\b",
+        # File-index label
         r"file[_\s-]*index[_\s-]*([0-9]+)",
+        # Lipid format: {batch}_{Neg|Pos|Set<n>_Neg|Set<n>_Pos}_{injection_number}[.raw]
+        # e.g. 041625_Neg_004, 110123_Set2_Neg_001, 041625_Sadovsky_Plasma_Lipid_Pos_1.raw
+        r"\d{5,8}_(?:set\d+_)?(?:neg|pos)_([0-9]+)(?:\.raw)?$",
+        # Generic .raw fallback: last number before optional .raw extension
+        # only triggered when the string looks like a raw instrument file path
+        r"(?:raw|pool|set[0-9]+|_pos_|_neg_|\bpos\b|\bneg\b).*?([0-9]+)(?:\.raw)?$",
     ]
     for value in values:
         text = str(value or "")
         for pattern in patterns:
             match = re.search(pattern, text, flags=re.IGNORECASE)
-            if match:
-                return float(match.group(1))
-        if re.search(r"(raw|pool|set[0-9]+|_pos_|_neg_|\bpos\b|\bneg\b)", text, flags=re.IGNORECASE):
-            match = re.search(r"([0-9]+)(?:\.raw)?$", text, flags=re.IGNORECASE)
             if match:
                 return float(match.group(1))
     return float("nan")
@@ -1133,7 +1183,15 @@ def _istd_normalize(
     artifacts.method_log.append(
         f"{run.polarity}: ISTD normalization used geometric mean of {list(run.raw_istd.columns)}."
     )
-    return normalized[non_istd_features], list(run.raw_istd.columns)
+    removed_istds = list(run.raw_istd.columns)
+    for istd_id in removed_istds:
+        _record_drop(
+            artifacts, "feature", istd_id,
+            step=4, step_name="Step 4 — ISTD Removal (normalization reference)",
+            polarity=run.polarity,
+            reason="Internal standard removed after normalization; not a biological analyte",
+        )
+    return normalized[non_istd_features], removed_istds
 
 
 def _median_fold_change_batch_normalize(
@@ -1183,6 +1241,7 @@ def _feature_missingness_filter(
     thresholds: Thresholds,
     artifacts: PipelineArtifacts,
     polarity: str,
+    feature_meta: pd.DataFrame | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     biological = sample_info["sample_type"] == "biological"
     bio_df = df.loc[biological].copy()
@@ -1216,16 +1275,29 @@ def _feature_missingness_filter(
             }
         )
         if drop:
+            reason_str = (
+                f"missingness control={control_missing:.3f}, "
+                f"case={case_missing:.3f}"
+            )
             artifacts.feature_filter_log.append(
                 {
                     "step": 7,
                     "feature_id": col,
                     "polarity": polarity,
-                    "reason": (
-                        f"missingness control={control_missing:.3f}, "
-                        f"case={case_missing:.3f}"
-                    ),
+                    "reason": reason_str,
                 }
+            )
+            _fm = feature_meta.loc[col] if (feature_meta is not None and col in feature_meta.index) else None
+            _record_drop(
+                artifacts, "feature", col,
+                step=7, step_name="Step 7 — Feature Missingness",
+                polarity=polarity, reason=reason_str,
+                annotation_name=str(_fm["annotation_name"]) if _fm is not None else "",
+                formula=str(_fm["formula"]) if _fm is not None else "",
+                mz=float(_fm["mz"]) if _fm is not None and pd.notna(_fm.get("mz")) else None,
+                rt_min=float(_fm["rt"]) if _fm is not None and pd.notna(_fm.get("rt")) else None,
+                metric_value=round(miss_any, 4),
+                metric_threshold=thresholds.feature_missing_threshold,
             )
             if (
                 np.isfinite(control_missing)
@@ -1247,6 +1319,7 @@ def _rsd_filter(
     thresholds: Thresholds,
     artifacts: PipelineArtifacts,
     polarity: str,
+    feature_meta: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Drop features whose QC-pool RSD exceeds the threshold in ANY batch.
 
@@ -1294,13 +1367,31 @@ def _rsd_filter(
             for b in sorted(batch_rsd)
             if col in batch_rsd[b].index
         )
+        reason_str = f"QC RSD >30% in ≥1 batch ({per_batch_str})"
         artifacts.feature_filter_log.append(
             {
                 "step": 17,
                 "feature_id": col,
                 "polarity": polarity,
-                "reason": f"QC RSD >30% in ≥1 batch ({per_batch_str})",
+                "reason": reason_str,
             }
+        )
+        _fm = feature_meta.loc[col] if (feature_meta is not None and col in feature_meta.index) else None
+        # worst (highest) RSD across batches as the representative metric value
+        worst_rsd = max(
+            (batch_rsd[b][col] for b in batch_rsd if col in batch_rsd[b].index),
+            default=float("nan"),
+        )
+        _record_drop(
+            artifacts, "feature", col,
+            step=17, step_name="Step 17 — QC-Pool RSD Filter",
+            polarity=polarity, reason=reason_str,
+            annotation_name=str(_fm["annotation_name"]) if _fm is not None else "",
+            formula=str(_fm["formula"]) if _fm is not None else "",
+            mz=float(_fm["mz"]) if _fm is not None and pd.notna(_fm.get("mz")) else None,
+            rt_min=float(_fm["rt"]) if _fm is not None and pd.notna(_fm.get("rt")) else None,
+            metric_value=round(worst_rsd, 2) if np.isfinite(worst_rsd) else None,
+            metric_threshold=thresholds.rsd_threshold,
         )
 
     keep = ~fail_mask
@@ -1320,14 +1411,27 @@ def _sample_missingness_filter(
     for row_id, frac in miss.items():
         if frac > thresholds.sample_missing_threshold:
             keep_mask.loc[row_id] = False
+            sname = sample_info.at[row_id, "sample_name"]
+            batch = str(sample_info.at[row_id, "batch"]) if "batch" in sample_info.columns else ""
+            tp_match = re.search(r"([A-E])$", str(sname).strip())
+            tp = tp_match.group(1) if tp_match else ""
+            reason_str = f"missingness={frac:.3f}"
             artifacts.sample_filter_log.append(
                 {
                     "step": 8,
                     "row_id": row_id,
-                    "sample_name": sample_info.at[row_id, "sample_name"],
+                    "sample_name": sname,
                     "polarity": polarity,
-                    "reason": f"missingness={frac:.3f}",
+                    "reason": reason_str,
                 }
+            )
+            _record_drop(
+                artifacts, "sample", sname,
+                step=8, step_name="Step 8 — Sample Missingness",
+                polarity=polarity, reason=reason_str,
+                metric_value=round(frac, 4),
+                metric_threshold=thresholds.sample_missing_threshold,
+                batch=batch, timepoint=tp,
             )
     return df.loc[keep_mask].copy(), sample_info.loc[keep_mask].copy()
 
@@ -1339,6 +1443,8 @@ def _sample_istd_mad_filter(
     artifacts: PipelineArtifacts,
 ) -> set[str]:
     bad_row_ids: set[str] = set()
+    # Collect per-sample ISTD failures: row_id -> list of reason strings
+    sample_failure_reasons: dict[str, list[str]] = {}
     biological = sample_info["sample_type"] == "biological"
     for batch, rows in sample_info.loc[biological].groupby("batch"):
         row_ids = rows.index.tolist()
@@ -1353,6 +1459,10 @@ def _sample_istd_mad_filter(
             failures = values[(values < lo) | (values > hi)]
             for row_id, value in failures.items():
                 bad_row_ids.add(row_id)
+                reason_str = (
+                    f"{column} raw ISTD={value:.3e} outside [{lo:.3e}, {hi:.3e}] "
+                    f"(median={med:.3e}, MAD={mad:.3e})"
+                )
                 artifacts.sample_filter_log.append(
                     {
                         "step": 16,
@@ -1360,12 +1470,26 @@ def _sample_istd_mad_filter(
                         "sample_name": sample_info.at[row_id, "sample_name"],
                         "polarity": run.polarity,
                         "batch": batch,
-                        "reason": (
-                            f"{column} raw ISTD={value:.3e} outside [{lo:.3e}, {hi:.3e}] "
-                            f"(median={med:.3e}, MAD={mad:.3e})"
-                        ),
+                        "reason": reason_str,
                     }
                 )
+                sample_failure_reasons.setdefault(row_id, []).append(reason_str)
+
+    # One comprehensive drop_log entry per flagged sample (not per ISTD)
+    for row_id, reasons in sample_failure_reasons.items():
+        sname = sample_info.at[row_id, "sample_name"]
+        batch_val = str(sample_info.at[row_id, "batch"]) if "batch" in sample_info.columns else ""
+        tp_match = re.search(r"([A-E])$", str(sname).strip())
+        tp = tp_match.group(1) if tp_match else ""
+        combined_reason = "; ".join(reasons)
+        _record_drop(
+            artifacts, "sample", sname,
+            step=16, step_name="Step 16 — ISTD MAD Filter (post-ComBat)",
+            polarity=run.polarity,
+            reason=f"Failed {len(reasons)} ISTD check(s): {combined_reason}",
+            batch=batch_val, timepoint=tp,
+        )
+
     return bad_row_ids
 
 
@@ -1843,6 +1967,7 @@ def _iqr_filter(
     thresholds: Thresholds,
     artifacts: PipelineArtifacts,
     polarity: str,
+    feature_meta: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Step 18 (SOP v4): Remove near-constant or hypervariable features using
     within-timepoint IQR on the batch-corrected log2 data.
@@ -1916,34 +2041,59 @@ def _iqr_filter(
     for feat, miqr in median_iqr.items():
         if pd.isna(miqr):
             continue
+        _fm = feature_meta.loc[feat] if (feature_meta is not None and feat in feature_meta.index) else None
         if miqr < low_pct_val and miqr < thresholds.iqr_floor:
             # Near-constant: fails both relative and absolute threshold
+            reason_str = (
+                f"near-constant: median IQR={miqr:.4f} < "
+                f"{thresholds.iqr_low_percentile}th pct ({low_pct_val:.4f}) "
+                f"AND < floor ({thresholds.iqr_floor})"
+            )
             artifacts.feature_filter_log.append(
                 {
                     "step": 18,
                     "feature_id": feat,
                     "polarity": polarity,
-                    "reason": (
-                        f"near-constant: median IQR={miqr:.4f} < "
-                        f"{thresholds.iqr_low_percentile}th pct ({low_pct_val:.4f}) "
-                        f"AND < floor ({thresholds.iqr_floor})"
-                    ),
+                    "reason": reason_str,
                 }
+            )
+            _record_drop(
+                artifacts, "feature", feat,
+                step=18, step_name="Step 18 — IQR Filter (near-constant)",
+                polarity=polarity, reason=reason_str,
+                annotation_name=str(_fm["annotation_name"]) if _fm is not None else "",
+                formula=str(_fm["formula"]) if _fm is not None else "",
+                mz=float(_fm["mz"]) if _fm is not None and pd.notna(_fm.get("mz")) else None,
+                rt_min=float(_fm["rt"]) if _fm is not None and pd.notna(_fm.get("rt")) else None,
+                metric_value=round(float(miqr), 4),
+                metric_threshold=thresholds.iqr_floor,
             )
             to_drop.append(feat)
         elif miqr > high_pct_val and miqr > thresholds.iqr_ceiling:
             # Hypervariable: fails both relative and absolute threshold
+            reason_str = (
+                f"hypervariable: median IQR={miqr:.4f} > "
+                f"{thresholds.iqr_high_percentile}th pct ({high_pct_val:.4f}) "
+                f"AND > ceiling ({thresholds.iqr_ceiling})"
+            )
             artifacts.feature_filter_log.append(
                 {
                     "step": 18,
                     "feature_id": feat,
                     "polarity": polarity,
-                    "reason": (
-                        f"hypervariable: median IQR={miqr:.4f} > "
-                        f"{thresholds.iqr_high_percentile}th pct ({high_pct_val:.4f}) "
-                        f"AND > ceiling ({thresholds.iqr_ceiling})"
-                    ),
+                    "reason": reason_str,
                 }
+            )
+            _record_drop(
+                artifacts, "feature", feat,
+                step=18, step_name="Step 18 — IQR Filter (hypervariable)",
+                polarity=polarity, reason=reason_str,
+                annotation_name=str(_fm["annotation_name"]) if _fm is not None else "",
+                formula=str(_fm["formula"]) if _fm is not None else "",
+                mz=float(_fm["mz"]) if _fm is not None and pd.notna(_fm.get("mz")) else None,
+                rt_min=float(_fm["rt"]) if _fm is not None and pd.notna(_fm.get("rt")) else None,
+                metric_value=round(float(miqr), 4),
+                metric_threshold=thresholds.iqr_ceiling,
             )
             to_drop.append(feat)
 
@@ -2132,6 +2282,19 @@ def _resolve_named_groups(
                     "rt_flag": rt_flag,
                 }
             )
+            _loser_row = meta.loc[loser] if loser in meta.index else None
+            _record_drop(
+                artifacts, "feature", loser,
+                step=24, step_name="Steps 20-25 — Named Within-Compound Deduplication",
+                polarity=run.polarity,
+                reason=f"Lower quality than representative '{winner}' in compound group '{name}' (rt_flag={rt_flag})",
+                annotation_name=str(_loser_row["annotation_name"]) if _loser_row is not None else "",
+                formula=str(_loser_row["formula"]) if _loser_row is not None else "",
+                mz=float(_loser_row["mz"]) if _loser_row is not None and pd.notna(_loser_row.get("mz")) else None,
+                rt_min=float(_loser_row["rt"]) if _loser_row is not None and pd.notna(_loser_row.get("rt")) else None,
+                dedup_phase="named_within_compound",
+                representative_feature=winner,
+            )
 
     named_kept = meta.loc[sorted(keep_ids)].copy() if keep_ids else meta.iloc[0:0].copy()
     return named_kept, unnamed.copy()
@@ -2188,6 +2351,13 @@ def _collapse_group_by_quality(
         ascending=[False, False, True, True],
     )
     winner = ranked.index[0]
+    # Map phase label to SOP step name
+    _phase_step_map = {
+        "unnamed_formula": (26, "Step 26 — Unnamed Formula+RT Deduplication"),
+        "unnamed_mass_rt": (27, "Step 27 — Unnamed Mass+RT Deduplication"),
+        "unnamed_adduct_graph": (28, "Step 28 — Unnamed Adduct/Isotope Graph Collapse"),
+    }
+    step_num, step_label = _phase_step_map.get(phase, (25, f"Deduplication ({phase})"))
     for loser in ranked.index[1:]:
         artifacts.dedup_log.append(
             {
@@ -2196,6 +2366,19 @@ def _collapse_group_by_quality(
                 "dropped_feature": loser,
                 "reason": representative_reason,
             }
+        )
+        _loser_row = meta.loc[loser] if loser in meta.index else None
+        _record_drop(
+            artifacts, "feature", loser,
+            step=step_num, step_name=step_label,
+            polarity=str(meta.at[loser, "polarity"]) if "polarity" in meta.columns else "",
+            reason=f"{representative_reason}; representative='{winner}'",
+            annotation_name=str(_loser_row["annotation_name"]) if _loser_row is not None and "annotation_name" in _loser_row.index else "",
+            formula=str(_loser_row["formula"]) if _loser_row is not None and "formula" in _loser_row.index else "",
+            mz=float(_loser_row["mz"]) if _loser_row is not None and "mz" in _loser_row.index and pd.notna(_loser_row["mz"]) else None,
+            rt_min=float(_loser_row["rt"]) if _loser_row is not None and "rt" in _loser_row.index and pd.notna(_loser_row["rt"]) else None,
+            dedup_phase=phase,
+            representative_feature=winner,
         )
     return winner
 
@@ -2735,6 +2918,7 @@ def _process_polarity(
         thresholds,
         artifacts,
         run.polarity,
+        feature_meta=run.feature_meta,
     )
     _snap("after Step 7 (feature missingness)", filtered, run.sample_info)
 
@@ -2816,11 +3000,11 @@ def _process_polarity(
     _snap("after Step 16 (sample ISTD MAD, post-ComBat)", corrected, sample_info)
 
     # ── Step 17: RSD filter on QC pools (post-ComBat in SOP v4) ─────────────
-    corrected = _rsd_filter(corrected, sample_info, thresholds, artifacts, run.polarity)
+    corrected = _rsd_filter(corrected, sample_info, thresholds, artifacts, run.polarity, feature_meta=run.feature_meta)
     _snap("after Step 17 (QC RSD filter, post-ComBat)", corrected, sample_info)
 
     # ── Step 18: IQR filter within-timepoint (SOP v4 new step) ───────────────
-    corrected = _iqr_filter(corrected, sample_info, thresholds, artifacts, run.polarity)
+    corrected = _iqr_filter(corrected, sample_info, thresholds, artifacts, run.polarity, feature_meta=run.feature_meta)
     _snap("after Step 18 (IQR filter, within-timepoint)", corrected, sample_info)
 
     named_kept, unnamed = _resolve_named_groups(
@@ -2919,6 +3103,19 @@ def run_dataset(
     if artifacts.dedup_log:
         pd.DataFrame(artifacts.dedup_log).to_csv(
             config.output_dir / f"{config.dataset_id}_dedup_log.csv", index=False
+        )
+    if artifacts.drop_log:
+        # Comprehensive per-entity drop log — never printed to terminal.
+        # One row per dropped feature or sample, with full context fields.
+        _drop_col_order = [
+            "entity_type", "entity_id", "step", "step_name", "polarity", "reason",
+            "annotation_name", "formula", "mz", "rt_min",
+            "metric_value", "metric_threshold",
+            "batch", "timepoint",
+            "dedup_phase", "representative_feature",
+        ]
+        pd.DataFrame(artifacts.drop_log)[_drop_col_order].to_csv(
+            config.output_dir / f"{config.dataset_id}_comprehensive_drop_log.csv", index=False
         )
 
     if config.tissue == "plasma":

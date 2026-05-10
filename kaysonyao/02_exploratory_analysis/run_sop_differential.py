@@ -28,6 +28,7 @@ from utilities import (
     _start_analysis_log,
     plot_cross_sectional_boxplots,
     plot_longitudinal_boxplots,
+    write_metaboanalyst_export,
 )
 
 logging.basicConfig(
@@ -83,6 +84,18 @@ def run_dataset(dataset: str, wkdir: str) -> None:
         file_prefix=prefix,
     )
 
+    # ── Load feature metadata for MetaboAnalyst m/z + RT lookup ──────────────
+    plasma_fm_path = os.path.join(plasma_dir, f"{tissue}_plasma_feature_metadata.csv")
+    plasma_feature_meta = (
+        pd.read_csv(plasma_fm_path, index_col=0, low_memory=False)
+        if os.path.exists(plasma_fm_path) else pd.DataFrame()
+    )
+    placenta_fm_path = os.path.join(placenta_dir, f"{tissue}_placenta_feature_metadata.csv")
+    placenta_feature_meta = (
+        pd.read_csv(placenta_fm_path, index_col=0, low_memory=False)
+        if has_placenta and os.path.exists(placenta_fm_path) else pd.DataFrame()
+    )
+
     # ── Cross-sectional: placenta ──────────────────────────────────────────
     if has_placenta and os.path.exists(placenta_csv):
         df = normalise_group_labels(load_data(placenta_csv))
@@ -91,11 +104,16 @@ def run_dataset(dataset: str, wkdir: str) -> None:
         logger.info(
             "Cross-sectional [placenta]: %d samples x %d analytes", df.shape[0], len(analyte_cols)
         )
+        placenta_cs_dir = os.path.join(output_root, "placenta", "cross_sectional")
         run_cross_sectional(
             df,
             analyte_cols,
             group_col="Group",
-            output_dir=os.path.join(output_root, "placenta", "cross_sectional"),
+            output_dir=placenta_cs_dir,
+        )
+        write_metaboanalyst_export(
+            placenta_cs_dir, "Control_vs_Complication", placenta_feature_meta,
+            metaboanalyst_dir=os.path.join(output_root, "placenta", "metaboanalyst"),
         )
     elif has_placenta:
         logger.warning("Placenta file not found, skipping: %s", placenta_csv)
@@ -114,11 +132,18 @@ def run_dataset(dataset: str, wkdir: str) -> None:
         logger.info(
             "Cross-sectional [plasma %s]: %d samples x %d analytes", tp, df_tp.shape[0], len(analyte_cols)
         )
+        tp_cs_dir = os.path.join(output_root, "plasma", "cross_sectional", tp)
         run_cross_sectional(
             df_tp,
             analyte_cols,
             group_col="Group",
-            output_dir=os.path.join(output_root, "plasma", "cross_sectional", tp),
+            output_dir=tp_cs_dir,
+        )
+        write_metaboanalyst_export(
+            tp_cs_dir, "Control_vs_Complication", plasma_feature_meta,
+            metaboanalyst_dir=os.path.join(
+                output_root, "plasma", "metaboanalyst", "cross_sectional", tp
+            ),
         )
 
     # ── Cross-sectional boxplots: plasma ───────────────────────────────────
@@ -175,6 +200,18 @@ def run_dataset(dataset: str, wkdir: str) -> None:
         subject_col="SubjectID",
         output_dir=long_dir,
     )
+
+    # ── MetaboAnalyst exports: longitudinal ───────────────────────────────
+    import glob as _glob
+    for long_csv in sorted(_glob.glob(os.path.join(long_dir, "*_longitudinal_results.csv"))):
+        stem = os.path.basename(long_csv).replace("_longitudinal_results.csv", "")
+        write_metaboanalyst_export(
+            long_dir, stem, plasma_feature_meta,
+            results_suffix="_longitudinal_results.csv",
+            metaboanalyst_dir=os.path.join(
+                output_root, "plasma", "metaboanalyst", "longitudinal"
+            ),
+        )
 
     # ── Longitudinal boxplots ──────────────────────────────────────────────
     plot_longitudinal_boxplots(

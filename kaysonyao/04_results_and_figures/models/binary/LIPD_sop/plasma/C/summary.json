@@ -1,7 +1,7 @@
 {
   "tissue": "plasma",
   "timepoint": "C",
-  "data_path": "/sessions/zealous-sleepy-curie/mnt/kaysonyao/data/cleaned/sop_omics_pipeline/LIPD_plasma_model_input/LIPD_plasma_formatted_suffix_C.csv",
+  "data_path": "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/sop_omics_pipeline_v2/LIPD_plasma/LIPD_plasma_suffix_C.csv",
   "outcome": "Complication",
   "complications_pooled": [
     "HDP",
@@ -23,42 +23,62 @@
     "control": 9,
     "complication": 11
   },
-  "n_features_pretlasso": 1005,
-  "n_features_postlasso": 1005,
+  "n_features_pretlasso": 564,
+  "n_features_postlasso": 541,
   "best_model_val": "RandomForest",
-  "best_val_pr_auc": 0.9757575757575758,
+  "best_val_pr_auc": 1.0,
   "test_metrics": {
     "LogisticRegression": {
-      "pr_auc": 0.9038673744556098,
-      "roc_auc": 0.8484848484848485,
-      "accuracy": 0.8,
-      "precision": 0.8888888888888888,
-      "recall": 0.7272727272727273,
-      "f1": 0.8
-    },
-    "RandomForest": {
-      "pr_auc": 0.986013986013986,
-      "roc_auc": 0.9797979797979798,
+      "pr_auc": 0.8845566050111504,
+      "pr_auc_ci_low": 0.6663034361471861,
+      "pr_auc_ci_high": 1.0,
+      "roc_auc": 0.9090909090909091,
+      "roc_auc_ci_low": 0.7031385281385282,
+      "roc_auc_ci_high": 1.0,
       "accuracy": 0.9,
       "precision": 0.9090909090909091,
       "recall": 0.9090909090909091,
-      "f1": 0.9090909090909091
+      "f1": 0.9090909090909091,
+      "n_test": 20
+    },
+    "RandomForest": {
+      "pr_auc": 1.0,
+      "pr_auc_ci_low": 0.9999999999999998,
+      "pr_auc_ci_high": 1.0000000000000002,
+      "roc_auc": 1.0,
+      "roc_auc_ci_low": 0.9999999999999999,
+      "roc_auc_ci_high": 1.0,
+      "accuracy": 0.8,
+      "precision": 1.0,
+      "recall": 0.6363636363636364,
+      "f1": 0.7777777777777778,
+      "n_test": 20
     },
     "XGBoost": {
       "pr_auc": 1.0,
+      "pr_auc_ci_low": 0.9999999999999998,
+      "pr_auc_ci_high": 1.0000000000000002,
       "roc_auc": 1.0,
+      "roc_auc_ci_low": 0.9999999999999999,
+      "roc_auc_ci_high": 1.0,
       "accuracy": 1.0,
       "precision": 1.0,
       "recall": 1.0,
-      "f1": 1.0
+      "f1": 1.0,
+      "n_test": 20
     },
     "SVM": {
-      "pr_auc": 0.986013986013986,
-      "roc_auc": 0.9797979797979798,
-      "accuracy": 0.9,
-      "precision": 1.0,
+      "pr_auc": 0.9406172110717566,
+      "pr_auc_ci_low": 0.7964739229024942,
+      "pr_auc_ci_high": 1.0,
+      "roc_auc": 0.9393939393939393,
+      "roc_auc_ci_low": 0.7812242445054945,
+      "roc_auc_ci_high": 1.0,
+      "accuracy": 0.85,
+      "precision": 0.9,
       "recall": 0.8181818181818182,
-      "f1": 0.9
+      "f1": 0.8571428571428571,
+      "n_test": 20
     }
   }
 }
