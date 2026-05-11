@@ -1,214 +1,228 @@
 # 01 Data Cleaning
 
-This README documents how to run:
+Scripts for QC, normalization, batch correction, and imputation across all DP3 omics and survey modalities.
 
-**Proteomics**
-- `clean_proteomics_data.py`
-- `format_proteomics.py`
-- `test_proteomics.py`
-- `proteomics_diagnostics.py`
-
-**Metabolomics**
-- `clean_metabolomics_data.py`
+| Script | Description |
+|---|---|
+| `utilities.py` | Shared helpers imported by all cleaning scripts (see below) |
+| `clean_proteomics_data.py` | Olink proteomics: QC, ComBat, imputation |
+| `format_proteomics.py` | Split proteomics plasma output by timepoint suffix |
+| `sop_omics_pipeline.py` | SOP v4 pipeline for metabolomics + lipidomics (Compound Discoverer exports) |
+| `clean_survey_data.py` | Extract and clean survey data (EPDS, PSS, PUQE-24, diet, water quality) |
 
 ---
 
-## Proteomics — `clean_proteomics_data.py`
+## `utilities.py` — Shared helpers
 
-### What It Does
+**Do not run directly** — imported by all other scripts in this folder and by `02_exploratory_analysis/utilities.py` and `03_model_development/utilities.py` via `importlib`.
+
+Key exports:
+
+| Symbol | Description |
+|---|---|
+| `METADATA_COLS` | Canonical list of metadata column names: `[SubjectID, Group, Subgroup, Batch, GestAgeDelivery, SampleGestAge, MetadataCanonicalID]` |
+| `_GROUP_LABEL_MAP` | Label corrections applied at metadata load time (e.g. `"sptb"` → `"sPTB"`) |
+| `load_metadata_with_batch` | Load and merge metadata from the master Excel workbook. Supports `meta_type` values: `"proteomics"`, `"placenta"`, `"metabolomics"`, `"lipids"` |
+| `load_data` | Load a cleaned wide-format CSV with `index_col=0` |
+| `get_analyte_columns` | Return all non-metadata column names from a cleaned DataFrame |
+| `normalise_group_labels` | Apply `_GROUP_LABEL_MAP` corrections to the Group column |
+| `half_min_impute_wide` | Impute missing values with per-column minimum − 1 (log2 space = half-min in linear space) |
+| `standardize_missing_npx` | Replace Olink-style missing flags with `NaN` |
+| `qc_mask` | Mask NPX values below Olink LOD |
+| `apply_panel_normalization_long` | Olink panel normalization using internal control samples |
+| `benjamini_hochberg_rejections` | BH FDR correction via `statsmodels.multipletests` with NaN-safe index handling |
+| `missingness_filter_and_group_check` | Filter assays by missingness + Fisher's exact test for group-imbalanced missing |
+| `combat_normalize_wide` | ComBat batch correction (pycombat) on wide-format DataFrames |
+
+---
+
+## `clean_proteomics_data.py` — Proteomics
+
+### What it does
 
 - Loads Olink proteomics CSV files.
-- Applies QC masking and panel normalization.
+- Applies QC masking (`qc_mask`) and panel normalization (`apply_panel_normalization_long`).
 - Removes Olink control samples.
 - Applies ComBat batch normalization using batch labels from metadata.
-- Filters assays by missingness after ComBat (cutoff + Fisher's exact test for group-imbalanced missingness) and writes a dropped-assay report.
+- Filters assays by missingness (cutoff + Fisher's exact test for group-imbalanced missingness).
 - Imputes below-LOD values with half-minimum per analyte (log2 scale).
 - Merges metadata and saves cleaned output CSV.
 
-## Required Inputs
-
-- Olink CSV files folder path (for example: `$ROOT_DIR/data/proteomics`)
-- Metadata Excel file path (for example: `$ROOT_DIR/data/<metadata_file>.xlsx`)
-
-## Quick Run
-
-Run from terminal:
+### Quick run
 
 ```bash
-ROOT_DIR=/path/to/repo
-python "$ROOT_DIR/01_data_cleaning/clean_proteomics_data.py"
+python 01_data_cleaning/clean_proteomics_data.py
 ```
 
-What this does:
+Auto-detects plasma and placenta files from `data/proteomics/`.
+Writes outputs to `data/cleaned/proteomics/normalized_full_results/`.
 
-- Auto-detects plasma and placenta files from `data/proteomics`.
-- Writes outputs to `data/cleaned/proteomics/normalized_full_results`.
+### CLI modes
 
-## CLI Modes
-
-### 1) Auto Mode
-
+**Auto mode** (default):
 ```bash
-ROOT_DIR=/path/to/repo
-python "$ROOT_DIR/01_data_cleaning/clean_proteomics_data.py" \
+python 01_data_cleaning/clean_proteomics_data.py \
   --mode auto \
-  --data-dir "$ROOT_DIR/data/proteomics" \
-  --metadata-path "$ROOT_DIR/data/<metadata_file>.xlsx" \
-  --output-dir "$ROOT_DIR/data/cleaned/proteomics/normalized_full_results"
+  --data-dir data/proteomics \
+  --metadata-path "data/dp3 master table v2.xlsx" \
+  --output-dir data/cleaned/proteomics/normalized_full_results
 ```
 
-### 2) Single Mode (Run One Dataset Type)
-
-Plasma example:
-
+**Single mode** (one dataset type):
 ```bash
-ROOT_DIR=/path/to/repo
-python "$ROOT_DIR/01_data_cleaning/clean_proteomics_data.py" \
-  --mode single \
-  --meta-type proteomics \
-  --metadata-path "$ROOT_DIR/data/<metadata_file>.xlsx" \
-  --output-csv "$ROOT_DIR/data/cleaned/proteomics/normalized_full_results/proteomics_plasma_cleaned_with_metadata.csv" \
-  --files "$ROOT_DIR/data/proteomics/<plasma_file_1>.csv" "$ROOT_DIR/data/proteomics/<plasma_file_2>.csv"
+# Plasma
+python 01_data_cleaning/clean_proteomics_data.py \
+  --mode single --meta-type proteomics \
+  --metadata-path "data/dp3 master table v2.xlsx" \
+  --output-csv data/cleaned/proteomics/normalized_full_results/proteomics_plasma_cleaned_with_metadata.csv \
+  --files data/proteomics/<file1>.csv data/proteomics/<file2>.csv
+
+# Placenta
+python 01_data_cleaning/clean_proteomics_data.py \
+  --mode single --meta-type placenta \
+  --metadata-path "data/dp3 master table v2.xlsx" \
+  --output-csv data/cleaned/proteomics/normalized_full_results/proteomics_placenta_cleaned_with_metadata.csv \
+  --files data/proteomics/<file1>.csv
 ```
-
-Placenta example:
-
-```bash
-ROOT_DIR=/path/to/repo
-python "$ROOT_DIR/01_data_cleaning/clean_proteomics_data.py" \
-  --mode single \
-  --meta-type placenta \
-  --metadata-path "$ROOT_DIR/data/<metadata_file>.xlsx" \
-  --output-csv "$ROOT_DIR/data/cleaned/proteomics/normalized_full_results/proteomics_placenta_cleaned_with_metadata.csv" \
-  --files "$ROOT_DIR/data/proteomics/<placenta_file_1>.csv" "$ROOT_DIR/data/proteomics/<placenta_file_2>.csv"
-```
-
-## Outputs
-
-Main cleaned outputs:
-
-- `$ROOT_DIR/data/cleaned/proteomics/normalized_full_results/proteomics_plasma_cleaned_with_metadata.csv`
-- `$ROOT_DIR/data/cleaned/proteomics/normalized_full_results/proteomics_placenta_cleaned_with_metadata.csv`
-
-Missingness reports (created when assays are dropped):
-
-- `*_dropped_missingness_report.csv`
-
-## Help
-
-```bash
-ROOT_DIR=/path/to/repo
-python "$ROOT_DIR/01_data_cleaning/clean_proteomics_data.py" --help
-```
-
-## Format Plasma Output By Longitudinal Suffix
-
-Use `format_proteomics.py` to split the final plasma output into one file per suffix label.
-
-What it does:
-
-- Removes internal whitespace in `SampleID` and `SubjectID`
-- Extracts suffix label by comparing `SampleID` vs `SubjectID`
-- Drops `Batch`
-- Writes one CSV per suffix label
-- In each output file:
-  - drops `SubjectID`
-  - removes suffix from `SampleID`
-
-Run:
-
-```bash
-ROOT_DIR=/path/to/repo
-python "$ROOT_DIR/01_data_cleaning/format_proteomics.py" \
-  --input-csv "$ROOT_DIR/data/cleaned/proteomics/normalized_full_results/proteomics_plasma_cleaned_with_metadata.csv" \
-  --output-dir "$ROOT_DIR/data/cleaned/proteomics/normalized_full_results/sliced_by_suffix" \
-  --base-name proteomics_plasma
-```
-
-Format script help:
-
-```bash
-ROOT_DIR=/path/to/repo
-python "$ROOT_DIR/01_data_cleaning/format_proteomics.py" --help
-```
-
-## Run Diagnostics
-
-Use `proteomics_diagnostics.py` to generate duplicate-combo report and PCA diagnostics.
-
-```bash
-ROOT_DIR=/path/to/repo
-python "$ROOT_DIR/01_data_cleaning/proteomics_diagnostics.py"
-```
-
-Outputs are written under:
-
-- `$ROOT_DIR/data/cleaned/proteomics/normalized_full_results` (cleaned outputs and reports)
-- `$ROOT_DIR/data/cleaned/proteomics/normalized_full_results/diagnostics` (all plots and diagnostics)
-
-## Run QA Tests
-
-Use `test_proteomics.py` to run validation checks and produce QA plots:
-
-```bash
-ROOT_DIR=/path/to/repo
-python "$ROOT_DIR/01_data_cleaning/test_proteomics.py"
-```
-
-Validate a specific cleaned output file:
-
-```bash
-ROOT_DIR=/path/to/repo
-python "$ROOT_DIR/01_data_cleaning/test_proteomics.py" \
-  --integration "$ROOT_DIR/data/cleaned/proteomics/normalized_full_results/proteomics_plasma_cleaned_with_metadata.csv" \
-  --verbose
-```
-
-QA report outputs are written under:
-
-- `$ROOT_DIR/data/cleaned/proteomics/qa_reports`
-
----
-
-## Metabolomics — `clean_metabolomics_data.py`
-
-### What It Does
-
-- Loads per-batch wide-format CSV files provided by the collaborator (plasma and placenta separately).
-- Strips non-analyte metadata columns (`patient_ID`, `group`, `subgroup`, `gestational_age`, `gestational_age_at_collection`) that are embedded alongside analyte intensities in the raw files.
-- Merges batch files and attaches clinical metadata (Group, Subgroup) from the master table.
-- Applies the same collaborator batch normalization already embedded in the data (per-analyte median/MAD scaling using control samples — a constant factor per analyte applied uniformly to all samples, preserving between-group fold changes).
-- Runs missingness filter (cutoff only — **Fisher's exact test for group-imbalanced missingness is omitted** because the collaborator-provided data contains 0% missing values across all plasma timepoints).
-- Imputes any residual missing values with half-minimum per analyte (log2 scale).
-- Splits plasma output by timepoint suffix (A–E) using `format_metabolomics.py`.
-
-### Key properties of metabolomics data
-
-| Property | Value |
-|---|---|
-| Scale | Already log2-transformed by collaborator |
-| Missing values | 0% across all plasma timepoints |
-| Plasma analytes | 1,887 (after removing metadata columns and unnamed-peak filtering) |
-| Placenta analytes | 2,039 |
-| Plasma samples | 523 (across all timepoints) |
-| Placenta samples | 106 |
-
-### Quick Run
-
-```bash
-ROOT_DIR=/path/to/repo
-python "$ROOT_DIR/01_data_cleaning/clean_metabolomics_data.py"
-```
-
-Auto-detects plasma and placenta raw files from `data/cleaned/metabolomics/plasma/` and
-`data/cleaned/metabolomics/placenta/`, writes outputs to
-`data/cleaned/metabolomics/normalized_full_results/` and
-`data/cleaned/metabolomics/normalized_sliced_by_suffix/`.
 
 ### Outputs
 
+- `data/cleaned/proteomics/normalized_full_results/proteomics_plasma_cleaned_with_metadata.csv`
+- `data/cleaned/proteomics/normalized_full_results/proteomics_placenta_cleaned_with_metadata.csv`
+- `*_dropped_missingness_report.csv` (when assays are dropped)
+
+---
+
+## `format_proteomics.py` — Split plasma by timepoint
+
+Splits the full plasma cleaned CSV into one file per suffix label (A–E).
+
+What it does:
+- Removes internal whitespace in `SampleID` and `SubjectID`
+- Extracts suffix label by comparing `SampleID` vs `SubjectID`
+- Drops `Batch`; writes one CSV per suffix
+- In each output file: drops `SubjectID`, removes suffix from `SampleID`
+
+```bash
+python 01_data_cleaning/format_proteomics.py \
+  --input-csv data/cleaned/proteomics/normalized_full_results/proteomics_plasma_cleaned_with_metadata.csv \
+  --output-dir data/cleaned/proteomics/normalized_sliced_by_suffix \
+  --base-name proteomics_plasma
+```
+
+---
+
+## `sop_omics_pipeline.py` — SOP v4 metabolomics + lipidomics
+
+Implements the April 2026 DP3 SOP from raw Compound Discoverer exports. Handles all four
+dataset configurations: `MTBL_plasma`, `MTBL_placenta`, `LIPD_plasma`, `LIPD_placenta`.
+
+### Processing steps (in order)
+
+1. Missing-value standardization
+2. Sample type / batch / injection-order parsing
+3. Pre-normalization drift diagnostics
+4. ISTD normalization
+5. Median fold-change batch normalization
+6. Post-normalization drift diagnostics
+7. Feature missingness filter (per-polarity)
+8. Sample missingness filter
+9. Log2 transformation
+10. Half-minimum imputation
+11. Pre-correction PCA
+12. Batch-confounding checks
+13. ComBat batch correction
+14. Post-correction PCA
+15. Post-ComBat intensity check + sample-level ISTD MAD QC
+16. QC-pool RSD filter
+17. IQR filter (within-timepoint)
+18. Bridge-sample averaging
+19. Deduplication, annotation, metadata integration
+20. Trajectory plots + human-readable pipeline log
+
+### Inputs
+
+Raw data lives in the sibling `kaylaxu/` repository:
+
+| Dataset | Input directory | Tissue |
+|---|---|---|
+| MTBL_plasma | `kaylaxu/data/MTBL_plasma/` | Plasma metabolomics (Compound Discoverer CSV) |
+| MTBL_placenta | `kaylaxu/data/MTBL_placenta/` | Placenta metabolomics |
+| LIPD_plasma | `kaylaxu/data/LIPD_plasma/` | Plasma lipidomics |
+| LIPD_placenta | `kaylaxu/data/LIPD_placenta/` | Placenta lipidomics |
+
+### Quick run
+
+```bash
+# All four datasets
+python 01_data_cleaning/sop_omics_pipeline.py
+
+# One dataset only
+python 01_data_cleaning/sop_omics_pipeline.py --datasets MTBL_plasma
+
+# Multiple specific datasets
+python 01_data_cleaning/sop_omics_pipeline.py --datasets MTBL_plasma MTBL_placenta
+```
+
+### CLI flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `--datasets` | all four | Space-separated list: `MTBL_plasma`, `MTBL_placenta`, `LIPD_plasma`, `LIPD_placenta` |
+| `--kayla-root` | `../kaylaxu` | Path to the Kayla Xu raw-export repository |
+| `--metadata` | `data/dp3 master table v2.xlsx` | Master metadata workbook |
+| `--output-root` | `data/cleaned/sop_omics_pipeline` | Root directory for cleaned outputs |
+
+### Outputs
+
+Per dataset under `data/cleaned/sop_omics_pipeline/<DATASET_ID>/`:
+
+```
+MTBL_plasma/
+├── MTBL_plasma_cleaned_with_metadata.csv    Full plasma matrix (all timepoints)
+├── MTBL_plasma_suffix_{A-E}.csv             One CSV per plasma timepoint
+├── MTBL_plasma_feature_metadata.csv         m/z, RT, annotation per feature
+├── MTBL_plasma_metadata_audit.csv           Per-sample metadata match log
+├── MTBL_plasma_drop_log.csv                 All dropped features/samples with reason
+├── pipeline_log.txt                         Human-readable step-by-step log
+└── diagnostics/
+    ├── pos/ neg/                            Per-polarity diagnostic plots
+    └── post_combat_intensity_check/
+```
+
+Placenta output (`MTBL_placenta/`) has the same structure minus the per-timepoint suffix files.
+
+---
+
+## `clean_survey_data.py` — Survey data
+
+Extracts, filters, and cleans survey instruments for the full DP3 survey cohort (≈390 subjects;
+broader than the n=133 omics cohort).
+
+### Inputs
+
 | File | Description |
 |---|---|
-| `data/cleaned/metabolomics/normalized_full_results/metabolomics_plasma_cleaned_with_metadata.csv` | Full plasma matrix (all timepoints merged) |
-| `data/cleaned/metabolomics/normalized_full_results/metabolomics_placenta_cleaned_with_metadata.csv` | Full placenta matrix |
-| `data/cleaned/metabolomics/normalized_sliced_by_suffix/metabolomics_plasma_formatted_suffix_{A-E}.csv` | One CSV per plasma timepoint |
+| `data/survey/epds_raw.csv` | Edinburgh Postnatal Depression Scale |
+| `data/survey/pss_raw.csv` | Perceived Stress Scale |
+| `data/survey/puqe24_raw.csv` | Pregnancy-Unique Quantification of Emesis |
+| `data/survey/diet_raw.csv` | Diet frequency questionnaire |
+| `data/survey/water.csv` | Drinking water THM/disinfection by-product data |
+| `data/dp3 master table v2.xlsx` (sheet: `clinical data`) | Group/Subgroup source for all enrolled subjects |
+
+### Outputs
+
+```
+data/survey/cleaned/
+├── epds_cleaned.csv
+├── pss_cleaned.csv
+├── puqe24_cleaned.csv
+├── diet_cleaned.csv
+└── water_cleaned.csv
+```
+
+### Quick run
+
+```bash
+python 01_data_cleaning/clean_survey_data.py
+```
