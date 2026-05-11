@@ -1,8 +1,6 @@
 """
-Title: clean_proteomics_data.py
-Author: Kayson Yao
-Date: 02/08/2026
-Description:
+clean_proteomics_data.py
+
 DP3 proteomics preprocessing for Olink Explore long-format exports.
 
 Workflow:

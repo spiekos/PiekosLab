@@ -3,7 +3,7 @@ Utilities for intraomics differential analysis and heatmap visualization.
 
 Shared constants, data loading helpers, statistical analysis functions
 (cross-sectional and longitudinal), and heatmap generation functions used by:
-  - identify_differential_analytes.py
+  - identify_differential_analytes_proteomics.py
   - generate_differential_cluster_heatmap_limited_group.py
 """
 
@@ -26,6 +26,25 @@ from scipy.spatial.distance import pdist
 import statsmodels.stats.multitest as multitest
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+
+# Shared helpers from the cleaning layer — single source of truth for metadata
+# column names, group label normalisation, and analyte column extraction.
+# importlib is used (instead of a plain import) to avoid a name collision with
+# this module's own name "utilities" on sys.path.
+import importlib.util as _ilu
+_cu_spec = _ilu.spec_from_file_location(
+    "dp3_cleaning_utilities",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "01_data_cleaning", "utilities.py"),
+)
+_cu = _ilu.module_from_spec(_cu_spec)
+_cu_spec.loader.exec_module(_cu)
+_METADATA_COLS        = _cu.METADATA_COLS
+_GROUP_LABEL_MAP      = _cu._GROUP_LABEL_MAP
+load_data             = _cu.load_data
+get_analyte_columns   = _cu.get_analyte_columns
+normalise_group_labels = _cu.normalise_group_labels
+del _ilu, _cu_spec, _cu
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +54,6 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 FDR_THRESHOLD    = 0.05
-_METADATA_COLS   = ["SubjectID", "Group", "Subgroup", "Batch", "GestAgeDelivery", "SampleGestAge"]
-_GROUP_LABEL_MAP = {"sptb": "sPTB"}
 
 # Analysis-specific constants
 MIN_N             = 5
@@ -60,32 +77,6 @@ _SUBGROUP_PALETTE: dict[str, str] = {
     "sPTB":    "mediumpurple",
 }
 _SUBGROUP_DEFAULT_COLOUR = "lightgray"   # for any unknown/unlabelled subgroup
-
-
-# ---------------------------------------------------------------------------
-# Shared data helpers
-# ---------------------------------------------------------------------------
-
-def load_data(path: str) -> pd.DataFrame:
-    """Load cleaned wide-format CSV (index=SampleID, columns=metadata+analytes)."""
-    return pd.read_csv(path, index_col=0)
-
-
-def normalise_group_labels(df: pd.DataFrame, group_col: str = "Group") -> pd.DataFrame:
-    """Standardise group label capitalisation using _GROUP_LABEL_MAP (returns df for chaining)."""
-    if group_col in df.columns:
-        before = df[group_col].value_counts()
-        df[group_col] = df[group_col].replace(_GROUP_LABEL_MAP)
-        for old, canonical in _GROUP_LABEL_MAP.items():
-            n = before.get(old, 0)
-            if n > 0:
-                logger.info("  Group label fix: '%s' → '%s' (%d sample(s))", old, canonical, n)
-    return df
-
-
-def get_analyte_columns(df: pd.DataFrame) -> list:
-    """Return analyte column names by excluding known metadata columns."""
-    return [c for c in df.columns if c not in _METADATA_COLS]
 
 
 # ---------------------------------------------------------------------------
@@ -604,7 +595,6 @@ def _add_subgroup_legend(fig, present_subgroups: list[str], font_scale: float = 
     bbox_to_anchor=(0.99, 0.91) in figure coordinates places the legend's
     upper-right corner at 91 % of figure height — below a suptitle at y=0.99.
     """
-    import matplotlib.patches as mpatches
     fs = font_scale
     patches = [
         mpatches.Patch(color=_SUBGROUP_PALETTE.get(sg, _SUBGROUP_DEFAULT_COLOUR), label=sg)
@@ -1124,11 +1114,6 @@ def plot_cross_sectional_boxplots(
     compl_sources    : list labels to pool as Complication (default: all non-control)
     top_n            : int  max analytes to plot (ranked by min q-value)
     """
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as mpatches
-
     os.makedirs(output_dir, exist_ok=True)
 
     timepoints = [tp for tp in _TIMEPOINT_ORDER if tp in tp_dfs]
@@ -1355,11 +1340,6 @@ def plot_longitudinal_boxplots(
     Significant analytes: flagged in Complication longitudinal results
     (q < 0.05 AND |median_delta| >= log2(1.5)) at >= 1 transition.
     """
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as mpatches
-
     os.makedirs(output_dir, exist_ok=True)
 
     timepoints  = [tp for tp in _TIMEPOINT_ORDER if tp in tp_dfs]

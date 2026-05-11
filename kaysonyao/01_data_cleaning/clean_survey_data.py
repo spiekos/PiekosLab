@@ -8,8 +8,8 @@ The n=133 tab only covers subjects whose omics data was successfully
 processed.  The raw survey files contain ~390 subjects total — many of
 whom completed surveys but whose omics samples were not processed (early
 loss-to-follow-up, withdrawal, excluded, or simply not yet processed).
-Survey analysis does NOT require a processed omics record, so we use the
-full 'clinical data' sheet in dp3 master table v2.xlsx as the group-map
+Survey analysis does NOT require a processed omics record; the full
+'clinical data' sheet in dp3 master table v2.xlsx is used as the group-map
 source.  Only subjects whose group is one of {Control, FGR, HDP, sPTB}
 are retained; subjects labelled SAB, LTFU, Withdraw, or excluded are
 dropped.

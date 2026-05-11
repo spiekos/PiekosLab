@@ -3,7 +3,9 @@ import json
 import logging
 import os
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import numpy as np
 import pandas as pd
@@ -11,6 +13,7 @@ import requests
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 from scipy.stats import fisher_exact
 from statsmodels.stats.multitest import multipletests
 
@@ -79,9 +82,6 @@ def _metaboanalyst_name_match(
     cache_path: str | None = None,
     n_workers: int = 20,
 ) -> pd.DataFrame:
-    import threading
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-
     cached = {}
     if cache_path and os.path.exists(cache_path):
         cached_df = pd.read_csv(cache_path, dtype=str).fillna("")
@@ -261,7 +261,6 @@ def plot_pathway_dotplot(
     ax.spines[["top", "right"]].set_visible(False)
 
     # Legend for colour
-    from matplotlib.lines import Line2D
     legend_elems = [
         Line2D([0], [0], marker="o", color="w", markerfacecolor="#ef4444",
                markersize=9, label="q < 0.05 (FDR)"),

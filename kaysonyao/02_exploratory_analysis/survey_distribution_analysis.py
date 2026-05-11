@@ -12,9 +12,6 @@ Statistical approach
     • BH FDR            : applied across all pairwise tests within
                          each survey × visit combination.
 
-  Same framework as the omics differential analysis so results are
-  directly comparable.
-
 Input
 -----
   data/cleaned/survey/{epds,pss,puqe24,diet}_cleaned.csv

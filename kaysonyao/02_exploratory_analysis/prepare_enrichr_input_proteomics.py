@@ -1,9 +1,8 @@
 """
-Title: prepare_enrichr_input.py
-Author: Kayson Yao
-Description:
-    Prepares gene/protein lists from differential analysis significant analyte
-    CSVs and runs pathway enrichment via the Enrichr API (using gseapy).
+prepare_enrichr_input_proteomics.py
+
+Prepares gene/protein lists from differential analysis significant analyte
+CSVs and runs pathway enrichment via the Enrichr API (using gseapy).
 
     Cross-sectional (Control vs Complication):
         fold_change = median_Complication - median_Control  (NPX log2 scale)
@@ -42,22 +41,22 @@ Description:
 
 Usage:
     # Default: auto-discover CS + longitudinal results and run enrichment for all
-    python prepare_enrichr_input.py
+    python prepare_enrichr_input_proteomics.py
 
     # Query every available Enrichr database (mirrors the website behaviour)
-    python prepare_enrichr_input.py --all-databases
+    python prepare_enrichr_input_proteomics.py --all-databases
 
     # Single CS comparison with all databases
-    python prepare_enrichr_input.py \
+    python prepare_enrichr_input_proteomics.py \
         --sig-csv path/to/Control_vs_Complication_significant_analytes.csv \
         --g1 Control --g2 Complication \
         --all-databases
 
     # Skip enrichment (gene lists only)
-    python prepare_enrichr_input.py --skip-enrichment
+    python prepare_enrichr_input_proteomics.py --skip-enrichment
 
     # Custom databases
-    python prepare_enrichr_input.py \
+    python prepare_enrichr_input_proteomics.py \
         --gene-sets GO_Biological_Process_2025 GO_Molecular_Function_2023 KEGG_2026
 """
 
@@ -134,7 +133,7 @@ def prepare_enrichr_lists(
 
     Args:
         sig_csv_path: Path to a *_significant_analytes.csv produced by
-                      identify_differential_analytes.py.
+                      identify_differential_analytes_proteomics.py.
         output_dir:   Directory where output files will be saved.
         g1:           Label of group 1 (reference; first group in filename).
         g2:           Label of group 2 (comparison group).

@@ -4,9 +4,8 @@ SOP-native untargeted metabolomics and lipidomics preprocessing pipeline.
 This module implements the April 2026 DP3 SOP starting from the raw
 Compound Discoverer style exports stored under ../kaylaxu/data/.
 
-It intentionally does NOT overwrite the older collaborator-integrated
-scripts. Instead, it provides a clean replacement entrypoint that follows
-the SOP ordering:
+Does NOT overwrite the older collaborator-integrated scripts. Provides a
+clean replacement entrypoint that follows the SOP ordering:
 
 1. Missing-value standardization
 2. Sample type / batch / injection-order parsing
@@ -49,13 +48,15 @@ import re
 import subprocess
 import tempfile
 import textwrap
-import zipfile
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable
-from xml.etree import ElementTree as ET
+import openpyxl
+from pycombat import Combat
+from utilities import half_min_impute_wide as _half_minimum_impute
+
 
 import numpy as np
 import pandas as pd
@@ -150,29 +151,6 @@ class PipelineArtifacts:
     # Comprehensive per-entity drop log (written to CSV; never printed to terminal).
     # Each row captures one dropped feature or sample with full context.
     drop_log: list[dict] = field(default_factory=list)
-
-
-def _bh_fdr(p_values: pd.Series) -> pd.Series:
-    """Benjamini-Hochberg q-values for a Series indexed like the input."""
-    p = p_values.astype(float).copy()
-    valid = p.notna()
-    if not valid.any():
-        return pd.Series(np.nan, index=p.index, dtype=float)
-
-    pv = p[valid].values
-    order = np.argsort(pv)
-    ranked = pv[order]
-    n = len(ranked)
-    q = np.empty(n, dtype=float)
-    prev = 1.0
-    for i in range(n - 1, -1, -1):
-        rank = i + 1
-        candidate = ranked[i] * n / rank
-        prev = min(prev, candidate)
-        q[i] = prev
-    out = pd.Series(np.nan, index=p.index, dtype=float)
-    out.loc[valid] = q[np.argsort(order)]
-    return out
 
 
 def _record_drop(
@@ -343,10 +321,9 @@ def _default_modifications() -> pd.DataFrame:
     """
     Canonical adduct/isotope/fragment mass shifts used for classification.
 
-    This list intentionally covers the high-frequency metabolomics and
-    lipidomics shifts needed by the SOP. The file-based canonical list
-    mentioned in the SOP is not present in the repo, so the pipeline vendors
-    a pragmatic default here.
+    Covers the high-frequency metabolomics and lipidomics shifts needed by
+    the SOP. The file-based canonical list mentioned in the SOP is not
+    present in the repo, so the pipeline uses a hardcoded default.
     """
     rows = [
         ("Isotope", "13C", 1.003355, "Single 13C isotope"),
@@ -374,84 +351,9 @@ def _default_modifications() -> pd.DataFrame:
     )
 
 
-def _excel_col_to_idx(cell_ref: str) -> int:
-    letters = re.match(r"([A-Z]+)", cell_ref)
-    if not letters:
-        return 0
-    idx = 0
-    for char in letters.group(1):
-        idx = idx * 26 + (ord(char) - ord("A") + 1)
-    return idx - 1
-
-
 def _read_xlsx_sheet(path: Path, sheet_name: str) -> pd.DataFrame:
-    """
-    Lightweight XLSX reader for environments without openpyxl.
-
-    Supports the subset needed by the DP3 metadata workbook: shared strings,
-    numeric cells, and inline strings.
-    """
-    ns = {
-        "main": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
-        "rel": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
-        "pkgrel": "http://schemas.openxmlformats.org/package/2006/relationships",
-    }
-    with zipfile.ZipFile(path) as zf:
-        shared_strings: list[str] = []
-        if "xl/sharedStrings.xml" in zf.namelist():
-            root = ET.fromstring(zf.read("xl/sharedStrings.xml"))
-            for item in root.findall("main:si", ns):
-                text = "".join(node.text or "" for node in item.findall(".//main:t", ns))
-                shared_strings.append(text)
-
-        workbook = ET.fromstring(zf.read("xl/workbook.xml"))
-        rels = ET.fromstring(zf.read("xl/_rels/workbook.xml.rels"))
-        rel_map = {
-            rel.attrib["Id"]: rel.attrib["Target"]
-            for rel in rels.findall("pkgrel:Relationship", ns)
-        }
-        sheet_target = None
-        for sheet in workbook.findall("main:sheets/main:sheet", ns):
-            if sheet.attrib.get("name") == sheet_name:
-                rel_id = sheet.attrib.get(f"{{{ns['rel']}}}id")
-                sheet_target = rel_map.get(rel_id)
-                break
-        if sheet_target is None:
-            raise ValueError(f"Sheet '{sheet_name}' not found in {path}.")
-
-        if not sheet_target.startswith("xl/"):
-            sheet_target = f"xl/{sheet_target}"
-        sheet_xml = ET.fromstring(zf.read(sheet_target))
-        rows: list[list[str]] = []
-        max_cols = 0
-        for row in sheet_xml.findall(".//main:sheetData/main:row", ns):
-            values: dict[int, str] = {}
-            for cell in row.findall("main:c", ns):
-                ref = cell.attrib.get("r", "A1")
-                col_idx = _excel_col_to_idx(ref)
-                cell_type = cell.attrib.get("t")
-                value = ""
-                if cell_type == "s":
-                    raw = cell.findtext("main:v", default="", namespaces=ns)
-                    if raw:
-                        value = shared_strings[int(raw)]
-                elif cell_type == "inlineStr":
-                    value = "".join(
-                        node.text or "" for node in cell.findall(".//main:t", ns)
-                    )
-                else:
-                    value = cell.findtext("main:v", default="", namespaces=ns)
-                values[col_idx] = value
-                max_cols = max(max_cols, col_idx + 1)
-            row_values = [""] * max_cols
-            for idx, value in values.items():
-                row_values[idx] = value
-            rows.append(row_values)
-    if not rows:
-        return pd.DataFrame()
-    header = rows[0]
-    data = [row + [""] * (len(header) - len(row)) for row in rows[1:]]
-    return pd.DataFrame(data, columns=header)
+    """Read a full sheet from an XLSX workbook into a DataFrame using openpyxl."""
+    return pd.read_excel(path, sheet_name=sheet_name, header=0, engine="openpyxl")
 
 
 def _read_xlsx_selected_rows(
@@ -462,82 +364,29 @@ def _read_xlsx_selected_rows(
     """
     Return only the requested XLSX rows as {row_number: {col_idx: value}}.
 
-    This keeps the raw-workbook parsing lightweight even for very large
-    untargeted exports.
+    Uses openpyxl in read-only mode so only rows up to max(target_rows) are
+    streamed — keeps memory usage low for large untargeted-export workbooks.
+    col_idx is 0-based (column A = 0) to match the rest of the pipeline.
     """
-    ns = {
-        "main": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
-        "rel": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
-        "pkgrel": "http://schemas.openxmlformats.org/package/2006/relationships",
-    }
     if not target_rows:
         return {}
-
-    with zipfile.ZipFile(path) as zf:
-        shared_strings: list[str] = []
-        if "xl/sharedStrings.xml" in zf.namelist():
-            root = ET.fromstring(zf.read("xl/sharedStrings.xml"))
-            for item in root.findall("main:si", ns):
-                text = "".join(node.text or "" for node in item.findall(".//main:t", ns))
-                shared_strings.append(text)
-
-        workbook = ET.fromstring(zf.read("xl/workbook.xml"))
-        rels = ET.fromstring(zf.read("xl/_rels/workbook.xml.rels"))
-        rel_map = {
-            rel.attrib["Id"]: rel.attrib["Target"]
-            for rel in rels.findall("pkgrel:Relationship", ns)
-        }
-        sheet_target = None
-        for sheet in workbook.findall("main:sheets/main:sheet", ns):
-            if sheet.attrib.get("name") == sheet_name:
-                rel_id = sheet.attrib.get(f"{{{ns['rel']}}}id")
-                sheet_target = rel_map.get(rel_id)
-                break
-        if sheet_target is None:
-            raise ValueError(f"Sheet '{sheet_name}' not found in {path}.")
-
-        if not sheet_target.startswith("xl/"):
-            sheet_target = f"xl/{sheet_target}"
-
-        rows: dict[int, dict[int, str]] = {}
+    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    try:
+        ws = wb[sheet_name]
+        result: dict[int, dict[int, str]] = {}
         max_target = max(target_rows)
-        for _, elem in ET.iterparse(zf.open(sheet_target), events=("end",)):
-            if not elem.tag.endswith("row"):
-                continue
-            row_number = int(elem.attrib.get("r", "0") or "0")
-            if row_number in target_rows:
-                row_values: dict[int, str] = {}
-                for cell in elem:
-                    if not cell.tag.endswith("c"):
-                        continue
-                    ref = cell.attrib.get("r", "A1")
-                    col_idx = _excel_col_to_idx(ref)
-                    cell_type = cell.attrib.get("t")
-                    value = ""
-                    if cell_type == "s":
-                        raw = next(
-                            (child.text for child in cell if child.tag.endswith("v")),
-                            "",
-                        )
-                        if raw:
-                            value = shared_strings[int(raw)]
-                    elif cell_type == "inlineStr":
-                        value = "".join(
-                            child.text or ""
-                            for child in cell.iter()
-                            if child.tag.endswith("t")
-                        )
-                    else:
-                        value = next(
-                            (child.text or "" for child in cell if child.tag.endswith("v")),
-                            "",
-                        )
-                    row_values[col_idx] = value
-                rows[row_number] = row_values
-            elem.clear()
-            if row_number >= max_target and target_rows.issubset(rows.keys()):
+        for row_num, row in enumerate(ws.iter_rows(values_only=False), start=1):
+            if row_num in target_rows:
+                result[row_num] = {
+                    cell.column - 1: str(cell.value) if cell.value is not None else ""
+                    for cell in row
+                    if cell.value is not None
+                }
+            if row_num >= max_target and target_rows.issubset(result.keys()):
                 break
-    return rows
+    finally:
+        wb.close()
+    return result
 
 
 def _sample_match_key(sample_name: str, sample_type: str) -> str:
@@ -682,6 +531,8 @@ def _standardize_feature_metadata(comp: pd.DataFrame, polarity: str) -> pd.DataF
         comp["mzcloud_confidence"] = np.nan
         comp["mass_list_matches"] = ""
         comp["annotation_source_matches"] = 0
+        comp["annotation_not_top_hit"] = 0
+        comp["annotation_partial_matches"] = 0
     else:
         annot_cols = [
             c
@@ -697,8 +548,12 @@ def _standardize_feature_metadata(comp: pd.DataFrame, polarity: str) -> pd.DataF
         ]
         if annot_cols:
             full_matches = (comp[annot_cols] == "Full match").sum(axis=1)
+            not_top_hit = (comp[annot_cols] == "Not the top hit").sum(axis=1)
+            partial_matches = (comp[annot_cols] == "Partial match").sum(axis=1)
         else:
             full_matches = pd.Series(0, index=comp.index)
+            not_top_hit = pd.Series(0, index=comp.index)
+            partial_matches = pd.Series(0, index=comp.index)
 
         mass_list_col = next(
             (c for c in comp.columns if c.startswith("Mass List Match: HMDB")),
@@ -723,6 +578,8 @@ def _standardize_feature_metadata(comp: pd.DataFrame, polarity: str) -> pd.DataF
             else ""
         )
         comp["annotation_source_matches"] = full_matches
+        comp["annotation_not_top_hit"] = not_top_hit
+        comp["annotation_partial_matches"] = partial_matches
 
     comp["annotation_name"] = comp["annotation_name"].fillna("").astype(str)
     comp["compound_group_name"] = comp["compound_group_name"].fillna("").astype(str)
@@ -1493,25 +1350,6 @@ def _sample_istd_mad_filter(
     return bad_row_ids
 
 
-def _half_minimum_impute(df: pd.DataFrame) -> pd.DataFrame:
-    """Impute missing values with half the per-feature minimum.
-
-    The input is expected to be in log2 space (log2(x + 1)).  In log2 space
-    dividing a value by 2 in linear scale is equivalent to subtracting 1:
-        log2(x / 2) = log2(x) - 1
-    Using ``min / 2`` would instead give the *square root* of the minimum in
-    linear space, which is incorrect.
-    """
-    out = df.copy()
-    for col in out.columns:
-        valid = out[col].dropna()
-        if valid.empty:
-            continue
-        fill = float(valid.min()) - 1.0  # half-minimum in log2 space
-        out[col] = out[col].fillna(fill)
-    return out
-
-
 def _pca_plot(
     df: pd.DataFrame,
     labels: pd.Series,
@@ -1736,8 +1574,6 @@ def _combat_pycombat(
     batch_labels: pd.Series,
     covariates: pd.DataFrame | None,
 ) -> pd.DataFrame:
-    from pycombat import Combat
-
     model = Combat()
     X = covariates.to_numpy(dtype=float) if covariates is not None and not covariates.empty else None
     corrected = model.fit_transform(
@@ -2175,21 +2011,36 @@ def _annotation_score(meta: pd.DataFrame, expression: pd.DataFrame) -> pd.Series
         else 0
     )
     no_mzcloud = meta["mzcloud_confidence"].isna()
-    annotation.loc[no_mzcloud] = meta.loc[no_mzcloud, "annotation_source_matches"].apply(
-        lambda x: 10
-        if x >= 6
-        else 9
-        if x == 5
-        else 8
-        if x == 4
-        else 7
-        if x == 3
-        else 6
-        if x == 2
-        else 5
-        if x == 1
-        else 0
-    )
+    # Full-match tier (5-10 pts): from annotation_source_matches
+    # Not-top-hit tier (4 pts): any "Not the top hit" hit when no full matches
+    # Partial-match tier (1-3 pts): partial match count when no full or not-top-hit evidence
+    def _annot_source_score(row: pd.Series) -> float:
+        full = int(row.get("annotation_source_matches", 0) or 0)
+        if full >= 6:
+            return 10
+        if full == 5:
+            return 9
+        if full == 4:
+            return 8
+        if full == 3:
+            return 7
+        if full == 2:
+            return 6
+        if full == 1:
+            return 5
+        nth = int(row.get("annotation_not_top_hit", 0) or 0)
+        if nth >= 1:
+            return 4
+        partial = int(row.get("annotation_partial_matches", 0) or 0)
+        if partial >= 3:
+            return 3
+        if partial == 2:
+            return 2
+        if partial == 1:
+            return 1
+        return 0
+
+    annotation.loc[no_mzcloud] = meta.loc[no_mzcloud].apply(_annot_source_score, axis=1)
     return peak + rsd + ms2 + scaled_rank(intensity) + annotation
 
 
@@ -2711,7 +2562,7 @@ def _write_plain_text_log(
 
     # ── Per-step feature / sample count table ─────────────────────────────────
     lines.append("")
-    lines.append("PER-STEP FEATURE AND SAMPLE COUNTS (Steps 7–18)")
+    lines.append("PER-STEP FEATURE AND SAMPLE COUNTS (Steps 7–18, Parts 3A–3B, Step 30)")
     lines.append("-" * 40)
     if artifacts.step_counts:
         for pol in sorted({sc["polarity"] for sc in artifacts.step_counts}):
@@ -3010,11 +2861,28 @@ def _process_polarity(
     named_kept, unnamed = _resolve_named_groups(
         run, corrected, thresholds, modifications, artifacts
     )
+    n_bio = int((sample_info["sample_type"] == "biological").sum())
+    # Step 35 count: features remaining after Part 3A = named survivors + all unnamed (not yet processed)
+    artifacts.step_counts.append({
+        "polarity": pol,
+        "label": "after Part 3A (named-compound dedup)",
+        "n_features": len(named_kept) + len(unnamed),
+        "n_samples": n_bio,
+    })
+
     unnamed_kept = _resolve_unnamed_groups(
         run, unnamed, corrected, thresholds, modifications, artifacts
     )
     retained_meta = pd.concat([named_kept, unnamed_kept], axis=0)
     retained_meta = retained_meta[~retained_meta.index.duplicated(keep="first")]
+    # Step 35 count: features remaining after Part 3B = named survivors + unnamed survivors
+    artifacts.step_counts.append({
+        "polarity": pol,
+        "label": "after Part 3B (unnamed dedup)",
+        "n_features": len(retained_meta),
+        "n_samples": n_bio,
+    })
+
     retained_expression = corrected[retained_meta.index.tolist()].copy()
     run.retained_feature_meta = retained_meta
     run.retained_expression = retained_expression
@@ -3085,6 +2953,13 @@ def run_dataset(
         thresholds,
         artifacts,
     )
+    # Step 35 count: features after POS/NEG merge (Step 30)
+    artifacts.step_counts.append({
+        "polarity": "MERGED",
+        "label": "after POS/NEG merge (Step 30)",
+        "n_features": feature_meta.shape[0],
+        "n_samples": len(final_matrix),
+    })
 
     full_path = config.output_dir / f"{config.dataset_id}_cleaned_with_metadata.csv"
     final_matrix.to_csv(full_path)

@@ -13,19 +13,19 @@ Longitudinal:
 
 Usage:
     # Proteomics (default — no args)
-    python identify_differential_analytes.py
+    python identify_differential_analytes_proteomics.py
 
     # Metabolomics
-    python identify_differential_analytes.py --omics-type metabolomics
+    python identify_differential_analytes_proteomics.py --omics-type metabolomics
 
     # CLI cross-sectional
-    python identify_differential_analytes.py \
+    python identify_differential_analytes_proteomics.py \
         --mode cross_sectional \
         --input cleaned.csv \
         --output-dir results
 
     # CLI longitudinal
-    python identify_differential_analytes.py \
+    python identify_differential_analytes_proteomics.py \
         --mode longitudinal \
         --timepoint-files t1.csv t2.csv t3.csv \
         --timepoint-labels T1 T2 T3 \

@@ -11,7 +11,8 @@ from sklearn.linear_model import LogisticRegressionCV, MultiTaskElasticNetCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import StratifiedKFold, KFold
+from sklearn.model_selection import StratifiedKFold, KFold, train_test_split
+from sklearn.multioutput import MultiOutputClassifier
 from sklearn.metrics import (
     average_precision_score,
     roc_auc_score,
@@ -24,24 +25,33 @@ from sklearn.metrics import (
 )
 from sklearn.preprocessing import RobustScaler
 from xgboost import XGBClassifier
+import optuna
+
+# Shared helpers from the cleaning layer — single source of truth for metadata
+# column names, group label normalisation, and analyte column extraction.
+# importlib is used (instead of a plain import) to avoid a name collision with
+# this module's own name "utilities" on sys.path.
+import importlib.util as _ilu
+_cu_spec = _ilu.spec_from_file_location(
+    "dp3_cleaning_utilities",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "01_data_cleaning", "utilities.py"),
+)
+_cu = _ilu.module_from_spec(_cu_spec)
+_cu_spec.loader.exec_module(_cu)
+_METADATA_COLS        = _cu.METADATA_COLS
+_GROUP_LABEL_MAP      = _cu._GROUP_LABEL_MAP
+load_data             = _cu.load_data
+get_analyte_columns   = _cu.get_analyte_columns
+normalise_group_labels = _cu.normalise_group_labels
+del _ilu, _cu_spec, _cu
 
 logger = logging.getLogger(__name__)
-
-_METADATA_COLS = [
-    "SubjectID", "Group", "Subgroup", "Batch", "GestAgeDelivery", "SampleGestAge",
-    "MetadataCanonicalID",  # audit field added by sop_omics_pipeline
-]
-_GROUP_LABEL_MAP = {"sptb": "sPTB"}
 
 OUTCOMES   = ["HDP", "FGR", "sPTB"]
 TIMEPOINTS = ["A", "B", "C", "D", "E"]
 
 N_CV_FOLDS = 10
 RANDOM_STATE = 42
-
-
-def load_data(path: str) -> pd.DataFrame:
-    return pd.read_csv(path, index_col=0)
 
 
 def load_significant_analytes(
@@ -58,17 +68,6 @@ def load_significant_analytes(
     sig = tested[tested["q_value"] < q_threshold]
     analytes = sig.index.dropna().tolist()
     return analytes if analytes else None
-
-def get_analyte_columns(df: pd.DataFrame) -> list:
-    return [c for c in df.columns if c not in _METADATA_COLS]
-
-
-def normalise_group_labels(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
-    if "Group" in df.columns:
-        df["Group"] = df["Group"].replace(_GROUP_LABEL_MAP)
-    return df
-
 
 def collect_superset_features(base_dir: str, timepoints: list) -> list:
     """Union of LASSO-selected features across given plasma timepoints and placenta."""
@@ -89,8 +88,6 @@ def split_70_15_15(
     stratify: bool = True,
     random_state: int = RANDOM_STATE,
 ):
-    from sklearn.model_selection import train_test_split
-
     strat = y if stratify else None
 
     X_train, X_tmp, y_train, y_tmp = train_test_split(
@@ -303,7 +300,6 @@ def tune_hyperparams_binary(
     n_trials: int = 50,
     random_state: int = RANDOM_STATE,
 ) -> tuple:
-    import optuna
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
     scaler  = RobustScaler()
@@ -334,9 +330,6 @@ def tune_hyperparams_multilabel(
     n_trials: int = 50,
     random_state: int = RANDOM_STATE,
 ) -> tuple:
-    import optuna
-    from sklearn.multioutput import MultiOutputClassifier
-
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
     scaler        = RobustScaler()
@@ -419,7 +412,6 @@ def build_tuned_model_multilabel(
     params: dict,
     random_state: int = RANDOM_STATE,
 ):
-    from sklearn.multioutput import MultiOutputClassifier
     base = build_tuned_model_binary(model_name, params, y_train=None, random_state=random_state)
     return MultiOutputClassifier(base, n_jobs=1)
 

@@ -1,7 +1,7 @@
 """
 Differential analysis for sop_omics_pipeline_v2 outputs (MTBL_sop and LIPD_sop).
 
-Runs the same cross-sectional + longitudinal pipeline as identify_differential_analytes.py
+Runs the same cross-sectional + longitudinal pipeline as identify_differential_analytes_proteomics.py
 but pointed at the new SOP v4 output paths.
 
 Usage (from the kaysonyao folder):
@@ -10,6 +10,7 @@ Usage (from the kaysonyao folder):
     python 02_exploratory_analysis/run_sop_differential.py  # runs both
 """
 
+import glob
 import os
 import sys
 import logging
@@ -202,8 +203,7 @@ def run_dataset(dataset: str, wkdir: str) -> None:
     )
 
     # ── MetaboAnalyst exports: longitudinal ───────────────────────────────
-    import glob as _glob
-    for long_csv in sorted(_glob.glob(os.path.join(long_dir, "*_longitudinal_results.csv"))):
+    for long_csv in sorted(glob.glob(os.path.join(long_dir, "*_longitudinal_results.csv"))):
         stem = os.path.basename(long_csv).replace("_longitudinal_results.csv", "")
         write_metaboanalyst_export(
             long_dir, stem, plasma_feature_meta,

@@ -1,5 +1,5 @@
 """
-Shared utilities for the DP3 proteomics preprocessing pipeline.
+Shared utilities for the DP3 omics preprocessing pipeline.
 
 Imported by:
     - clean_proteomics_data.py
@@ -8,6 +8,7 @@ Imported by:
 
 import logging
 import os
+import re
 
 import numpy as np
 import pandas as pd
@@ -23,6 +24,13 @@ CONTROL_SAMPLE_PREFIXES = ("CONTROL", "NEG", "PLATE")
 # Canonical group label corrections — applied to the Group column at metadata load time
 # so every downstream output CSV carries consistent labels.
 _GROUP_LABEL_MAP = {"sptb": "sPTB"}
+
+# Columns produced by metadata loaders — used downstream to separate metadata
+# from analyte/feature columns when both share the same DataFrame.
+METADATA_COLS = [
+    "SubjectID", "Group", "Subgroup", "Batch", "GestAgeDelivery", "SampleGestAge",
+    "MetadataCanonicalID",
+]
 
 
 # -----------------------------
@@ -63,26 +71,49 @@ def load_metadata_with_batch(
     batch_col: str = "omics set#",
 ) -> pd.DataFrame:
     """
-    Load metadata from Excel file and extract:
-    - Batch (from 'omics set#' column)
-    - Group
-    - Subgroup
-    - Gestational age at delivery (gest age del)
-    - Sample gestational age (sample gest Age) - for proteomics only
+    Load metadata from the DP3 master Excel file and return a clean DataFrame.
 
-    Returns a DataFrame with SampleID (with letters) as index and metadata columns.
+    Supported meta_type values and their index semantics
+    -----------------------------------------------------
+    "proteomics"   → sheet "n=133 proteomics", index = SampleID (DP3-XXXXZ)
+    "placenta"     → sheet "n=133 placenta",   index = SampleID (DP3-XXXXZ)
+    "metabolomics" → sheet "n=133 metabolomics", index = SampleID (DP3-XXXXZ)
+    "lipids"       → sheet "Sheet1" (positional columns), index = SubjectID (DP3-XXXX)
+                     Postpartum-only IDs stored as "DP3-XXXXE" are stripped to
+                     "DP3-XXXX" so they can be joined on bare subject ID.
+
+    Common output columns: Batch, Group, Subgroup, GestAgeDelivery
+    Proteomics-only extra column: SampleGestAge
+
+    The "lipids" branch uses positional column access because Sheet1 has no
+    standardised named columns. Column layout assumed:
+        col 0  → subject/sample ID
+        col 5  → gest age del
+        col 7  → group
+        col 8  → subgroup
+        col 16 → omics set# / batch
 
     Args:
         metadata_path: path to the metadata Excel file
-        meta_type: "proteomics" or "placenta" - which sheet to load
-        sample_id_col: column name containing unique sample identifiers
-                      (default None = auto-detect based on meta_type)
-        batch_col: column name containing batch/omics set info (default "omics set#")
+        meta_type: one of "proteomics", "placenta", "metabolomics", "lipids"
+        sample_id_col: (non-lipids only) column name for sample IDs;
+                       default None = auto-detect from meta_type
+        batch_col: (non-lipids only) column name for batch; default "omics set#"
 
     Returns:
-        DataFrame with SampleID as index and columns:
-        Batch, Group, Subgroup, GestAgeDelivery, SampleGestAge (proteomics only)
+        DataFrame indexed by SampleID (proteomics/placenta/metabolomics)
+        or SubjectID (lipids), with columns Batch, Group, Subgroup, GestAgeDelivery
+        (and SampleGestAge for proteomics).
     """
+    # -----------------------------------------------------------------
+    # Lipids: Sheet1 with positional column access
+    # -----------------------------------------------------------------
+    if meta_type == "lipids":
+        return _load_lipids_metadata(metadata_path)
+
+    # -----------------------------------------------------------------
+    # Named-sheet datasets: proteomics / placenta / metabolomics
+    # -----------------------------------------------------------------
     if meta_type == "proteomics":
         sheet_name = "n=133 proteomics"
         if sample_id_col is None:
@@ -96,7 +127,10 @@ def load_metadata_with_batch(
         if sample_id_col is None:
             sample_id_col = "Sample ID"
     else:
-        raise ValueError(f"meta_type must be 'proteomics', 'placenta' or 'metabolomics', got '{meta_type}'")
+        raise ValueError(
+            f"meta_type must be 'proteomics', 'placenta', 'metabolomics', or 'lipids', "
+            f"got '{meta_type}'"
+        )
 
     meta = pd.read_excel(metadata_path, sheet_name=sheet_name)
 
@@ -157,6 +191,92 @@ def load_metadata_with_batch(
                 )
 
     return meta_subset
+
+
+def _load_lipids_metadata(metadata_path: str) -> pd.DataFrame:
+    """
+    Load subject-level metadata from the master table's "Sheet1".
+
+    Uses positional column access (Sheet1 has no standardised named columns):
+        col 0  → subject/sample ID   (DP3-XXXX or DP3-XXXXE for postpartum-only)
+        col 5  → gest age del
+        col 7  → group
+        col 8  → subgroup
+        col 16 → omics set# / batch
+
+    Returns a DataFrame indexed by bare SubjectID (DP3-XXXX) — without the
+    timepoint letter.  Postpartum-only IDs stored as "DP3-XXXXE" are stripped
+    to "DP3-XXXX" so SampleIDs like "DP3-0029E" from the feature matrix can
+    be joined by stripping the suffix.
+
+    Columns: Batch, Group, Subgroup, GestAgeDelivery
+    """
+    logger.info("Loading lipids metadata from %s", metadata_path)
+    wb = pd.read_excel(metadata_path, sheet_name="Sheet1", header=0, engine="openpyxl")
+    rows = []
+    n_suffixed = 0
+    for _, row in wb.iterrows():
+        subject_id = str(row.iloc[0]).strip() if pd.notna(row.iloc[0]) else None
+        if not subject_id or not subject_id.startswith("DP3-"):
+            continue
+        gest_age_del = row.iloc[5] if pd.notna(row.iloc[5]) else None
+        group        = str(row.iloc[7]).strip() if pd.notna(row.iloc[7]) else None
+        subgroup     = str(row.iloc[8]).strip() if pd.notna(row.iloc[8]) else None
+        batch        = row.iloc[16] if pd.notna(row.iloc[16]) else None
+        if group:
+            for old, canonical in _GROUP_LABEL_MAP.items():
+                group = group.replace(old, canonical)
+        # Strip timepoint suffix from postpartum-only subjects ("DP3-0029E" → "DP3-0029")
+        m = re.match(r"^(DP3-\d{4})[A-Ea-e]$", subject_id)
+        if m:
+            lookup_key = m.group(1)
+            n_suffixed += 1
+        else:
+            lookup_key = subject_id
+        rows.append({
+            "SubjectID":       lookup_key,
+            "Batch":           batch,
+            "Group":           group,
+            "Subgroup":        subgroup,
+            "GestAgeDelivery": gest_age_del,
+        })
+    meta_df = pd.DataFrame(rows).set_index("SubjectID")
+    meta_df = meta_df[~meta_df.index.duplicated(keep="first")]
+    logger.info(
+        "Loaded lipids metadata for %d subjects (%d with timepoint suffix in ID column)",
+        len(meta_df), n_suffixed,
+    )
+    return meta_df
+
+
+# -----------------------------
+# Shared analyte/group helpers
+# (re-exported for use by 02_exploratory_analysis and 03_model_development)
+# -----------------------------
+def load_data(path: str) -> pd.DataFrame:
+    """Load a cleaned wide-format CSV (index=SampleID, columns=metadata+analytes)."""
+    return pd.read_csv(path, index_col=0)
+
+
+def get_analyte_columns(df: pd.DataFrame) -> list:
+    """Return analyte column names by excluding known metadata columns."""
+    return [c for c in df.columns if c not in METADATA_COLS]
+
+
+def normalise_group_labels(
+    df: pd.DataFrame,
+    group_col: str = "Group",
+) -> pd.DataFrame:
+    """Standardise group label capitalisation using _GROUP_LABEL_MAP (returns df for chaining)."""
+    if group_col in df.columns:
+        before = df[group_col].value_counts()
+        df = df.copy()
+        df[group_col] = df[group_col].replace(_GROUP_LABEL_MAP)
+        for old, canonical in _GROUP_LABEL_MAP.items():
+            n = before.get(old, 0)
+            if n > 0:
+                logger.info("Group label fix: '%s' → '%s' (%d sample(s))", old, canonical, n)
+    return df
 
 
 # -----------------------------
@@ -240,8 +360,10 @@ def is_olink_control_assay(df_long: pd.DataFrame) -> pd.Series:
 def apply_panel_normalization_long(df_long: pd.DataFrame) -> pd.DataFrame:
     """
     Panel normalization using Olink internal control samples.
-    Normalizes across panels to adjust for systematic differences.
-    """
+
+    For each assay, computes the per-panel control median, then shifts
+    all panel NPX values by (global_median - panel_median).
+"""
     df = df_long.copy()
     required = {"SampleID", "Panel", "Assay", "NPX"}
     missing = required - set(df.columns)
