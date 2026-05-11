@@ -166,23 +166,3 @@ See each folder's `README.md` for full CLI documentation and output details.
 - **Survey cohort** is broader than the omics cohort (≈390 vs. 133 subjects); `clean_survey_data.py`
   uses the full `clinical data` sheet of the master table as its group source.
 
----
-
-## Change log
-
-| Date | Change |
-|---|---|
-| 2026-03-04 | Added `02_exploratory_analysis/utilities.py`; refactored differential analysis scripts to import from it. |
-| 2026-03-04 | Added `02_exploratory_analysis/prepare_enrichr_input_proteomics.py` for directional Enrichr gene list generation. |
-| 2026-03-04 | Created top-level README and `02_exploratory_analysis/README.md`. |
-| 2026-03-19 | Added superset enrichment: `03_model_development/superset_enrichment_analysis.py`. |
-| 2026-03-30 | Added full metabolomics pipeline (now superseded by SOP v4 for new runs). |
-| 2026-03-30 | Extended differential analysis with `--omics-type` parameter. |
-| 2026-03-30 | Added `03_model_development/metabolomics_enrichment_analysis.py` (KEGG REST API ORA). |
-| 2026-04-xx | Added SOP v4 pipeline: `01_data_cleaning/sop_omics_pipeline.py`. Covers MTBL_plasma, MTBL_placenta, LIPD_plasma, LIPD_placenta from raw Compound Discoverer exports. |
-| 2026-04-xx | Added `02_exploratory_analysis/run_sop_differential.py` for differential analysis on SOP v4 outputs. |
-| 2026-04-xx | Added `03_model_development/run_sop_models.py` and `run_sop_nodiff.py` for classifiers on SOP v4 outputs. |
-| 2026-04-xx | Added survey pipeline: `01_data_cleaning/clean_survey_data.py`, `02_exploratory_analysis/survey_distribution_analysis.py`, `02_exploratory_analysis/water_quality_analysis.py`, `03_model_development/run_survey_models.py`. |
-| 2026-05-xx | Consolidated shared helpers (`load_data`, `get_analyte_columns`, `normalise_group_labels`, `METADATA_COLS`) into `01_data_cleaning/utilities.py` as single source of truth; imported by 02 and 03 utilities via importlib. |
-| 2026-05-xx | Replaced hand-rolled XLSX parser with `openpyxl` throughout. |
-| 2026-05-xx | Deleted `clean_lipids_data.py` (superseded by SOP v4 pipeline LIPD configs). |
