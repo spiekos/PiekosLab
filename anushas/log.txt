@@ -1,0 +1,21 @@
+placental infarction: 2
+retroplacental hemorrhage: 0
+distal villous hypoplasia focal/diffuse: 14
+accelerated villous maturation: 48
+increased syncytial knots: 46
+decidual arteriopathy membrane role/basal plate/both: 0.0
+vascular thrombosis: 0
+segmental avascular villi small/intermediate/large: 9
+villous stromal vascular karyorrhexis: 0
+vascular intramural fibrin deposition: 0
+stem vessel obliteration/fibromuscular sclerosis: 0
+vascular ectasia: 0
+delayed villous maturation: 4
+maternal inflammatory response stage/grade: 0.0
+fetal inflammatory response stage/grade/location: 0.0
+villitis of unknown etiology, high/low grade, focal/diffuse: 14
+diffuse villous edema: 0
+increased perivillous fibrin deposition: 2
+chorangiosis: 4
+mr: 6
+placental hypoplasia: 0

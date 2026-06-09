@@ -1,9 +1,10 @@
 import pandas as pd
+import numpy as np
 
 # load both sheets and returns both sheets
 def load_sheets():
-    sheet1 = pd.read_csv("dp3 3rd set gest age for Tony assessed final.xlsx - Sheet1.csv")
-    sheet2 = pd.read_csv("DP3 slides Tony's analysis batches 1-2.xlsx - Sheet2.csv")
+    sheet1 = pd.read_csv("anushas/dp3 3rd set gest age for Tony assessed final.xlsx - Sheet1.csv")
+    sheet2 = pd.read_csv("anushas/DP3 slides Tony's analysis batches 1-2.xlsx - Sheet2.csv")
     return sheet1, sheet2
 
 # merges both sheets and returns the newly merged sheet
@@ -32,6 +33,7 @@ def rename_columns(sheet1, sheet2):
     })
 
     sheet2 = sheet2.rename(columns = {
+        "notes": "mr",
         "dp3 participant #": "id",
         "placental infarctions": "placental infarction",
         "accelerated villous maturity": "accelerated villous maturation",
@@ -63,6 +65,14 @@ def delete_columns(sheet):
     sheet = sheet.drop(columns = ["slide a", "slide b", "slide membrane roll", "not in file"])
     return sheet
 
+# condition_col represents the column that we are checking the value of (true/false)
+# change_col represents the column that will be changed by this function. for each row in the sheet, if the cell in condition_col is false (has a value of 0),
+# the cell in change_col will be changed to "NA". otherwise, it will remain unchanged.
+def fillna(sheet, condition_col, change_col):
+    sheet.loc[sheet[condition_col] == 0, change_col] = np.nan
+
+    return sheet
+
 # encode all columns from strings to 0, 1, 2, etc.
 def encode(sheet):
     # encode yes/no to 1/0
@@ -74,6 +84,10 @@ def encode(sheet):
         "diffuse villous edema", "increased perivillous fibrin deposition", "chorangiosis", "placental hypoplasia"
     ]
     sheet[yes_no_columns] = sheet[yes_no_columns].apply(lambda x: x.map(yes_no_mapping))
+
+    sheet["mr"] = sheet["mr"].map({
+        "No MR": 1
+    })
     
     sheet["maternal inflammatory response stage/grade"] = sheet["maternal inflammatory response stage/grade"].map({
         "S1/G1": 1,
@@ -106,11 +120,18 @@ def encode(sheet):
     numeric_cols.remove("gestational age")
     sheet[numeric_cols] = sheet[numeric_cols].fillna(0).astype(int)
 
+    # for the notes column, "no MR" corresponds to no data having been collected for decidual arteriopathy, maternal inflammatory response, and fetal 
+    # inflammatory response. therefore, if a participant is marked negative for MR, we fill in "NA" into these three columns.
+    sheet = fillna(sheet, "mr", "decidual arteriopathy membrane role/basal plate/both")
+    sheet = fillna(sheet, "mr", "maternal inflammatory response stage/grade")
+    sheet = fillna(sheet, "mr", "fetal inflammatory response stage/grade/location")
+
+
     return sheet
 
 # print the total of each appropriate column (excluding text columns and gestational age) into a log file
 def print_totals(sheet):
-    log_path = "log.txt"
+    log_path = "anushas/log.txt"
     numeric_cols = sheet.select_dtypes(include = "number").columns
     numeric_cols = numeric_cols.tolist()
     numeric_cols.remove("gestational age")
@@ -128,7 +149,7 @@ def main():
     merged = encode(merged)
 
     # write sheet to an output file
-    merged.to_csv("output.csv", index = False)
+    merged.to_csv("anushas/output.csv", index = False)
 
     print_totals(merged)
 
