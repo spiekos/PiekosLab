@@ -23,7 +23,7 @@ def merge_sheets(sheet1, sheet2):
 # rename columns of both sheets so that column names are consistent across sheets
 def rename_columns(sheet1, sheet2):
     sheet1 = sheet1.rename(columns = {
-        "gest age del": "gestational age",
+        "gest age del": "gestational age at delivery",
         "decual arteriopathy membrane roll/ basal plate/ both": "decidual arteriopathy membrane role/basal plate/both",
         "segmental avascular villi small/ intermediate/ large": "segmental avascular villi small/intermediate/large",
         "stem vessel obliteration / fibromuscular sclerosis": "stem vessel obliteration/fibromuscular sclerosis",
@@ -33,8 +33,9 @@ def rename_columns(sheet1, sheet2):
     })
 
     sheet2 = sheet2.rename(columns = {
-        "notes": "mr",
         "dp3 participant #": "id",
+        "notes": "mr",
+        "gestational age": "gestational age at delivery",
         "placental infarctions": "placental infarction",
         "accelerated villous maturity": "accelerated villous maturation",
         "syncytial knots - (tony: considered with accelerated villous maturation)": "increased syncytial knots",
@@ -60,7 +61,8 @@ def delete_patients(sheet):
 
     return sheet
 
-# delete the following columns: "slide a", "slide b", "slide membrane roll", "not in file"
+# delete the following unnecessary columns: "slide a", "slide b", "slide membrane roll", "not in file"
+# delete the following empty columns:
 def delete_columns(sheet):
     sheet = sheet.drop(columns = ["slide a", "slide b", "slide membrane roll", "not in file"])
     return sheet
@@ -114,18 +116,17 @@ def encode(sheet):
         "yes, large": 3
     })
 
-    # fill all encoded columns with 0 as the corresponding N/A value
-    numeric_cols = sheet.select_dtypes(include = "number").columns
-    numeric_cols = numeric_cols.tolist()
-    numeric_cols.remove("gestational age")
-    sheet[numeric_cols] = sheet[numeric_cols].fillna(0).astype(int)
-
     # for the notes column, "no MR" corresponds to no data having been collected for decidual arteriopathy, maternal inflammatory response, and fetal 
     # inflammatory response. therefore, if a participant is marked negative for MR, we fill in "NA" into these three columns.
     sheet = fillna(sheet, "mr", "decidual arteriopathy membrane role/basal plate/both")
     sheet = fillna(sheet, "mr", "maternal inflammatory response stage/grade")
     sheet = fillna(sheet, "mr", "fetal inflammatory response stage/grade/location")
 
+    # fill all encoded columns with 0 as the corresponding N/A value
+    numeric_cols = sheet.select_dtypes(include = "number").columns
+    numeric_cols = numeric_cols.tolist()
+    numeric_cols.remove("gestational age at delivery")
+    sheet[numeric_cols] = sheet[numeric_cols].fillna(0).astype(int)
 
     return sheet
 
@@ -134,7 +135,7 @@ def print_totals(sheet):
     log_path = "anushas/log.txt"
     numeric_cols = sheet.select_dtypes(include = "number").columns
     numeric_cols = numeric_cols.tolist()
-    numeric_cols.remove("gestational age")
+    numeric_cols.remove("gestational age at delivery")
 
     with open(log_path, "w") as f:
         for col in numeric_cols:
@@ -148,10 +149,10 @@ def main():
     merged = delete_columns(merged)
     merged = encode(merged)
 
+    print_totals(merged)
+
     # write sheet to an output file
     merged.to_csv("anushas/output.csv", index = False)
-
-    print_totals(merged)
 
 if __name__ == "__main__":
     main()
