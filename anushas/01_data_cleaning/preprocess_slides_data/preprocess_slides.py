@@ -3,8 +3,8 @@ import numpy as np
 
 # load both sheets and returns both sheets
 def load_sheets():
-    sheet1 = pd.read_csv("anushas/dp3 3rd set gest age for Tony assessed final.xlsx - Sheet1.csv")
-    sheet2 = pd.read_csv("anushas/DP3 slides Tony's analysis batches 1-2.xlsx - Sheet2.csv")
+    sheet1 = pd.read_csv("01_data_cleaning/preprocess_slides_data/dp3 3rd set gest age for Tony assessed final.xlsx - Sheet1.csv")
+    sheet2 = pd.read_csv("01_data_cleaning/preprocess_slides_data/DP3 slides Tony's analysis batches 1-2.xlsx - Sheet2.csv")
     return sheet1, sheet2
 
 # merges both sheets and returns the newly merged sheet
@@ -132,7 +132,7 @@ def encode(sheet):
 
 # print the total of each appropriate column (excluding text columns and gestational age) into a log file
 def print_totals(sheet):
-    log_path = "anushas/log.txt"
+    log_path = "01_data_cleaning/preprocess_slides_data/log.txt"
     numeric_cols = sheet.select_dtypes(include = "number").columns
     numeric_cols = numeric_cols.tolist()
     numeric_cols.remove("gestational age at delivery")
@@ -152,7 +152,7 @@ def main():
     print_totals(merged)
 
     # write sheet to an output file
-    merged.to_csv("anushas/output.csv", index = False)
+    merged.to_csv("01_data_cleaning/preprocess_slides_data/output.csv", index = False)
 
 if __name__ == "__main__":
     main()
