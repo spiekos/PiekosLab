@@ -2,7 +2,7 @@ import pandas as pd
 
 # load and return the dataset
 def load_sheet():
-    sheet = pd.read_csv("01_data_cleaning/preprocess_fitbit_data/DP3_playset_PE.csv")
+    sheet = pd.read_csv("02_exploratory_analysis/analyze_fitbit_data/DP3_playset_PE.csv")
     return sheet
 
 # returns the total number of missing (aka "NA") values in the dataset across all columns. excludes the "NA" values corresponding to the general information 
@@ -77,7 +77,7 @@ def calc_summary_stats(sheet, feature_cols):
 
 # print all calculated data into a log file
 def print_log(total_missing, per_patient, max_con_missing, unique_dates, summary_stats):
-    log_path = "01_data_cleaning/preprocess_fitbit_data/log.txt"
+    log_path = "02_exploratory_analysis/analyze_fitbit_data/log.txt"
 
     with open(log_path, "w") as f:
         f.write(f"Total number of missing values: {total_missing}")
