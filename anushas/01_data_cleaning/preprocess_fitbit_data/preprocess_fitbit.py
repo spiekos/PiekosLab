@@ -21,7 +21,7 @@ def missing_per_patient(sheet, feature_cols):
         sheet.groupby("Record.ID")["is_missing"]
         .sum()
         .reset_index()
-        .rename(columns = {"Record.ID": "id", "is_missing": "missing days"})
+        .rename(columns = {"Record.ID": "ID", "is_missing": "Missing Days"})
     )
 
     return result
@@ -54,31 +54,48 @@ def max_consecutive_missing(sheet, feature_cols):
 
     return final_table
 
-# return total number of unique dates recorded across all patients
+# returns total number of unique dates recorded across all patients
 def count_unique_dates(sheet):
     total = sheet["Date"].nunique()
     return total
 
+# returns median + interquartile range for each relevant metric:
+# gestational age at start of study, gestational age at delivery, steps, total distance, very active minutes, total minutes asleep
+def calc_summary_stats(sheet, feature_cols):
+    new_cols = feature_cols + ["Gestational.age.by.reported.LMP", "gest age del"]
 
+    def iqr(x):
+        return x.quantile(0.75) - x.quantile(0.25)
+    
+    # aggregate across the entire dataset for median and IQR
+    summary = sheet[new_cols].agg(["median", iqr]).T
 
+    summary = summary.reset_index()
+    summary.columns = ["Feature", "Median", "IQR"]
+
+    return summary
 
 # print all calculated data into a log file
-def print_log(total_missing, per_patient, max_con_missing, unique_dates):
+def print_log(total_missing, per_patient, max_con_missing, unique_dates, summary_stats):
     log_path = "01_data_cleaning/preprocess_fitbit_data/log.txt"
 
     with open(log_path, "w") as f:
-        f.write(f"total number of missing values: {total_missing}")
+        f.write(f"Total number of missing values: {total_missing}")
         f.write("\n\n")
 
-        f.write("number of missing days per patient:\n")
+        f.write("Number of missing days per patient:\n")
         f.write(per_patient.to_string(index = False))
         f.write("\n\n")
 
-        f.write("maximum consecutive number of days missing per feature per patient:\n")
+        f.write("Maximum consecutive number of days missing per feature per patient:\n")
         f.write(max_con_missing.to_string(index = False))
         f.write("\n\n")
 
-        f.write(f"total number of unique dates recorded across all patients: {unique_dates}")
+        f.write(f"Total number of unique dates recorded across all patients: {unique_dates}")
+        f.write("\n\n")
+
+        f.write("Summary statistics by metric:\n")
+        f.write(summary_stats.to_string(index = False))
         f.write("\n\n")
 
 def main():
@@ -97,9 +114,10 @@ def main():
     total_missing = count_total_missing(sheet_filtered)
     per_patient = missing_per_patient(sheet_filtered, feature_cols)
     max_con_missing = max_consecutive_missing(sheet_filtered, feature_cols)
-    unique_dates = count_unique_dates(sheet)
+    unique_dates = count_unique_dates(sheet_filtered)
+    summary_stats = calc_summary_stats(sheet_filtered, feature_cols)
 
-    print_log(total_missing, per_patient, max_con_missing, unique_dates)
+    print_log(total_missing, per_patient, max_con_missing, unique_dates, summary_stats)
 
 if __name__ == "__main__":
     main()

@@ -1,7 +1,7 @@
-total number of missing values: 13117
+Total number of missing values: 13117
 
-number of missing days per patient:
-       id  missing days
+Number of missing days per patient:
+       ID  Missing Days
  DP3-0001            57
  DP3-0002             8
  DP3-0003             5
@@ -292,7 +292,7 @@ DP3-0432E            60
 DP3-0433E             6
  DP3-0434            26
 
-maximum consecutive number of days missing per feature per patient:
+Maximum consecutive number of days missing per feature per patient:
        id  Activities...Summary...steps  Activities...Summary...totalDistances  Activities...Summary...veryActiveMinutes  Sleep...Summary...total.minutes.asleep
  DP3-0001                            10                                     10                                        10                                      20
  DP3-0002                             1                                      1                                         1                                       2
@@ -584,5 +584,14 @@ DP3-0432E                             1                                      1  
 DP3-0433E                             1                                      1                                         1                                       2
  DP3-0434                             1                                      1                                         1                                       3
 
-total number of unique dates recorded across all patients: 1270
+Total number of unique dates recorded across all patients: 1270
+
+Summary statistics by metric:
+                                 Feature      Median         IQR
+            Activities...Summary...steps 5212.000000 4690.000000
+   Activities...Summary...totalDistances    3.300000    3.280000
+Activities...Summary...veryActiveMinutes    0.000000    3.000000
+  Sleep...Summary...total.minutes.asleep  435.000000  112.000000
+         Gestational.age.by.reported.LMP   10.900000    3.300000
+                            gest age del   39.142857    1.571429
 
