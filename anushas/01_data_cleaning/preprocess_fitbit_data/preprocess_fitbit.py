@@ -54,13 +54,16 @@ def max_consecutive_missing(sheet, feature_cols):
 
     return final_table
 
-
+# return total number of unique dates recorded across all patients
+def count_unique_dates(sheet):
+    total = sheet["Date"].nunique()
+    return total
 
 
 
 
 # print all calculated data into a log file
-def print_log(total_missing, per_patient, max_con_missing):
+def print_log(total_missing, per_patient, max_con_missing, unique_dates):
     log_path = "01_data_cleaning/preprocess_fitbit_data/log.txt"
 
     with open(log_path, "w") as f:
@@ -75,6 +78,9 @@ def print_log(total_missing, per_patient, max_con_missing):
         f.write(max_con_missing.to_string(index = False))
         f.write("\n\n")
 
+        f.write(f"total number of unique dates recorded across all patients: {unique_dates}")
+        f.write("\n\n")
+
 def main():
     feature_cols = [
         "Activities...Summary...steps", 
@@ -85,14 +91,15 @@ def main():
 
     sheet = load_sheet()
 
-    # filter out "General" events from the sheet
-    sheet_filtered = sheet[sheet["Event.Name"] != "General"].copy()
+    # filter out all events from the sheet except the "Fitbit Data" ones
+    sheet_filtered = sheet[sheet["Event.Name"] == "Fitbit Data"].copy()
 
     total_missing = count_total_missing(sheet_filtered)
     per_patient = missing_per_patient(sheet_filtered, feature_cols)
     max_con_missing = max_consecutive_missing(sheet_filtered, feature_cols)
+    unique_dates = count_unique_dates(sheet)
 
-    print_log(total_missing, per_patient, max_con_missing)
+    print_log(total_missing, per_patient, max_con_missing, unique_dates)
 
 if __name__ == "__main__":
     main()
