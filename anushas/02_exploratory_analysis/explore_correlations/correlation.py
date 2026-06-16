@@ -1,7 +1,23 @@
+import sys
+import subprocess
+
+# Force-install the required packages directly into the active environment
+try:
+    from scipy.stats import spearmanr
+    from statsmodels.stats.multitest import multipletests
+except ModuleNotFoundError:
+    print("--> Packages missing. Installing scipy and statsmodels now...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "scipy", "statsmodels"])
+    
+    # Try importing them again after installation
+    from scipy.stats import spearmanr
+    from statsmodels.stats.multitest import multipletests
+    print("--> Installation successful! Continuing script...")
+
 import pandas as pd
 import numpy as np
-from scipy.stats import spearmanr
-from statsmodels.stats.multitest import multipletests
+# from scipy.stats import spearmanr
+# from statsmodels.stats.multitest import multipletests
 
 # loads both sheets and returns both sheets
 def load_sheets():
@@ -49,13 +65,13 @@ def check_spearman_correlation(df_placental,df_delivery, placental_vars, deliver
     pos_associations = significant_pairs[significant_pairs["rho"] > 0]
     neg_associations = significant_pairs[significant_pairs["rho"] < 0]
 
-    unique_pos_proteins = list(pos_associations["delivery_var"].unique())
-    unique_neg_proteins = list(neg_associations["delivery_var"].unique())
+    unique_pos = list(pos_associations["delivery_var"].unique())
+    unique_neg = list(neg_associations["delivery_var"].unique())
 
     analysis_assets = {
         "master_results": results_table,
-        "pos_proteins": unique_pos_proteins,
-        "neg_proteins": unique_neg_proteins
+        "pos_delivery_vars": unique_pos,
+        "neg_delivery_vars": unique_neg
     }
 
     return analysis_assets
@@ -63,13 +79,27 @@ def check_spearman_correlation(df_placental,df_delivery, placental_vars, deliver
 
 # print all calculated correlation data into a log file
 def print_log(df):
-    log_path = "02_exploratory_analysis/explore_correlations/log.txt"
+    pos_log_path = "02_exploratory_analysis/explore_correlations/positively_associated_delivery_vars.txt"
+    neg_log_path = "02_exploratory_analysis/explore_correlations/negatively_associated_delivery_vars.txt"
 
-    with open(log_path, "w") as f:
-        f.write(df)
+    # write into the positively associated delivery var file
+    with open(pos_log_path, "w") as pos_file:
+        # write to file only if at least one delivery var passes the FDR threshold
+        if df["pos_delivery_vars"]:
+            pos_file.write("\n".join(df["pos_delivery_vars"]))
+        else:
+            pos_file.write("")
+
+    # write into the negatively associated delivery var file
+    with open(neg_log_path, "w") as neg_file:
+        # write to file only if at least one delivery var passes the FDR threshold
+        if df["neg_delivery_vars"]:
+            neg_file.write("\n".join(df["neg_delivery_vars"]))
+        else:
+            neg_file.write("")
 
 def main():
-    placental_metrics = [] # IDKKK need to fill this in
+    placental_metrics = ["height (cm)", "weight (kg)", "delivery bmi"] # ARE THESE THE CORRECT VARIABLES??
     delivery_metrics = ["apgar 1", "apgar 5", "nicu days", "birthweight", "gest age del"]
     placental_df, delivery_df = load_sheets()
     

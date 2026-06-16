@@ -1,0 +1,5 @@
+apgar 1
+apgar 5
+nicu days
+birthweight
+gest age del
