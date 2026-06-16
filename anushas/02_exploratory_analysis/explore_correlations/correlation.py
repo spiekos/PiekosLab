@@ -1,44 +1,32 @@
-import sys
-import subprocess
-
-# force-install the required packages directly into the active environment
-try:
-    from scipy.stats import spearmanr
-    from statsmodels.stats.multitest import multipletests
-except ModuleNotFoundError:
-    print("--> Packages missing. Installing scipy and statsmodels now...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "scipy", "statsmodels"])
-    
-    # try importing them again after installation
-    from scipy.stats import spearmanr
-    from statsmodels.stats.multitest import multipletests
-    print("--> Installation successful! Continuing script...")
-
 import pandas as pd
 import numpy as np
-# from scipy.stats import spearmanr
-# from statsmodels.stats.multitest import multipletests
+from scipy.stats import spearmanr
+from statsmodels.stats.multitest import multipletests
 
-# loads both sheets (one contains the placental histopathology data, and the other contains the variables of interest data) and returns both sheets
+# loads both sheets (sheet1 contains the placental histopathology data, and sheet2 contains the variables of interest data) and returns both sheets
 def load_sheets():
     sheet1 = pd.read_csv("01_data_cleaning/preprocess_slides_data/output.csv")
     sheet2 = pd.read_csv("02_exploratory_analysis/explore_correlations/dp3 master table v2.xlsx - variables of interest.csv")
     return sheet1, sheet2
 
-def check_spearman_correlation(df_placental,df_delivery, placental_vars, delivery_vars, fdr_threshold = 0.05):
+def check_spearman_correlation(df_placental, df_delivery, placental_vars, delivery_vars, fdr_threshold = 0.05):
     # make sure column names are consistent across dataframes
     df_delivery = df_delivery.rename(columns = {"ID": "id"})
 
-    # align and merge datasets based on patient ID
+    # make sure column inputs don't have any hidden spaces
+    df_placental.columns = df_placental.columns.str.strip()
+    df_delivery.columns = df_delivery.columns.str.strip()
+
     # only grab the ID column and variables of interest
     df_placental_sub = df_placental[["id"] + placental_vars]
     df_delivery_sub = df_delivery[["id"] + delivery_vars]
 
+    # align and merge datasets based on patient ID
     merged_df = pd.merge(df_placental_sub, df_delivery_sub, on="id", how="inner")
 
     # drop rows with missing values in the columns of interest
     all_vars = placental_vars + delivery_vars
-    merged_df = merged_df.dropna(subset=all_vars)
+    merged_df = merged_df.dropna(subset = all_vars)
 
     # vectorized spearman correlation loop
     # loop over placental variables and vectorize across delivery variables
@@ -46,12 +34,7 @@ def check_spearman_correlation(df_placental,df_delivery, placental_vars, deliver
     for p_var in placental_vars:
         # for each delivery variable, calculate its correlation with each placental variable
         for d_var in delivery_vars:
-            # check if either column is constant (has only 1 unique value) or is empty
-            if merged_df[p_var].nunique() <= 1 or merged_df[d_var].nunique() <= 1:
-                rho, p = None, None
-                print(f"Skipping: {p_var} or {d_var} has constant values.")
-            else:
-                rho, p = spearmanr(merged_df[p_var], merged_df[d_var])
+            rho, p = spearmanr(merged_df[p_var], merged_df[d_var])
 
             # save this to records
             records.append({
@@ -86,9 +69,11 @@ def check_spearman_correlation(df_placental,df_delivery, placental_vars, deliver
 
 
 # print all calculated correlation data into a log file
-def print_log(df):
+def print_log(df, fdr_threshold):
     pos_log_path = "02_exploratory_analysis/explore_correlations/positively_associated_delivery_vars.txt"
     neg_log_path = "02_exploratory_analysis/explore_correlations/negatively_associated_delivery_vars.txt"
+    full_table_log_path = "02_exploratory_analysis/explore_correlations/full_correlation_table.txt"
+    filtered_table_log_path = "02_exploratory_analysis/explore_correlations/filtered_correlation_table.txt"
 
     # write into the positively associated delivery var file
     with open(pos_log_path, "w") as pos_file:
@@ -106,25 +91,54 @@ def print_log(df):
         else:
             neg_file.write("")
 
+    # write the full correlation table into another log file
+    # includes all pairs of variables, including those that failed the FDR test
+    with open(full_table_log_path, "w") as full_table_file:
+        # sort table by increasing FDR value
+        summary_table = df["master_results"].sort_values(by = ["placental_var", "FDR"])
+
+        # clean up the presentation of the table
+        summary_table["placental_var"] = summary_table["placental_var"].mask(summary_table["placental_var"].duplicated(), '')
+
+        full_table_file.write(summary_table.to_markdown(index = False))
+        
+    # write the correlation table into another log file
+    # only includes pairs of variables that passed the FDR test
+    with open(filtered_table_log_path, "w") as filtered_table_file:
+        # filter for pairs of variables that passed the FDR test
+        passed_fdr = df["master_results"][df["master_results"]["FDR"] <= fdr_threshold].copy()
+        
+        # sort table by increasing FDR value
+        summary_table = passed_fdr.sort_values(by = ["placental_var", "FDR"])
+
+        # clean up the presentation of the table
+        summary_table["placental_var"] = summary_table["placental_var"].mask(summary_table["placental_var"].duplicated(), '')
+
+        filtered_table_file.write(summary_table.to_markdown(index = False))
+
 def main():
     placental_metrics = [
         "placental infarction", "distal villous hypoplasia focal/diffuse", "accelerated villous maturation", "increased syncytial knots", 
         "decidual arteriopathy membrane role/basal plate/both", "segmental avascular villi small/intermediate/large", "delayed villous maturation", 
         "maternal inflammatory response stage/grade", "villitis of unknown etiology, high/low grade, focal/diffuse", "increased perivillous fibrin deposition", 
-        "chorangiosis", "fetal inflammatory response stage/grade/location"
+        "chorangiosis"
     ]
-    delivery_metrics = ["apgar 1", "apgar 5", "nicu days", "birthweight", "gest age del"]
+    delivery_metrics = [
+        "maternal age", "height (cm)", "weight (kg)", "delivery bmi", "prepregnancy weight self or record", 
+        "prepregnancy BMI self or record", "smoking", "gravida", "parity", "diabetes", "chtn", "labor onset", 
+        "Route of delivery 1-vag, 2-cs", "gest age del", "birthweight", "infant sex", "apgar 1", "apgar 5", "nicu days"
+    ]
     placental_df, delivery_df = load_sheets()
     
-    master_results = check_spearman_correlation(
+    analysis_assets = check_spearman_correlation(
         df_placental=placental_df,
         df_delivery=delivery_df,
         placental_vars=placental_metrics,
         delivery_vars=delivery_metrics,
         fdr_threshold=0.05
     )
-
-    print_log(master_results)
+    
+    print_log(analysis_assets, fdr_threshold = 0.05)
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,4 @@
-ID,status,omics set#,group,subgroup,maternal age,height (cm),weight (kg),delivery bmi,prepregnancy weight self or record,prepregnancy BMI self or record,race,ethnicity,smoking,gravida,parity,diabetes,chtn,labor onset,"Route of delivery 1-vag, 2-cs",gest age del,birthweight,infant sex,apgar 1,apgar 5,nicu days,
+"ID",status,omics set#,group,subgroup,maternal age,height (cm),weight (kg),delivery bmi,prepregnancy weight self or record,prepregnancy BMI self or record,race,ethnicity,smoking,gravida,parity,diabetes,chtn,labor onset,"Route of delivery 1-vag, 2-cs",gest age del,birthweight,infant sex,apgar 1,apgar 5,nicu days,
 #N/A,,,,,MOM_AGE,DMOMHGT,MOBADMWT,,,,MOTHER_RACE,EthniciEthnicityDescriptionty,,MHXGRAV,MHXPARA,MENDDIAB,MCVDHTN,LABOR_ONSET,FDELTYPE,,BIRTHWEIGHT,BabySex,APGARSCORE1MINUTE,APGARSCORE5MINUTE,INICUDAY,aspirin
 DP3-0001,Delivered,0,Control,Control,30,163,74,27.9,67.6,25.4,WHITE,NOT HISPANIC OR LATINO,Never,3,2,0,0,Spontaneous,1,39.9,3390,M,8,9,0,no
 DP3-0002,Delivered,0,Control,Control,37,168,80.3,28.5,68.5,24.3,WHITE,NOT HISPANIC OR LATINO,Never,1,0,0,0,?,1,39.3,3150,M,9,9,0,no
