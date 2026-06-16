@@ -43,16 +43,55 @@ def prepare_pregnancy_counts(df):
 
     return all_data_counts, pregnancy_counts
 
+# plotting function
+# takes both dataframes (all datapoints, pregnancy only) and plots the two histograms
+def make_histograms(all_data, pregnancy_data):
+    def draw_plot(data, title, filename):
+        plt.figure(figsize = (12, 6))
 
+        # plot the data
+        sns.barplot(data = data, x = "timepoint", y = "patient_count", color = "skyblue")
 
+        # add trimester lines
+        plt.axvline(x = 91, color = "red", linestyle = "--", linewidth = 1.5, label = "End of Trimester 1 (Week 13)")
+        plt.axvline(x = 182, color = "orange", linestyle = "--", linewidth = 1.5, label = "End of Trimester 2 (Week 26)")
+        plt.axvline(x = 280, color = "green", linestyle = ":", linewidth = 1.5, label = "Typical Delivery (Week 40)")
 
+        # clean up x-axis ticks by only making them visible every 2 weeks
+        ax = plt.gca()
+        for ind, label in enumerate(ax.get_xticklabels()):
+            if ind % 14 != 0:
+                label.set_visible(False)
 
+        plt.title(title, fontsize = 14, fontweight = "bold")
+        plt.xlabel("Day of Pregnancy", fontsize = 12)
+        plt.ylabel("Number of Patients with Fitbit Data", fontsize = 12)
+        plt.legend(loc = "upper right")
+        plt.grid(axis = "y", alpha = 0.3)
+
+        plt.tight_layout()
+        plt.savefig(filename, dpi = 300)
+
+    # generate plot 1: all valid datapoints
+    draw_plot(
+        data = all_data,
+        title = "Number of Patients per Day (All Valid Fitbit Updates)",
+        filename = "patients_per_day_all.png"
+    )
+
+    # generate plot 2: only datapoints during pregnancy
+    draw_plot(
+        data = pregnancy_data,
+        title = "Number of Patients per Day (Strictly During Pregnancy)",
+        filename = "patients_per_day_during_pregnancy.png"
+    )
+
+    plt.show()
 
 def main():
     sheet = load_sheet()
-    prepare_pregnancy_counts(sheet)
-
-
+    all_counts, preg_counts = prepare_pregnancy_counts(sheet)
+    make_histograms(all_counts, preg_counts)
 
 if __name__ == "__main__":
     main()
