@@ -19,19 +19,22 @@ import numpy as np
 # from scipy.stats import spearmanr
 # from statsmodels.stats.multitest import multipletests
 
-# loads both sheets and returns both sheets
+# loads both sheets (one contains the placental histopathology data, and the other contains the variables of interest data) and returns both sheets
 def load_sheets():
-    sheet1 = pd.read_csv("02_exploratory_analysis/explore_correlations/dp3 master table v2.xlsx - clinical data.csv")
+    sheet1 = pd.read_csv("01_data_cleaning/preprocess_slides_data/output.csv")
     sheet2 = pd.read_csv("02_exploratory_analysis/explore_correlations/dp3 master table v2.xlsx - variables of interest.csv")
     return sheet1, sheet2
 
 def check_spearman_correlation(df_placental,df_delivery, placental_vars, delivery_vars, fdr_threshold = 0.05):
+    # make sure column names are consistent across dataframes
+    df_delivery = df_delivery.rename(columns = {"ID": "id"})
+
     # align and merge datasets based on patient ID
     # only grab the ID column and variables of interest
-    df_placental_sub = df_placental[["ID"] + placental_vars]
-    df_delivery_sub = df_delivery[["ID"] + delivery_vars]
+    df_placental_sub = df_placental[["id"] + placental_vars]
+    df_delivery_sub = df_delivery[["id"] + delivery_vars]
 
-    merged_df = pd.merge(df_placental_sub, df_delivery_sub, on="ID", how="inner")
+    merged_df = pd.merge(df_placental_sub, df_delivery_sub, on="id", how="inner")
 
     # drop rows with missing values in the columns of interest
     all_vars = placental_vars + delivery_vars
@@ -43,7 +46,12 @@ def check_spearman_correlation(df_placental,df_delivery, placental_vars, deliver
     for p_var in placental_vars:
         # for each delivery variable, calculate its correlation with each placental variable
         for d_var in delivery_vars:
-            rho, p = spearmanr(merged_df[p_var], merged_df[d_var])
+            # check if either column is constant (has only 1 unique value) or is empty
+            if merged_df[p_var].nunique() <= 1 or merged_df[d_var].nunique() <= 1:
+                rho, p = None, None
+                print(f"Skipping: {p_var} or {d_var} has constant values.")
+            else:
+                rho, p = spearmanr(merged_df[p_var], merged_df[d_var])
 
             # save this to records
             records.append({
@@ -99,7 +107,12 @@ def print_log(df):
             neg_file.write("")
 
 def main():
-    placental_metrics = ["height (cm)", "weight (kg)", "delivery bmi"] # ARE THESE THE CORRECT VARIABLES??
+    placental_metrics = [
+        "placental infarction", "distal villous hypoplasia focal/diffuse", "accelerated villous maturation", "increased syncytial knots", 
+        "decidual arteriopathy membrane role/basal plate/both", "segmental avascular villi small/intermediate/large", "delayed villous maturation", 
+        "maternal inflammatory response stage/grade", "villitis of unknown etiology, high/low grade, focal/diffuse", "increased perivillous fibrin deposition", 
+        "chorangiosis", "fetal inflammatory response stage/grade/location"
+    ]
     delivery_metrics = ["apgar 1", "apgar 5", "nicu days", "birthweight", "gest age del"]
     placental_df, delivery_df = load_sheets()
     

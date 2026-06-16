@@ -62,7 +62,7 @@ def delete_patients(sheet):
     return sheet
 
 # delete the following unnecessary columns: "slide a", "slide b", "slide membrane roll", "not in file"
-# delete all empty columns
+# delete all empty columns, i.e. columns representing histopathology that is not present in any patient
 def delete_columns(sheet):
     sheet = sheet.drop(columns = [
         "slide a", "slide b", "slide membrane roll", "not in file", 
@@ -123,7 +123,6 @@ def encode(sheet):
     # inflammatory response. therefore, if a participant is marked negative for MR, we fill in "NA" into these three columns.
     sheet = fillna(sheet, "mr", "decidual arteriopathy membrane role/basal plate/both")
     sheet = fillna(sheet, "mr", "maternal inflammatory response stage/grade")
-    sheet = fillna(sheet, "mr", "fetal inflammatory response stage/grade/location")
 
     # fill all encoded columns with 0 as the corresponding N/A value
     numeric_cols = sheet.select_dtypes(include = "number").columns
