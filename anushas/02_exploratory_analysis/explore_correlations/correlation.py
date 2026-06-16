@@ -1,7 +1,7 @@
 import sys
 import subprocess
 
-# Force-install the required packages directly into the active environment
+# force-install the required packages directly into the active environment
 try:
     from scipy.stats import spearmanr
     from statsmodels.stats.multitest import multipletests
@@ -9,7 +9,7 @@ except ModuleNotFoundError:
     print("--> Packages missing. Installing scipy and statsmodels now...")
     subprocess.check_call([sys.executable, "-m", "pip", "install", "scipy", "statsmodels"])
     
-    # Try importing them again after installation
+    # try importing them again after installation
     from scipy.stats import spearmanr
     from statsmodels.stats.multitest import multipletests
     print("--> Installation successful! Continuing script...")
