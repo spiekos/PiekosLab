@@ -62,9 +62,14 @@ def delete_patients(sheet):
     return sheet
 
 # delete the following unnecessary columns: "slide a", "slide b", "slide membrane roll", "not in file"
-# delete the following empty columns:
+# delete all empty columns
 def delete_columns(sheet):
-    sheet = sheet.drop(columns = ["slide a", "slide b", "slide membrane roll", "not in file"])
+    sheet = sheet.drop(columns = [
+        "slide a", "slide b", "slide membrane roll", "not in file", 
+        "retroplacental hemorrhage", "vascular thrombosis", "villous stromal vascular karyorrhexis", "vascular intramural fibrin deposition", 
+        "stem vessel obliteration/fibromuscular sclerosis", "vascular ectasia", "fetal inflammatory response stage/grade/location", "diffuse villous edema", 
+        "placental hypoplasia"
+])
     return sheet
 
 # condition_col represents the column that we are checking the value of (true/false)
@@ -80,10 +85,8 @@ def encode(sheet):
     # encode yes/no to 1/0
     yes_no_mapping = {"yes": 1}
     yes_no_columns = [
-        "placental infarction", "retroplacental hemorrhage", "distal villous hypoplasia focal/diffuse", "accelerated villous maturation", 
-        "increased syncytial knots", "vascular thrombosis", "villous stromal vascular karyorrhexis", "vascular intramural fibrin deposition", 
-        "stem vessel obliteration/fibromuscular sclerosis", "vascular ectasia", "delayed villous maturation", "fetal inflammatory response stage/grade/location", 
-        "diffuse villous edema", "increased perivillous fibrin deposition", "chorangiosis", "placental hypoplasia"
+        "placental infarction", "distal villous hypoplasia focal/diffuse", "accelerated villous maturation", "increased syncytial knots", 
+        "delayed villous maturation", "increased perivillous fibrin deposition", "chorangiosis"
     ]
     sheet[yes_no_columns] = sheet[yes_no_columns].apply(lambda x: x.map(yes_no_mapping))
 
@@ -138,9 +141,16 @@ def print_totals(sheet):
     numeric_cols.remove("gestational age at delivery")
 
     with open(log_path, "w") as f:
+        f.write("This file contains the sum of the values in each column corresponding to a placental histopathology feature.\n\n")
+        f.write("Note that the following columns were dropped from the dataset because these features were not present in any patient:\n")
+        f.write("retroplacental hemorrhage, vascular thrombosis, villous stromal vascular karyorrhexis, vascular intramural fibrin deposition,\n")
+        f.write("stem vessel obliteration/fibromuscular sclerosis, vascular ectasia, fetal inflammatory response stage/grade/location, diffuse villous edema,\n")
+        f.write("and placental hypoplasia.\n\n")
+
         for col in numeric_cols:
             total = sheet[col].sum()
-            f.write(f"{col}: {total}\n")
+            if total != 0:
+                f.write(f"{col}: {total}\n")
 
 def main():
     sheet1, sheet2 = load_sheets()

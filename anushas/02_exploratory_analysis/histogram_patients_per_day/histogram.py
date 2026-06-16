@@ -23,20 +23,20 @@ def prepare_pregnancy_counts(df):
     ]
     df_clean = df_filtered.dropna(subset = data_cols, how = "any").copy()
 
-    df_clean["delivery_day_limit"] = df_clean["gest age del"] * 7
+    df_clean["current_weeks"] = df_clean["timepoint"] / 7
 
     # construct dataset 1: all valid Fitbit updates
     all_data_counts = (
-        df_clean.groupby("timepoint")["Record.ID"]
+        df_clean.groupby("current_weeks")["Record.ID"]
         .nunique()
         .reset_index(name = "patient_count")
     )
 
     # construct dataset 2: pregnancy only (stop counting datapoints past delivery)
-    pregnancy_only_df = df_clean[df_clean["timepoint"] <= df_clean["delivery_day_limit"]]
+    pregnancy_only_df = df_clean[df_clean["current_weeks"] <= df_clean["gest age del"]]
 
     pregnancy_counts = (
-        pregnancy_only_df.groupby("timepoint")["Record.ID"]
+        pregnancy_only_df.groupby("current_weeks")["Record.ID"]
         .nunique()
         .reset_index(name = "patient_count")
     )
@@ -50,7 +50,7 @@ def make_histograms(all_data, pregnancy_data):
         plt.figure(figsize = (12, 6))
 
         # plot the data
-        sns.barplot(data = data, x = "timepoint", y = "patient_count", color = "skyblue")
+        sns.barplot(data = data, x = "current_weeks", y = "patient_count", color = "skyblue")
 
         # add trimester lines
         plt.axvline(x = 91, color = "red", linestyle = "--", linewidth = 1.5, label = "End of Trimester 1 (Week 13)")
@@ -60,11 +60,11 @@ def make_histograms(all_data, pregnancy_data):
         # clean up x-axis ticks by only making them visible every 2 weeks
         ax = plt.gca()
         for ind, label in enumerate(ax.get_xticklabels()):
-            if ind % 14 != 0:
+            if ind % 2 != 0:
                 label.set_visible(False)
 
         plt.title(title, fontsize = 14, fontweight = "bold")
-        plt.xlabel("Day of Pregnancy", fontsize = 12)
+        plt.xlabel("Week of Pregnancy", fontsize = 12)
         plt.ylabel("Number of Patients with Fitbit Data", fontsize = 12)
         plt.legend(loc = "upper right")
         plt.grid(axis = "y", alpha = 0.3)
