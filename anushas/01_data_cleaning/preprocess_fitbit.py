@@ -2,8 +2,8 @@ import pandas as pd
 
 # loads both fitbit data sheets and returns both sheets
 def load_sheets():
-    sheet1 = pd.read_csv("00_raw_data/DP3_playset.csv", index_col = 0)
-    sheet2 = pd.read_csv("00_raw_data/DP3-FitbitFullReport_DATA_LABELS_2025-02-18_1356.csv")
+    sheet1 = pd.read_csv("01_data_cleaning/preprocess_fitbit_data/DP3_playset.csv", index_col = 0)
+    sheet2 = pd.read_csv("01_data_cleaning/preprocess_fitbit_data/DP3-FitbitFullReport_DATA_LABELS_2025-02-18_1356.csv")
     return sheet1, sheet2
 
 # rename columns of both sheets so that column names are consistent across sheets
@@ -52,6 +52,39 @@ def sort_columns(sheet):
     
     return sheet
 
+# reads from the fitbit analysis log file
+# extracts the table containing data on max number of consecutive days missing per feature per patient, and returns this table
+def read_fitbit_analysis():
+    fitbit_analysis_path = "02_exploratory_analysis/analyze_fitbit_data/log.txt"
+    target_title = "Maximum consecutive number of days missing per feature per patient:"
+
+    table_lines = []
+    inside_target_table = False
+    
+    with open(fitbit_analysis_path, 'r') as f:
+        for line in f:
+            cleaned_line = line.strip()
+
+            # if we find the title, start capturing lines
+            if target_title in cleaned_line:
+                inside_target_table = True
+                continue # skip the title line
+
+            # if we are inside the table and hit a blank line, we're done reading
+            if inside_target_table and not cleaned_line:
+                break
+
+            # collect the table's rows
+            if inside_target_table:
+                table_lines.append(line)
+
+        
+
+
+# drop all patients with no recording of 2+ days in a row for any feature
+# sheet: the entire fitbit data sheet, which contains patient information and all collected metrics
+# table: the dataframe containing data on max number of consecutive days missing per feature per patient
+def drop_patients(sheet, table):
 
 
 
@@ -63,7 +96,7 @@ def main():
     merged = sort_columns(merged)
 
     # write sheet to an output file
-    merged.to_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv", index = False)
+    merged.to_csv("01_data_cleaning/preprocess_fitbit_data/output.csv", index = False)
 
 
 

@@ -2,7 +2,7 @@ import pandas as pd
 
 # load and return the dataset
 def load_sheet():
-    sheet = pd.read_csv("02_exploratory_analysis/analyze_fitbit_data/DP3_playset_PE.csv")
+    sheet = pd.read_csv("00_raw_data/DP3_playset_PE.csv")
     return sheet
 
 # filters the sheet to only include "Fitbit Data" events and only include events during pregnancy
@@ -89,7 +89,7 @@ def calc_summary_stats(sheet, feature_cols):
 
 # print all calculated data into a log file
 def print_log(total_missing, per_patient, max_con_missing, unique_dates, summary_stats):
-    log_path = "02_exploratory_analysis/analyze_fitbit_data/log.txt"
+    log_path = "02_exploratory_analysis/outputs/fitbit_data_analysis.txt"
 
     with open(log_path, "w") as f:
         f.write("Following are various statistics about the Fitbit dataset. \n")
