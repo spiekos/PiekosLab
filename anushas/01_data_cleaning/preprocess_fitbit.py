@@ -2,8 +2,8 @@ import pandas as pd
 
 # loads both fitbit data sheets and returns both sheets
 def load_sheets():
-    sheet1 = pd.read_csv("01_data_cleaning/preprocess_fitbit_data/DP3_playset.csv", index_col = 0)
-    sheet2 = pd.read_csv("01_data_cleaning/preprocess_fitbit_data/DP3-FitbitFullReport_DATA_LABELS_2025-02-18_1356.csv")
+    sheet1 = pd.read_csv("00_raw_data/DP3_playset.csv", index_col = 0)
+    sheet2 = pd.read_csv("00_raw_data/DP3-FitbitFullReport_DATA_LABELS_2025-02-18_1356.csv")
     return sheet1, sheet2
 
 # rename columns of both sheets so that column names are consistent across sheets
@@ -63,7 +63,7 @@ def main():
     merged = sort_columns(merged)
 
     # write sheet to an output file
-    merged.to_csv("01_data_cleaning/preprocess_fitbit_data/output.csv", index = False)
+    merged.to_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv", index = False)
 
 
 
