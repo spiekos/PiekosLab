@@ -5,8 +5,8 @@ from statsmodels.stats.multitest import multipletests
 
 # loads both sheets (sheet1 contains the placental histopathology data, and sheet2 contains the variables of interest data) and returns both sheets
 def load_sheets():
-    sheet1 = pd.read_csv("01_data_cleaning/preprocess_slides_data/output.csv")
-    sheet2 = pd.read_csv("02_exploratory_analysis/explore_correlations/dp3 master table v2.xlsx - variables of interest.csv")
+    sheet1 = pd.read_csv("01_data_cleaning/processed_data/processed_placental_data.csv")
+    sheet2 = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - variables of interest.csv")
     return sheet1, sheet2
 
 def check_spearman_correlation(df_placental, df_delivery, placental_vars, delivery_vars, fdr_threshold = 0.05):
@@ -91,10 +91,10 @@ def print_log(df, fdr_threshold):
         print("No results to write to log files.")
         return
 
-    pos_log_path = "02_exploratory_analysis/explore_correlations/positively_associated_delivery_vars.txt"
-    neg_log_path = "02_exploratory_analysis/explore_correlations/negatively_associated_delivery_vars.txt"
-    full_table_log_path = "02_exploratory_analysis/explore_correlations/full_correlation_table.txt"
-    filtered_table_log_path = "02_exploratory_analysis/explore_correlations/filtered_correlation_table.txt"
+    pos_log_path = "02_exploratory_analysis/outputs/positively_associated_delivery_vars.txt"
+    neg_log_path = "02_exploratory_analysis/outputs/negatively_associated_delivery_vars.txt"
+    full_table_log_path = "02_exploratory_analysis/outputs/full_correlation_table.txt"
+    filtered_table_log_path = "02_exploratory_analysis/outputs/filtered_correlation_table.txt"
 
     # write into the positively associated delivery var file
     with open(pos_log_path, "w") as pos_file:
