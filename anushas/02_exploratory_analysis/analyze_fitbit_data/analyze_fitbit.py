@@ -5,6 +5,17 @@ def load_sheet():
     sheet = pd.read_csv("02_exploratory_analysis/analyze_fitbit_data/DP3_playset_PE.csv")
     return sheet
 
+# filters the sheet to only include "Fitbit Data" events and only include events during pregnancy
+def filter_sheet(sheet):
+    # filter out all events from the sheet except the "Fitbit Data" ones
+    sheet_filtered = sheet[sheet["Event.Name"] == "Fitbit Data"].copy()
+
+    # only include events during pregnancy
+    sheet_filtered["current_weeks"] = sheet_filtered["timepoint"] / 7
+    sheet_filtered = sheet_filtered[sheet_filtered["current_weeks"] <= sheet_filtered["gest age del"]]
+
+    return sheet_filtered
+
 # returns the total number of missing (aka "NA") values in the dataset across all columns. excludes the "NA" values corresponding to the general information 
 # rows for each patient, as these do not represent missing values in the data.
 def count_total_missing(sheet):
@@ -80,6 +91,9 @@ def print_log(total_missing, per_patient, max_con_missing, unique_dates, summary
     log_path = "02_exploratory_analysis/analyze_fitbit_data/log.txt"
 
     with open(log_path, "w") as f:
+        f.write("Following are various statistics about the Fitbit dataset. \n")
+        f.write("Note that this data has been filtered to only include datapoints during pregnancy.\n\n")
+
         f.write(f"Total number of missing values: {total_missing}")
         f.write("\n\n")
 
@@ -108,8 +122,7 @@ def main():
 
     sheet = load_sheet()
 
-    # filter out all events from the sheet except the "Fitbit Data" ones
-    sheet_filtered = sheet[sheet["Event.Name"] == "Fitbit Data"].copy()
+    sheet_filtered = filter_sheet(sheet)
 
     total_missing = count_total_missing(sheet_filtered)
     per_patient = missing_per_patient(sheet_filtered, feature_cols)
