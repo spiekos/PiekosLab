@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+from matplotlib.backends.backend_pdf import PdfPages
 
 # loads and returns the dataset
 def load_sheet():
@@ -45,54 +46,56 @@ def prepare_pregnancy_counts(df):
 
 # plotting function
 # takes both dataframes (all datapoints, pregnancy only) and plots the two histograms
-def make_histograms(all_data, pregnancy_data):
-    def draw_plot(data, title, filename):
-        plt.figure(figsize = (12, 6))
+def make_histograms_pdf(all_data, pregnancy_data):
+    output_filename = "02_exploratory_analysis/outputs/pregnancy_plots_report.pdf"
 
-        # plot the data
-        plt.bar(data["current_weeks"], data["patient_count"], width = 0.1, color = "skyblue")
+    with PdfPages(output_filename) as pdf:
+    
+        def draw_plot(data, title):
+            fig = plt.figure(figsize = (12, 6))
 
-        # add trimester lines
-        plt.axvline(x = 13, color = "red", linestyle = "--", linewidth = 1.5, label = "End of Trimester 1 (Week 13)")
-        plt.axvline(x = 26, color = "orange", linestyle = "--", linewidth = 1.5, label = "End of Trimester 2 (Week 26)")
-        plt.axvline(x = 40, color = "green", linestyle = ":", linewidth = 1.5, label = "Typical Delivery (Week 40)")
+            # plot the data
+            plt.bar(data["current_weeks"], data["patient_count"], width = 0.1, color = "skyblue")
 
-        # clean up x-axis ticks by only making them visible every 5 weeks
-        ax = plt.gca()
-        ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
-        ax.xaxis.set_minor_locator(ticker.NullLocator())
+            # add trimester lines
+            plt.axvline(x = 13, color = "red", linestyle = "--", linewidth = 1.5, label = "End of Trimester 1 (Week 13)")
+            plt.axvline(x = 26, color = "orange", linestyle = "--", linewidth = 1.5, label = "End of Trimester 2 (Week 26)")
+            plt.axvline(x = 40, color = "green", linestyle = ":", linewidth = 1.5, label = "Typical Delivery (Week 40)")
 
-        plt.xlim(0, data["current_weeks"].max() + 2)
+            # clean up x-axis ticks by only making them visible every 5 weeks
+            ax = plt.gca()
+            ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
+            ax.xaxis.set_minor_locator(ticker.NullLocator())
 
-        plt.title(title, fontsize = 14, fontweight = "bold")
-        plt.xlabel("Week of Pregnancy", fontsize = 12)
-        plt.ylabel("Number of Patients with Fitbit Data", fontsize = 12)
-        plt.legend(loc = "upper right")
-        plt.grid(axis = "y", alpha = 0.3)
+            plt.xlim(0, data["current_weeks"].max() + 2)
 
-        plt.tight_layout()
-        plt.savefig(filename, dpi = 300)
+            plt.title(title, fontsize = 14, fontweight = "bold")
+            plt.xlabel("Week of Pregnancy", fontsize = 12)
+            plt.ylabel("Number of Patients with Fitbit Data", fontsize = 12)
+            plt.legend(loc = "upper right")
+            plt.grid(axis = "y", alpha = 0.3)
+            plt.tight_layout()
 
-    # generate plot 1: all valid datapoints
-    draw_plot(
-        data = all_data,
-        title = "Number of Patients per Day (All Valid Fitbit Updates)",
-        filename = "patients_per_day_all.png"
-    )
+            pdf.savefig(fig, dpi = 300)
+            plt.close(fig)
 
-    # generate plot 2: only datapoints during pregnancy
-    draw_plot(
-        data = pregnancy_data,
-        title = "Number of Patients per Day (Strictly During Pregnancy)",
-        filename = "patients_per_day_during_pregnancy.png"
-    )
+        # generate plot 1: all valid datapoints
+        draw_plot(
+            data = all_data,
+            title = "Number of Patients per Day (All Valid Fitbit Updates)",
+        )
 
-    plt.show()
+        # generate plot 2: only datapoints during pregnancy
+        draw_plot(
+            data = pregnancy_data,
+            title = "Number of Patients per Day (Strictly During Pregnancy)",
+        )
 
 def main():
     sheet = load_sheet()
     all_counts, preg_counts = prepare_pregnancy_counts(sheet)
-    make_histograms(all_counts, preg_counts)
+
+    make_histograms_pdf(all_counts, preg_counts)
 
 if __name__ == "__main__":
     main()
