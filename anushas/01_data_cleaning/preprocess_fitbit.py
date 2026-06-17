@@ -90,21 +90,41 @@ def extract_days_missing_table():
     return df_target
 
 # drop all patients with no recording of 2+ days in a row for any feature
+# inputs:
 # sheet: the fitbit data sheet, which contains patient information and all collected metrics
 # table: the dataframe containing a table of max number of consecutive days missing per feature per patient
+# outputs:
+# sheet_clean: the input sheet cleaned, i.e. after all patients with max consecutive days missing >= 2 have been dropped
+# dropped_report: a table containing the patient IDs of the patients that were dropped from the sheet, as well as the max consecutive days missing (for any 
+# single metric) corresponding to each patient
 def drop_patients(sheet, table):
     metric_cols = [col for col in table.columns if col != "id"]
 
     # find rows for which any metric value is >= 2
     drop_mask = (table[metric_cols] >= 2).any(axis = 1)
 
-    # find the unique IDs of the patients who failed this test
-    patients_to_drop = table.loc[drop_mask, "id"].unique()
+    # extract patient ID for the patients that will be dropped
+    dropped_report = table.loc[drop_mask, ["id"]].copy()
+
+    dropped_report["max_consecutive_days_missing"] = table.loc[drop_mask, metric_cols].max(axis = 1)
+
+    patients_to_drop = dropped_report["id"].unique().tolist()
 
     # drop the appropriate patients
     sheet_clean = sheet[~sheet["Record ID"].isin(patients_to_drop)]
 
-    return sheet_clean, patients_to_drop
+    return sheet_clean, dropped_report
+
+# print to a log file explaining why you dropped each patient from the dataset
+# i.e. creates a table containing each patient that was dropped and the maximum consecutive number of days their data was missing
+def print_log(dropped_report):
+    log_path = "02_exploratory_analysis/outputs/dropped_patients_fitbit_log.txt"
+    with open(log_path, "w") as f:
+        f.write("This file contains a table consisting of the patient IDs of all patients that were dropped from the Fitbit\n")
+        f.write("dataset, as well as the maximum number of consecutive days that they had missing data (per feature).\n")
+        f.write("Patients were dropped if their maximum number of consecutive missing days was greater than or equal to 2.\n\n")
+
+        f.write(dropped_report.to_string(index = False))
 
 def main():
     sheet1, sheet2 = load_sheets()
@@ -113,7 +133,9 @@ def main():
 
     days_missing_table = extract_days_missing_table()
 
-    merged_clean, patients_to_drop = drop_patients(merged, days_missing_table)
+    merged_clean, dropped_report = drop_patients(merged, days_missing_table)
+
+    print_log(dropped_report)
 
     # write sheet to an output file
     merged_clean.to_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv", index = False)
