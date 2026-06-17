@@ -1,6 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
+import matplotlib.ticker as ticker
 
 # loads and returns the dataset
 def load_sheet():
@@ -50,18 +50,19 @@ def make_histograms(all_data, pregnancy_data):
         plt.figure(figsize = (12, 6))
 
         # plot the data
-        sns.barplot(data = data, x = "current_weeks", y = "patient_count", color = "skyblue")
+        plt.bar(data["current_weeks"], data["patient_count"], width = 0.1, color = "skyblue")
 
         # add trimester lines
-        plt.axvline(x = 91, color = "red", linestyle = "--", linewidth = 1.5, label = "End of Trimester 1 (Week 13)")
-        plt.axvline(x = 182, color = "orange", linestyle = "--", linewidth = 1.5, label = "End of Trimester 2 (Week 26)")
-        plt.axvline(x = 280, color = "green", linestyle = ":", linewidth = 1.5, label = "Typical Delivery (Week 40)")
+        plt.axvline(x = 13, color = "red", linestyle = "--", linewidth = 1.5, label = "End of Trimester 1 (Week 13)")
+        plt.axvline(x = 26, color = "orange", linestyle = "--", linewidth = 1.5, label = "End of Trimester 2 (Week 26)")
+        plt.axvline(x = 40, color = "green", linestyle = ":", linewidth = 1.5, label = "Typical Delivery (Week 40)")
 
-        # clean up x-axis ticks by only making them visible every 2 weeks
+        # clean up x-axis ticks by only making them visible every 5 weeks
         ax = plt.gca()
-        for ind, label in enumerate(ax.get_xticklabels()):
-            if ind % 2 != 0:
-                label.set_visible(False)
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
+        ax.xaxis.set_minor_locator(ticker.NullLocator())
+
+        plt.xlim(0, data["current_weeks"].max() + 2)
 
         plt.title(title, fontsize = 14, fontweight = "bold")
         plt.xlabel("Week of Pregnancy", fontsize = 12)
