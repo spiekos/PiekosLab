@@ -23,9 +23,10 @@ def count_total_missing(sheet):
     return sheet.isna().sum().sum()
 
 # returns a table containing the number of days missing per patient
+# a day is only considered missing if every value for that day is NaN
 def missing_per_patient(sheet, feature_cols):
-    # check if any value in each row is NaN
-    sheet["is_missing"] = sheet[feature_cols].isna().any(axis = 1)
+    # check if all values in each row are NaN
+    sheet["is_missing"] = sheet[feature_cols].isna().all(axis = 1)
 
     # sum the True values by patient ID
     result = (
