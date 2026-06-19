@@ -2,7 +2,7 @@
 
 This directory contains the cleaned, merged, and filtered datasets used for downstream analysis. These files are programmatically generated from raw data sources by standardizing schemas, applying quality thresholds, and encoding categorical features.
 
-## 📁 Directory Structure & Lineage
+## Directory Structure & Lineage
 
 * **`processed_fitbit_data.csv`**
   * *Description:* Cleaned and filtered patient biometric data.
@@ -13,7 +13,7 @@ This directory contains the cleaned, merged, and filtered datasets used for down
 
 ---
 
-## 🛠️ Data Processing Pipelines
+## Data Processing Pipelines
 
 ### 1. Fitbit Data Pipeline
 
@@ -46,7 +46,7 @@ This dataset standardizes clinical pathology records, removes uninformative feat
 
 ---
 
-## 🚀 Pipeline Execution
+## Pipeline Execution
 
 To regenerate or refresh these processed datasets from the raw source files, run the following scripts from the project root directory:
 
