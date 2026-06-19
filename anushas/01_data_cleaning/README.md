@@ -2,7 +2,7 @@
 
 This directory houses the source code and resulting outputs for the data preprocessing pipeline. It handles data ingestion, schema harmonization, missing data filtration, and categorical encoding for both Fitbit and placental histopathology datasets.
 
-## 📁 Directory Structure
+## Directory Structure
 
 ```text
 01_data_cleaning/
@@ -17,7 +17,7 @@ This directory houses the source code and resulting outputs for the data preproc
 
 ---
 
-## ⚙️ Scripts Overview
+## Scripts Overview
 
 ### `preprocess_fitbit.py`
 
@@ -35,7 +35,7 @@ This directory houses the source code and resulting outputs for the data preproc
 
 ---
 
-## 🚀 Execution
+## Execution
 
 To re-run the entire data cleaning pipeline and refresh the files in `processed_data/`, execute the scripts from the root of this directory:
 
@@ -45,4 +45,3 @@ python preprocess_placental.py
 ```
 
 > ⚠️ **Prerequisites:** Ensure all raw data dependencies are placed in their expected input paths before running these scripts.
->
