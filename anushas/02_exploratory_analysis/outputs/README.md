@@ -1,5 +1,4 @@
-
-# Output Directory README
+# Outputs
 
 This folder contains the output files generated during the data cleaning and exploratory data analysis phases of the project. The files include filtered datasets, statistical summaries, correlation tables, and visual reports.
 
