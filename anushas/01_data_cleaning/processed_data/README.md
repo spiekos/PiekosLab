@@ -1,5 +1,4 @@
-
-# README: Processed Data Directory
+# Processed Data Directory
 
 This directory contains the cleaned, merged, and filtered datasets used for downstream analysis. These files are programmatically generated from raw data sources by standardizing schemas, applying quality thresholds, and encoding categorical features.
 
