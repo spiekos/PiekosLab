@@ -12,17 +12,17 @@ def load_sheet():
 # processes raw data and returns two datasets:
 # one contains all daily patient counts (including post-delivery)
 # the other has been filtered to only include datapoints during pregnancy (excluding post-delivery)
-# patients are counted if all four activity/sleep metrics are non-null
+# patients are counted if any of the four activity/sleep metrics are non-null
 # note that we only include the datapoints for which the column Event.Name != "General"
 def prepare_pregnancy_counts(df):
     df_filtered = df[df["Event.Name"] != "General"].copy()
 
-    # only keep rows for which all four activity/sleep metrics are non-null
+    # only keep rows for which any of the four activity/sleep metrics are non-null
     data_cols = [
         "Activities...Summary...steps", "Activities...Summary...totalDistances", 
         "Activities...Summary...veryActiveMinutes", "Sleep...Summary...total.minutes.asleep"
     ]
-    df_clean = df_filtered.dropna(subset = data_cols, how = "any").copy()
+    df_clean = df_filtered.dropna(subset = data_cols, how = "all").copy()
 
     df_clean["current_weeks"] = df_clean["timepoint"] / 7
 
