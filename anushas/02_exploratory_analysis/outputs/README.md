@@ -4,7 +4,7 @@ This folder contains the output files generated during the data cleaning and exp
 
 ---
 
-## 📂 Directory Contents
+## Directory Contents
 
 ### 1. Data Cleaning Outputs (`01_data_cleaning`)
 
@@ -59,7 +59,7 @@ This folder contains the output files generated during the data cleaning and exp
 
 ---
 
-## 🛠️ Pipeline Overview
+## Pipeline Overview
 
 ```text
 
