@@ -4,7 +4,7 @@ This directory contains the scripts responsible for performing exploratory data 
 
 ---
 
-## 📁 Directory Structure
+## Directory Structure
 
 ```text
 02_exploratory_analysis/
@@ -14,7 +14,7 @@ This directory contains the scripts responsible for performing exploratory data 
 └── outputs/               # Subdirectory containing all generated results
 ```
 
-## ⚙️ Script Overview & Functionality
+## Script Overview & Functionality
 
 ### 1. `analyze_fitbit.py`
 
@@ -54,7 +54,7 @@ This directory contains the scripts responsible for performing exploratory data 
   * **Plot 1 (All Valid Data):** Plots active patient counts per day across all available valid data updates.
   * **Plot 2 (Pregnancy-Only Data):** Identical plot layout, but strictly truncated to data captured within the formal pregnancy timeline.
 
-## 🔄 Dependency Graph
+## Dependency Graph
 
 ```
 SCRIPTS                                     LOCAL OUTPUTS
