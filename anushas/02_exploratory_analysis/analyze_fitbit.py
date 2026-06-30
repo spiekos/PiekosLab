@@ -37,6 +37,10 @@ def bucket_data(sheet):
 
     return outputs
 
+# returns the total number of unique patients, after data has been filtered
+def get_total_patients(sheet):
+    return sheet["Record ID"].nunique()
+
 # returns the total number of missing (aka "NA") values in the dataset across all columns. excludes the "NA" values corresponding to the general information 
 # rows for each patient, as these do not represent missing values in the data.
 def count_total_missing(sheet):
@@ -132,13 +136,65 @@ def get_patients_per_timeframe(sheets, feature_cols):
 
     return pd.DataFrame(summary_data)
 
+# returns a true/false matrix (patients x metrics) showing whether each patient has non-missing data for at least 80% of their valid pregnancy tracking days
+# also returns a table containing the number of metrics with 80+% of valid data, per patient
+# also returns a table containing the number of patients with 80+% of valid data, per metric
+def get_metric_representation_matrices(sheet, feature_cols):
+    df = sheet.sort_values(by = ["Record ID", "timepoint"]).copy()
+
+    # extract start and end dates per patient
+    # start date marks the day the patient enrolled/started data collection
+    # end data marks delivery
+    enrollment_days = df.groupby("Record ID")["timepoint"].min()
+    max_recorded_days = df.groupby("Record ID")["timepoint"].max()
+
+    delivery_weeks = df.groupby("Record ID")["gest age del"].first()
+    delivery_days = delivery_weeks * 7
+
+    # apply fallback logic for the end of the tracking window:
+    # use gestational age at delivery if present; otherwise, use latest recorded day
+    end_days = delivery_days.fillna(max_recorded_days)
+
+    recorded_data_lengths = (end_days - enrollment_days) + 1
+    recorded_data_lengths = recorded_data_lengths.clip(lower = 1) # ensure values are positive
+
+    # count how many days of valid data exist per metric per patient
+    active_days_per_metric = df.groupby("Record ID")[feature_cols].agg(lambda x: x.notna().sum())
+
+    # contains percent of data that is valid per metric per patient
+    representation_matrix = active_days_per_metric.div(active_days_per_metric, axis = 0)
+    
+    final_table = representation_matrix >= 0.80
+    final_table = final_table.reset_index().rename(columns = {"Record ID": "Patient ID"})
+
+    # contains the number of metrics with 80+% of valid data, per patient
+    pt_summary = pd.DataFrame({
+        "Patient ID": final_table["Patient ID"],
+        "Compliant Metrics Count": final_table[feature_cols].sum(axis = 1)
+    })
+    pt_summary = pt_summary.sort_values(by = "Compliant Metrics Count", ascending = False).reset_index(drop = True)
+
+    # contains the number of patients with 80+% of valid data, per metric
+    patient_counts_per_metric = final_table[feature_cols].sum(axis = 0)
+    metric_summary = pd.DataFrame({
+        "Fitbit Metric": patient_counts_per_metric.index,
+        "Patients with >= 80% Density": patient_counts_per_metric.values
+    })
+    metric_summary = metric_summary.sort_values(by = "Patients with >= 80% Density", ascending = False).reset_index(drop = True)
+
+    return final_table, pt_summary, metric_summary
+
 # print all calculated data into a log file
-def print_log(total_missing, per_patient, max_con_missing, unique_dates, summary_stats, patients_per_timeframe):
+def print_log(total_patients, total_missing, per_patient, max_con_missing, unique_dates, summary_stats, 
+              patients_per_timeframe, metric_matrix, pt_summary, metric_summary, num_metrics):
     log_path = "02_exploratory_analysis/outputs/fitbit_data_analysis.txt"
 
     with open(log_path, "w") as f:
         f.write("Following are various statistics about the Fitbit dataset. \n")
         f.write("Note that this data has been filtered to only include datapoints during pregnancy.\n\n")
+
+        f.write(f"Total number of patients: {total_patients}")
+        f.write("\n\n")
 
         f.write(f"Total number of missing values: {total_missing}")
         f.write("\n\n")
@@ -162,6 +218,18 @@ def print_log(total_missing, per_patient, max_con_missing, unique_dates, summary
         f.write(patients_per_timeframe.to_string(index = False))
         f.write("\n\n")
 
+        f.write("Which patients contributed valid data for at least 80% of their pregnancy, per feature:\n")
+        f.write(metric_matrix.to_string(index = False))
+        f.write("\n\n")
+
+        f.write(f"Number of the {num_metrics} metrics for which each patient achieved >= 80% data density:\n")
+        f.write(pt_summary.to_string(index = False))
+        f.write("\n\n")
+
+        f.write(f"Number of the {total_patients} patients that achieved >= 80% data density, per metric:\n")
+        f.write(metric_summary.to_string(index = False))
+        f.write("\n\n")
+
 def main():
     sheet = load_sheet()
 
@@ -177,14 +245,17 @@ def main():
 
     sheet_bucketed = bucket_data(sheet_filtered)
 
+    total_patients = get_total_patients(sheet_filtered)
     total_missing = count_total_missing(sheet_filtered)
     per_patient = get_missing_per_patient(sheet_filtered, feature_cols)
     max_con_missing = get_max_consecutive_missing(sheet_filtered, feature_cols)
     unique_dates = count_unique_dates(sheet_filtered)
     summary_stats = calc_summary_stats(sheet_filtered, feature_cols)
     patients_per_timeframe = get_patients_per_timeframe(sheet_bucketed, feature_cols)
+    metric_matrix, pt_summary, metric_summary = get_metric_representation_matrices(sheet_filtered, feature_cols)
 
-    print_log(total_missing, per_patient, max_con_missing, unique_dates, summary_stats, patients_per_timeframe)
+    print_log(total_patients, total_missing, per_patient, max_con_missing, unique_dates, summary_stats, 
+              patients_per_timeframe, metric_matrix, pt_summary, metric_summary, len(feature_cols))
 
 if __name__ == "__main__":
     main()
