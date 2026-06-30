@@ -2,13 +2,13 @@ import pandas as pd
 
 # load and return the dataset
 def load_sheet():
-    sheet = pd.read_csv("00_raw_data/DP3_playset_PE.csv")
+    sheet = pd.read_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv")
     return sheet
 
 # filters the sheet to only include "Fitbit Data" events and only include events during pregnancy
 def filter_sheet(sheet):
     # filter out all events from the sheet except the "Fitbit Data" ones
-    sheet_filtered = sheet[sheet["Event.Name"] == "Fitbit Data"].copy()
+    sheet_filtered = sheet[sheet["Event Name"] == "Fitbit Data"].copy()
 
     # only include events during pregnancy
     sheet_filtered["current_weeks"] = sheet_filtered["timepoint"] / 7
@@ -30,10 +30,10 @@ def missing_per_patient(sheet, feature_cols):
 
     # sum the True values by patient ID
     result = (
-        sheet.groupby("Record.ID")["is_missing"]
+        sheet.groupby("Record ID")["is_missing"]
         .sum()
         .reset_index()
-        .rename(columns = {"Record.ID": "ID", "is_missing": "Missing Days"})
+        .rename(columns = {"Record ID": "ID", "is_missing": "Missing Days"})
     )
 
     return result
@@ -53,16 +53,16 @@ def max_consecutive_missing(sheet, feature_cols):
         # group is_missing by (patient id, block id). since block_id only changes when a non-NaN value is seen, these groups will each contain streaks of NaN 
         # values, organized in chronological order, for each patient.
         # then sum the true values (by groups) in is_missing. this gives the lengths of every missing streak for that patient
-        streak_lengths = is_missing.groupby([sheet["Record.ID"], block_id]).sum()
+        streak_lengths = is_missing.groupby([sheet["Record ID"], block_id]).sum()
 
         # find the maximum streak length for each patient
-        max_streak = streak_lengths.groupby("Record.ID").max()
+        max_streak = streak_lengths.groupby("Record ID").max()
 
         feature_results[col] = max_streak
 
     # combine results for all features into a table
     final_table = pd.DataFrame(feature_results).reset_index()
-    final_table = final_table.rename(columns = {"Record.ID": "id"})
+    final_table = final_table.rename(columns = {"Record ID": "id"})
 
     return final_table
 
@@ -74,7 +74,7 @@ def count_unique_dates(sheet):
 # returns median + interquartile range for each relevant metric:
 # gestational age at start of study, gestational age at delivery, steps, total distance, very active minutes, total minutes asleep
 def calc_summary_stats(sheet, feature_cols):
-    new_cols = feature_cols + ["Gestational.age.by.reported.LMP", "gest age del"]
+    new_cols = feature_cols + ["Gestational age by reported LMP", "gest age del"]
 
     def iqr(x):
         return x.quantile(0.75) - x.quantile(0.25)
@@ -114,16 +114,17 @@ def print_log(total_missing, per_patient, max_con_missing, unique_dates, summary
         f.write("\n\n")
 
 def main():
-    feature_cols = [
-        "Activities...Summary...steps", 
-        "Activities...Summary...totalDistances", 
-        "Activities...Summary...veryActiveMinutes", 
-        "Sleep...Summary...total.minutes.asleep"
-    ]
-
     sheet = load_sheet()
 
     sheet_filtered = filter_sheet(sheet)
+
+    feature_cols = [col for col in sheet_filtered.columns if col.startswith(("Activities", "Sleep", "Heart Rate"))]
+
+    # forcefully convert all feature columns into numeric types
+    for col in feature_cols:
+        sheet_filtered[col] = pd.to_numeric(sheet_filtered[col], errors = "coerce")
+    sheet_filtered["Gestational age by reported LMP"] = pd.to_numeric(sheet_filtered["Gestational age by reported LMP"], errors = "coerce")
+    sheet_filtered["gest age del"] = pd.to_numeric(sheet_filtered["gest age del"], errors = "coerce")
 
     total_missing = count_total_missing(sheet_filtered)
     per_patient = missing_per_patient(sheet_filtered, feature_cols)

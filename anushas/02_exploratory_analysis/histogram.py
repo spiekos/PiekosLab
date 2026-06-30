@@ -58,9 +58,10 @@ def make_histograms_pdf(all_data, pregnancy_data):
             plt.bar(data["current_weeks"], data["patient_count"], width = 0.1, color = "skyblue")
 
             # add trimester lines
-            plt.axvline(x = 13, color = "red", linestyle = "--", linewidth = 1.5, label = "End of Trimester 1 (Week 13)")
-            plt.axvline(x = 26, color = "orange", linestyle = "--", linewidth = 1.5, label = "End of Trimester 2 (Week 26)")
-            plt.axvline(x = 40, color = "green", linestyle = ":", linewidth = 1.5, label = "Typical Delivery (Week 40)")
+            plt.axvline(x = 14, color = "red", linestyle = "--", linewidth = 1.5, label = "End of Trimester 1 (Week 14)")
+            plt.axvline(x = 22, color = "orange", linestyle = "--", linewidth = 1.5, label = "End of Early Trimester 2 (Week 22)")
+            plt.axvline(x = 32, color = "blue", linestyle = "--", linewidth = 1.5, label = "End of Early Trimester 3 (Week 32)")
+            plt.axvline(x = 37, color = "green", linestyle = ":", linewidth = 1.5, label = "Typical Delivery (Week 37)")
 
             # clean up x-axis ticks by only making them visible every 5 weeks
             ax = plt.gca()
