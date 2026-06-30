@@ -5,30 +5,27 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 # loads and returns the dataset
 def load_sheet():
-    sheet = pd.read_csv("00_raw_data/DP3_playset.csv")
+    sheet = pd.read_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv")
     return sheet
 
 # data preparation
 # processes raw data and returns two datasets:
 # one contains all daily patient counts (including post-delivery)
 # the other has been filtered to only include datapoints during pregnancy (excluding post-delivery)
-# patients are counted if any of the four activity/sleep metrics are non-null
+# patients are counted if any of the metrics are non-null
 # note that we only include the datapoints for which the column Event.Name != "General"
 def prepare_pregnancy_counts(df):
-    df_filtered = df[df["Event.Name"] != "General"].copy()
+    df_filtered = df[df["Event Name"] != "General"].copy()
 
-    # only keep rows for which any of the four activity/sleep metrics are non-null
-    data_cols = [
-        "Activities...Summary...steps", "Activities...Summary...totalDistances", 
-        "Activities...Summary...veryActiveMinutes", "Sleep...Summary...total.minutes.asleep"
-    ]
-    df_clean = df_filtered.dropna(subset = data_cols, how = "all").copy()
+    # only keep rows for which any of the metrics are non-null
+    feature_cols = [col for col in df_filtered.columns if col.startswith(("Activities", "Sleep", "Heart Rate"))]
+    df_clean = df_filtered.dropna(subset = feature_cols, how = "all").copy()
 
     df_clean["current_weeks"] = df_clean["timepoint"] / 7
 
     # construct dataset 1: all valid Fitbit updates
     all_data_counts = (
-        df_clean.groupby("current_weeks")["Record.ID"]
+        df_clean.groupby("current_weeks")["Record ID"]
         .nunique()
         .reset_index(name = "patient_count")
     )
@@ -37,7 +34,7 @@ def prepare_pregnancy_counts(df):
     pregnancy_only_df = df_clean[df_clean["current_weeks"] <= df_clean["gest age del"]]
 
     pregnancy_counts = (
-        pregnancy_only_df.groupby("current_weeks")["Record.ID"]
+        pregnancy_only_df.groupby("current_weeks")["Record ID"]
         .nunique()
         .reset_index(name = "patient_count")
     )
