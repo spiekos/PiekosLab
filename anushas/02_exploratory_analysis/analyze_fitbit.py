@@ -199,7 +199,7 @@ def prepare_correlation_data(sheet_bucketed, feature_cols, timeframe_names, clin
 
         # take the mean of each metric by patient in this timeframe
         # rename the columns
-        pt_trimester_avg = df.groupby("Record ID")[feature_cols].mean()
+        pt_trimester_avg = df.groupby("Record ID")[feature_cols].median()
         pt_trimester_avg.columns = [f"{label}_{col}" for col in pt_trimester_avg.columns]
         trimester_dfs.append(pt_trimester_avg)
 
