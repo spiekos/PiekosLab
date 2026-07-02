@@ -3,10 +3,12 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from matplotlib.backends.backend_pdf import PdfPages
 
+
 # loads and returns the dataset
 def load_sheet():
     sheet = pd.read_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv")
     return sheet
+
 
 # data preparation
 # processes raw data and returns two datasets:
@@ -40,6 +42,7 @@ def prepare_pregnancy_counts(df):
     )
 
     return all_data_counts, pregnancy_counts
+
 
 # plotting function
 # takes both dataframes (all datapoints, pregnancy only) and plots the two histograms
@@ -89,11 +92,13 @@ def make_histograms_pdf(all_data, pregnancy_data):
             title = "Number of Patients per Day (Strictly During Pregnancy)",
         )
 
+
 def main():
     sheet = load_sheet()
     all_counts, preg_counts = prepare_pregnancy_counts(sheet)
 
     make_histograms_pdf(all_counts, preg_counts)
+
 
 if __name__ == "__main__":
     main()

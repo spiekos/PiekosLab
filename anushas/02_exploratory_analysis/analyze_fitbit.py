@@ -1,11 +1,13 @@
 import pandas as pd
 
+
 # load and return the fitbit dataset and the placental dataset
 def load_sheets():
     sheet1 = pd.read_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv")
     sheet2 = pd.read_csv("01_data_cleaning/processed_data/processed_placental_data.csv")
     sheet3 = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - variables of interest.csv")
     return sheet1, sheet2, sheet3
+
 
 # filters the sheet to only include "Fitbit Data" events and only include events during pregnancy
 def filter_sheet(sheet):
@@ -18,6 +20,7 @@ def filter_sheet(sheet):
     sheet_filtered = sheet_filtered[(sheet_filtered["current_weeks"] <= sheet_filtered["gest age del"]) | 
                                     (sheet_filtered["gest age del"].isna() & sheet_filtered["current_weeks"] <= 40)]
     return sheet_filtered
+
 
 # splits the filtered dataset into four smaller datasets, based on which trimester of the pregnancy each datapoint is in
 # the four datasets are: 1st trimester, early 2nd trimester, late 2nd/early 3rd trimester, late 3rd trimester
@@ -39,15 +42,18 @@ def bucket_data(sheet):
 
     return outputs
 
+
 # returns the total number of unique patients, after data has been filtered
 def get_total_patients(sheet):
     return sheet["Record ID"].nunique()
+
 
 # returns the total number of missing (aka "NA") values in the dataset across all columns. excludes the "NA" values corresponding to the general information 
 # rows for each patient, as these do not represent missing values in the data.
 def count_total_missing(sheet):
     # sum all NaN values across the whole sheet
     return sheet.isna().sum().sum()
+
 
 # returns a table containing the number of days missing per patient
 # a day is only considered missing if every value for that day is NaN
@@ -65,6 +71,7 @@ def get_missing_per_patient(sheet, feature_cols):
     )
 
     return result
+
 
 # returns a table containing the maximum consecutive number of days missing per feature per patient
 def get_max_consecutive_missing(sheet, feature_cols):
@@ -97,9 +104,11 @@ def get_max_consecutive_missing(sheet, feature_cols):
 
     return final_table
 
+
 # returns total number of unique dates recorded across all patients
 def count_unique_dates(sheet):
     return sheet["Date"].nunique()
+
 
 # returns median + interquartile range for each relevant metric:
 # gestational age at start of study, gestational age at delivery, steps, total distance, very active minutes, total minutes asleep
@@ -116,6 +125,7 @@ def calc_summary_stats(sheet, feature_cols):
     summary.columns = ["Feature", "Median", "IQR"]
 
     return summary
+
 
 # returns a table containing the number of patients with Fitbit data for at least one metric during each timeframe
 # the timeframes are: 1st trimester, early 2nd trimester, late 2nd/early 3rd trimester, late 3rd trimester
@@ -135,6 +145,7 @@ def get_patients_per_timeframe(sheets, feature_cols, timeframe_names):
         })
 
     return pd.DataFrame(summary_data)
+
 
 # returns a true/false matrix (patients x metrics) showing whether each patient has non-missing data for at least 80% of their valid pregnancy tracking days
 # also returns a table containing the number of metrics with 80+% of valid data, per patient
@@ -183,6 +194,7 @@ def get_metric_representation_matrices(sheet, feature_cols):
     metric_summary = metric_summary.sort_values(by = "Patients with >= 80% Density", ascending = False).reset_index(drop = True)
 
     return final_table, pt_summary, metric_summary
+
 
 # collapses multi-row trimester data into single-row patient averages for each metric
 # merges this with delivery and placental data
@@ -247,6 +259,7 @@ def prepare_correlation_data(sheet_bucketed, feature_cols, timeframe_names, clin
     
     return master_corr_df
 
+
 # print all calculated data into a log file
 def print_log(total_patients, total_missing, per_patient, max_con_missing, unique_dates, summary_stats, 
               patients_per_timeframe, metric_matrix, pt_summary, metric_summary, num_metrics):
@@ -293,6 +306,7 @@ def print_log(total_patients, total_missing, per_patient, max_con_missing, uniqu
         f.write(metric_summary.to_string(index = False))
         f.write("\n\n")
 
+
 def main():
     fitbit_sheet, placental_sheet, clinical_sheet = load_sheets()
 
@@ -326,6 +340,7 @@ def main():
     if not correlation_ready_df.empty:
         output_csv_path = "02_exploratory_analysis/outputs/master_fitbit_clinical_correlation_data.csv"
         correlation_ready_df.to_csv(output_csv_path, index = False)
+
 
 if __name__ == "__main__":
     main()

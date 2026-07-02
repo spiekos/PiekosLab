@@ -70,6 +70,7 @@ def run_spearman_core(merged_df, independent_vars, dependent_vars, id_col="id", 
 
     return analysis_assets
 
+
 # test 1: runs correlation test between placental histopathology variables and delivery metrics
 def run_test_1_placental_vs_delivery(df_placental, df_delivery, placental_vars, delivery_vars, fdr_threshold=0.05):
     df_delivery = df_delivery.rename(columns={"ID": "id"})
@@ -191,6 +192,7 @@ def main():
     )
     
     print_log(test2_assets, fdr_threshold = 0.05, prefix = "fitbit_")
+
 
 if __name__ == "__main__":
     main()

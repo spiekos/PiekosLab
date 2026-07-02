@@ -1,11 +1,13 @@
 import io
 import pandas as pd
 
+
 # loads both fitbit data sheets and returns both sheets
 def load_sheets():
     sheet1 = pd.read_csv("00_raw_data/DP3_playset.csv", index_col = 0)
     sheet2 = pd.read_csv("00_raw_data/DP3-FitbitFullReport_DATA_LABELS_2025-02-18_1356.csv")
     return sheet1, sheet2
+
 
 # rename columns of both sheets so that column names are consistent across sheets
 def rename_columns(sheet1, sheet2):
@@ -20,6 +22,7 @@ def rename_columns(sheet1, sheet2):
     })
 
     return sheet1, sheet2
+
 
 # merges the two input sheets on record ID and date
 # ensures that no columns are duplicated and all column names are consistent
@@ -39,6 +42,7 @@ def merge_sheets(sheet1, sheet2):
 
     return merged
 
+
 # sort columns such that the activity/sleep/heart rate/etc. columns are all at the end
 def sort_columns(sheet):
     front_columns = [
@@ -52,6 +56,7 @@ def sort_columns(sheet):
     sheet = sheet[front_columns + other_columns]
     
     return sheet
+
 
 # reads from the fitbit analysis log file
 # extracts the table containing data on max number of consecutive days missing per feature per patient, and returns this table
@@ -89,6 +94,7 @@ def extract_days_missing_table():
 
     return df_target
 
+
 # drop all patients with no recording of 2+ days in a row for any feature
 # inputs:
 # sheet: the fitbit data sheet, which contains patient information and all collected metrics
@@ -115,6 +121,7 @@ def drop_patients(sheet, table):
 
     return sheet_clean, dropped_report
 
+
 # print to a log file explaining why you dropped each patient from the dataset
 # i.e. creates a table containing each patient that was dropped and the maximum consecutive number of days their data was missing
 def print_log(dropped_report):
@@ -125,6 +132,7 @@ def print_log(dropped_report):
         f.write("Patients were dropped if their maximum number of consecutive missing days was greater than or equal to 2.\n\n")
 
         f.write(dropped_report.to_string(index = False))
+
 
 def main():
     sheet1, sheet2 = load_sheets()
@@ -139,6 +147,7 @@ def main():
 
     # write sheet to an output file
     merged_clean.to_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv", index = False)
+
 
 if __name__ == "__main__":
     main()

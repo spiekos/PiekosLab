@@ -1,11 +1,13 @@
 import pandas as pd
 import numpy as np
 
+
 # load both sheets and returns both sheets
 def load_sheets():
     sheet1 = pd.read_csv("00_raw_data/dp3 3rd set gest age for Tony assessed final.xlsx - Sheet1.csv")
     sheet2 = pd.read_csv("00_raw_data/DP3 slides Tony's analysis batches 1-2.xlsx - Sheet2.csv")
     return sheet1, sheet2
+
 
 # merges both sheets and returns the newly merged sheet
 def merge_sheets(sheet1, sheet2):
@@ -19,6 +21,7 @@ def merge_sheets(sheet1, sheet2):
     merged = pd.concat([sheet1, sheet2], ignore_index = True)
 
     return merged
+
 
 # rename columns of both sheets so that column names are consistent across sheets
 def rename_columns(sheet1, sheet2):
@@ -51,6 +54,7 @@ def rename_columns(sheet1, sheet2):
 
     return sheet1, sheet2
 
+
 # drop patients with no slides and patients with all X's in the columns "slide a", "slide b", and "slide membrane roll"
 def delete_patients(sheet):
     # drop patients with no slides
@@ -60,6 +64,7 @@ def delete_patients(sheet):
     sheet = sheet[~((sheet["slide a"] == "X") & (sheet["slide b"] == "X") & (sheet["slide membrane roll"] == "X"))]
 
     return sheet
+
 
 # delete the following unnecessary columns: "slide a", "slide b", "slide membrane roll", "not in file"
 # delete all empty columns, i.e. columns representing histopathology that is not present in any patient
@@ -72,6 +77,7 @@ def delete_columns(sheet):
 ])
     return sheet
 
+
 # condition_col represents the column that we are checking the value of (true/false)
 # change_col represents the column that will be changed by this function. for each row in the sheet, if the cell in condition_col is false (has a value of 0),
 # the cell in change_col will be changed to "NA". otherwise, it will remain unchanged.
@@ -79,6 +85,7 @@ def fillna(sheet, condition_col, change_col):
     sheet.loc[sheet[condition_col] == 0, change_col] = np.nan
 
     return sheet
+
 
 # encode all columns from strings to 0, 1, 2, etc.
 def encode(sheet):
@@ -132,6 +139,7 @@ def encode(sheet):
 
     return sheet
 
+
 # print the total of each appropriate column (excluding text columns and gestational age) into a log file
 def print_totals(sheet):
     log_path = "02_exploratory_analysis/outputs/sum_placental_histo_features.txt"
@@ -151,6 +159,7 @@ def print_totals(sheet):
             if total != 0:
                 f.write(f"{col}: {total}\n")
 
+
 def main():
     sheet1, sheet2 = load_sheets()
     merged = merge_sheets(sheet1, sheet2)
@@ -162,6 +171,7 @@ def main():
 
     # write sheet to an output file
     merged.to_csv("01_data_cleaning/processed_data/processed_placental_data.csv", index = False)
+
 
 if __name__ == "__main__":
     main()
