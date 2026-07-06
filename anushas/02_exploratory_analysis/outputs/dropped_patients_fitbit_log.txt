@@ -1,265 +1,48 @@
-This file contains a table consisting of the patient IDs of all patients that were dropped from the Fitbit
-dataset, as well as the maximum number of consecutive days that they had missing data (per feature).
-Patients were dropped if their maximum number of consecutive missing days was greater than or equal to 2.
+This file contains a table consisting of the number of patients whose data was nulled out, organized
+per metric. Patients had their data nulled out for a certain metric if they had more than 7 consecutive
+days of data missing for that metric.
 
-       id  max_consecutive_days_missing
- DP3-0001                            20
- DP3-0002                             2
- DP3-0003                             3
- DP3-0006                             2
- DP3-0008                            20
- DP3-0015                            15
- DP3-0017                            12
- DP3-0018                            27
- DP3-0019                            12
- DP3-0020                             3
- DP3-0021                            18
- DP3-0022                            20
- DP3-0025                             3
- DP3-0027                             2
- DP3-0028                             2
-DP3-0029E                             4
- DP3-0030                             2
- DP3-0032                             3
-DP3-0033E                             2
- DP3-0034                             2
- DP3-0036                            10
- DP3-0037                             2
-DP3-0039E                            12
- DP3-0040                            14
-DP3-0041E                             2
- DP3-0042                             8
- DP3-0043                             9
- DP3-0044                             2
- DP3-0045                             4
- DP3-0046                             9
- DP3-0048                             2
- DP3-0050                             5
- DP3-0051                             2
-DP3-0052E                            16
- DP3-0053                             3
- DP3-0054                             3
-DP3-0055E                             9
- DP3-0056                             2
- DP3-0057                             3
-DP3-0060E                            17
- DP3-0062                             2
- DP3-0064                             2
- DP3-0065                             3
- DP3-0066                            23
-DP3-0069E                             6
- DP3-0070                            18
- DP3-0071                            12
-DP3-0073E                            37
- DP3-0074                             4
- DP3-0075                             3
-DP3-0076E                             4
- DP3-0077                             2
- DP3-0080                             4
- DP3-0082                             8
-DP3-0083E                             3
- DP3-0084                            19
- DP3-0085                             3
-DP3-0086E                             7
- DP3-0087                             2
-DP3-0088E                            17
-DP3-0091E                            16
- DP3-0092                            31
- DP3-0093                            10
- DP3-0094                            41
- DP3-0097                             3
-DP3-0100E                             4
- DP3-0104                             6
- DP3-0105                             2
- DP3-0108                             6
- DP3-0109                            25
- DP3-0111                            21
- DP3-0112                             3
- DP3-0113                             2
- DP3-0116                             2
- DP3-0117                            12
-DP3-0119E                             3
- DP3-0120                             2
- DP3-0123                             7
- DP3-0124                            16
- DP3-0125                             5
- DP3-0126                             2
- DP3-0127                            11
- DP3-0128                             5
- DP3-0129                             3
-DP3-0130E                             3
- DP3-0133                             3
-DP3-0134E                            14
- DP3-0142                            26
- DP3-0143                             4
- DP3-0144                             6
-DP3-0151E                            34
- DP3-0152                             9
- DP3-0157                            13
- DP3-0158                            12
-DP3-0163E                             6
- DP3-0164                            20
-DP3-0165E                             7
- DP3-0166                             6
-DP3-0167E                             4
- DP3-0168                             2
- DP3-0169                             5
-DP3-0170E                             2
- DP3-0172                             3
-DP3-0173E                             5
- DP3-0175                             6
- DP3-0177                             2
- DP3-0179                             2
- DP3-0181                             8
- DP3-0185                             5
- DP3-0187                             5
- DP3-0188                             9
- DP3-0189                             2
- DP3-0190                             2
- DP3-0192                             2
- DP3-0193                            10
- DP3-0195                             4
-DP3-0196E                             2
- DP3-0197                             7
- DP3-0199                            22
- DP3-0200                             4
-DP3-0201E                             3
- DP3-0202                            16
- DP3-0203                             2
- DP3-0204                             2
-DP3-0205E                             7
- DP3-0207                            11
- DP3-0208                             2
-DP3-0209E                             5
- DP3-0210                             4
- DP3-0212                             9
- DP3-0216                            12
- DP3-0217                             7
- DP3-0219                             4
- DP3-0220                             3
- DP3-0221                             2
- DP3-0222                             4
- DP3-0223                           102
- DP3-0224                            10
- DP3-0225                             3
- DP3-0226                             2
- DP3-0227                             3
-DP3-0229E                           211
- DP3-0230                             8
- DP3-0231                             2
-DP3-0232E                            14
-DP3-0233E                           138
- DP3-0237                             4
- DP3-0239                             6
- DP3-0241                             2
- DP3-0242                             2
- DP3-0243                             8
- DP3-0244                             2
- DP3-0245                             2
- DP3-0246                             3
-DP3-0248E                             2
- DP3-0250                             2
- DP3-0251                            20
- DP3-0253                             5
- DP3-0254                             7
- DP3-0255                             8
- DP3-0256                             2
- DP3-0257                             2
-DP3-0261E                             6
- DP3-0262                             5
-DP3-0263E                            13
- DP3-0264                             9
- DP3-0266                             8
- DP3-0271                             2
- DP3-0272                             2
- DP3-0273                             2
- DP3-0275                             4
- DP3-0276                            10
- DP3-0277                             2
- DP3-0278                             4
- DP3-0279                            10
- DP3-0280                             8
- DP3-0282                            10
- DP3-0283                             4
- DP3-0285                             2
- DP3-0287                             5
- DP3-0290                             2
- DP3-0292                             7
- DP3-0293                             2
- DP3-0294                             2
- DP3-0295                             9
- DP3-0296                             7
- DP3-0297                             9
-DP3-0298E                             2
- DP3-0300                             2
- DP3-0302                             6
-DP3-0303E                             4
- DP3-0306                            11
- DP3-0309                             2
- DP3-0310                             7
- DP3-0311                            13
- DP3-0312                            30
- DP3-0313                            23
- DP3-0314                            24
- DP3-0316                             5
- DP3-0318                            16
- DP3-0319                             3
- DP3-0320                             5
- DP3-0326                            10
- DP3-0328                            12
- DP3-0332                             2
- DP3-0333                             3
- DP3-0335                             7
- DP3-0336                             2
- DP3-0338                            11
- DP3-0340                             2
- DP3-0342                             2
- DP3-0344                             2
- DP3-0346                             2
- DP3-0347                             4
- DP3-0348                             2
-DP3-0350E                             2
- DP3-0353                             2
- DP3-0354                             6
- DP3-0355                            27
- DP3-0357                             6
- DP3-0359                             2
-DP3-0360E                             3
-DP3-0362E                            15
- DP3-0363                            22
- DP3-0364                             2
- DP3-0366                             9
- DP3-0368                            19
- DP3-0369                             2
- DP3-0372                             2
-DP3-0375E                            13
-DP3-0376E                             3
-DP3-0377E                            39
- DP3-0381                             2
- DP3-0385                             4
- DP3-0386                            14
- DP3-0387                            11
- DP3-0388                             4
- DP3-0389                             2
- DP3-0390                             5
- DP3-0392                            11
-DP3-0393E                            19
- DP3-0394                             6
- DP3-0397                            13
-DP3-0400E                            13
- DP3-0404                             5
- DP3-0405                             8
- DP3-0407                             3
- DP3-0409                             5
-DP3-0415E                             7
- DP3-0418                             2
- DP3-0419                            29
-DP3-0422E                             2
-DP3-0423E                            22
- DP3-0424                            45
- DP3-0425                             2
- DP3-0426                            41
-DP3-0427E                            10
- DP3-0429                             6
-DP3-0432E                            21
- DP3-0434                             3
+Metric                                        | Patients Excluded
+Activities - Summary - Steps                  | 132
+Activities - Summary - totalDistances_x       | 132
+Activities - Summary - veryActiveMinutes_x    | 132
+Sleep - Summary - total minutes asleep_x      | 195
+Activities - Goals - activeMinutes            | 146
+Activities - Goals - caloriesOut              | 146
+Activities - Goals - distance                 | 145
+Activities - Goals - steps                    | 145
+Activities - Summary - activeScore            | 145
+Activities - Summary - activityCalories       | 145
+Activities - Summary - caloriesBMR            | 145
+Activities - Summary - caloriesOut            | 145
+Activities - Summary - totalDistances_y       | 145
+Activities - Summary - fairlyActiveMinutes    | 145
+Activities - Summary - lightlyActiveMinutes   | 145
+Activities - Summary - marginalCalories       | 145
+Activities - Summary - sedentaryMinutes       | 145
+Activities - Summary - steps                  | 145
+Activities - Summary - veryActiveMinutes_y    | 145
+Heart Rate - Resting Heart Rate               | 184
+Heart Rate - Zone: Out of Range - caloriesOut | 184
+Heart Rate - Zone: Out of Range - min         | 184
+Heart Rate - Zone: Out of Range - max         | 184
+Heart Rate - Zone: Out of Range - minutes     | 184
+Heart Rate - Zone: Fat Burn - caloriesOut     | 184
+Heart Rate - Zone: Fat Burn - min             | 184
+Heart Rate - Zone: Fat Burn - max             | 184
+Heart Rate - Zone: Fat Burn - minutes         | 184
+Heart Rate - Zone: Cardio - caloriesOut       | 184
+Heart Rate - Zone: Cardio - min               | 184
+Heart Rate - Zone: Cardio - max               | 184
+Heart Rate - Zone: Cardio - minutes           | 184
+Heart Rate - Zone: Peak - caloriesOut         | 184
+Heart Rate - Zone: Peak - min                 | 184
+Heart Rate - Zone: Peak - max                 | 184
+Heart Rate - Zone: Peak - minutes             | 184
+Sleep - Summary - Stages - deep               | 211
+Sleep - Summary - Stages - light              | 211
+Sleep - Summary - Stages - rem                | 211
+Sleep - Summary - Stages - wake               | 211
+Sleep - Summary - total minutes asleep_y      | 208
+Sleep - Summary - total sleep records         | 208
+Sleep - Summary - total time in bed           | 208
