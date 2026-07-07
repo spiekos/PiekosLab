@@ -2,8 +2,6 @@
 
 This directory contains the scripts responsible for performing exploratory data analysis (EDA) on the filtered Fitbit data, placental histopathology features, and delivery variables. It manages data aggregation across pregnancy trimesters, missingness tracking, data quality filtering, and multi-hypothesis statistical testing.
 
----
-
 ## Directory Structure
 
 ```text
@@ -53,7 +51,6 @@ This directory contains the scripts responsible for performing exploratory data 
 * **Outputs Generated:** Compiles a dual-plot PDF report saved to `outputs/pregnancy_plots_report.pdf`:
   * **Plot 1 (All Valid Data):** Plots active patient counts per day across all available valid data updates.
   * **Plot 2 (Pregnancy-Only Data):** Identical plot layout, but strictly truncated to data captured within the formal pregnancy timeline.
-
 
 ## Dependency Graph & Pipeline Sequence
 
