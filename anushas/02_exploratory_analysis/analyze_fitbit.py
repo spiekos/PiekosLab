@@ -338,7 +338,7 @@ def main():
 
     correlation_ready_df = prepare_correlation_data(sheet_bucketed, feature_cols, timeframe_names, clinical_sheet, placental_sheet)
     if not correlation_ready_df.empty:
-        output_csv_path = "02_exploratory_analysis/outputs/master_fitbit_clinical_correlation_data.csv"
+        output_csv_path = "01_data_cleaning/processed_data/master_fitbit_clinical_correlation_data.csv"
         correlation_ready_df.to_csv(output_csv_path, index = False)
 
 

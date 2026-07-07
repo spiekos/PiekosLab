@@ -1,3 +1,5 @@
+height (cm)
 weight (kg)
 delivery bmi
 prepregnancy BMI self or record
+chtn

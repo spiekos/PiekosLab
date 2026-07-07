@@ -1,51 +1,70 @@
 | independent_var                                                                     | dependent_var                   |       rho |     p_value |   sample_size_N |         FDR |
 |:------------------------------------------------------------------------------------|:--------------------------------|----------:|------------:|----------------:|------------:|
-| Early Second Trimester_Activities - Goals - caloriesOut                             | weight (kg)                     |  0.708548 | 1.32944e-06 |              36 | 0.000207892 |
-|                                                                                     | delivery bmi                    |  0.659973 | 1.19245e-05 |              36 | 0.0014691   |
-|                                                                                     | prepregnancy BMI self or record |  0.649546 | 1.81576e-05 |              36 | 0.00216486  |
-| Early Second Trimester_Activities - Summary - caloriesBMR                           | weight (kg)                     |  0.91221  | 9.89045e-15 |              36 | 3.65551e-11 |
-|                                                                                     | delivery bmi                    |  0.843995 | 1.00733e-10 |              36 | 9.30774e-08 |
-|                                                                                     | prepregnancy BMI self or record |  0.819668 | 9.69979e-10 |              36 | 7.17008e-07 |
-| Early Second Trimester_Activities - Summary - caloriesOut                           | delivery bmi                    |  0.776755 | 2.55893e-08 |              36 | 1.18222e-05 |
-|                                                                                     | weight (kg)                     |  0.763033 | 6.28512e-08 |              36 | 1.65927e-05 |
-|                                                                                     | prepregnancy BMI self or record |  0.754231 | 1.08443e-07 |              36 | 2.595e-05   |
-| Early Second Trimester_Activities - Summary - marginalCalories                      | prepregnancy BMI self or record |  0.55306  | 0.00046829  |              36 | 0.0368255   |
-|                                                                                     | delivery bmi                    |  0.544437 | 0.0005975   |              36 | 0.0450686   |
-| Early Second Trimester_Heart Rate - Zone: Out of Range - caloriesOut                | delivery bmi                    |  0.770577 | 3.86413e-08 |              36 | 1.42818e-05 |
-|                                                                                     | weight (kg)                     |  0.765607 | 5.33465e-08 |              36 | 1.64307e-05 |
-|                                                                                     | prepregnancy BMI self or record |  0.763884 | 5.95456e-08 |              36 | 1.65927e-05 |
-| First Trimester_Activities - Goals - caloriesOut                                    | weight (kg)                     |  0.669722 | 2.76261e-05 |              32 | 0.00309412  |
-|                                                                                     | delivery bmi                    |  0.627589 | 0.000120686 |              32 | 0.0120555   |
-|                                                                                     | prepregnancy BMI self or record |  0.600917 | 0.000276021 |              32 | 0.0252223   |
-| First Trimester_Activities - Summary - caloriesBMR                                  | weight (kg)                     |  0.887809 | 1.24906e-11 |              32 | 1.53885e-08 |
-|                                                                                     | delivery bmi                    |  0.830905 | 3.94706e-09 |              32 | 2.08405e-06 |
-|                                                                                     | prepregnancy BMI self or record |  0.79791  | 4.51899e-08 |              32 | 1.51838e-05 |
-| First Trimester_Activities - Summary - caloriesOut                                  | delivery bmi                    |  0.803409 | 3.10816e-08 |              32 | 1.27642e-05 |
-|                                                                                     | prepregnancy BMI self or record |  0.783796 | 1.12338e-07 |              32 | 2.595e-05   |
-|                                                                                     | weight (kg)                     |  0.776535 | 1.74904e-07 |              32 | 3.59136e-05 |
-| First Trimester_Activities - Summary - marginalCalories                             | prepregnancy BMI self or record |  0.598845 | 0.000293442 |              32 | 0.0252223   |
-|                                                                                     | delivery bmi                    |  0.576666 | 0.000550953 |              32 | 0.0424234   |
-| First Trimester_Heart Rate - Zone: Out of Range - caloriesOut                       | delivery bmi                    |  0.722207 | 3.06544e-06 |              32 | 0.000435764 |
-|                                                                                     | weight (kg)                     |  0.720073 | 3.38383e-06 |              32 | 0.000463208 |
-|                                                                                     | prepregnancy BMI self or record |  0.663551 | 3.4781e-05  |              32 | 0.00378089  |
-| Late Second and Early Third Trimester_Activities - Goals - caloriesOut              | weight (kg)                     |  0.692129 | 4.49739e-05 |              28 | 0.00474924  |
-|                                                                                     | delivery bmi                    |  0.633812 | 0.000293308 |              28 | 0.0252223   |
-| Late Second and Early Third Trimester_Activities - Summary - caloriesBMR            | weight (kg)                     |  0.924867 | 2.01675e-12 |              28 | 3.72695e-09 |
-|                                                                                     | delivery bmi                    |  0.815109 | 1.2799e-07  |              28 | 2.78266e-05 |
-|                                                                                     | prepregnancy BMI self or record |  0.7526   | 3.84226e-06 |              28 | 0.000507179 |
-| Late Second and Early Third Trimester_Activities - Summary - caloriesOut            | weight (kg)                     |  0.774052 | 1.34995e-06 |              28 | 0.000207892 |
-|                                                                                     | delivery bmi                    |  0.763378 | 2.30271e-06 |              28 | 0.000340433 |
-|                                                                                     | prepregnancy BMI self or record |  0.743842 | 5.71751e-06 |              28 | 0.000728687 |
-| Late Second and Early Third Trimester_Heart Rate - Zone: Cardio - max               | maternal age                    | -0.627949 | 0.000346868 |              28 | 0.0284894   |
-| Late Second and Early Third Trimester_Heart Rate - Zone: Out of Range - caloriesOut | prepregnancy BMI self or record |  0.805692 | 2.30572e-07 |              28 | 4.48524e-05 |
-|                                                                                     | delivery bmi                    |  0.778979 | 1.04483e-06 |              28 | 0.00018389  |
-|                                                                                     | weight (kg)                     |  0.777337 | 1.13879e-06 |              28 | 0.000191318 |
-| Late Second and Early Third Trimester_Heart Rate - Zone: Peak - min                 | maternal age                    | -0.627949 | 0.000346868 |              28 | 0.0284894   |
-| Late Third Trimester_Activities - Goals - caloriesOut                               | weight (kg)                     |  0.789474 | 2.08948e-05 |              21 | 0.00241335  |
-|                                                                                     | delivery bmi                    |  0.712569 | 0.000289375 |              21 | 0.0252223   |
-| Late Third Trimester_Activities - Summary - caloriesBMR                             | weight (kg)                     |  0.928873 | 1.23132e-09 |              21 | 7.58491e-07 |
-|                                                                                     | delivery bmi                    |  0.744156 | 0.000109799 |              21 | 0.0112727   |
-| Late Third Trimester_Heart Rate - Zone: Cardio - max                                | maternal age                    | -0.724296 | 0.000205007 |              21 | 0.0194283   |
-| Late Third Trimester_Heart Rate - Zone: Out of Range - caloriesOut                  | weight (kg)                     |  0.865866 | 3.96026e-07 |              21 | 7.31856e-05 |
-|                                                                                     | delivery bmi                    |  0.698701 | 0.000426087 |              21 | 0.0342351   |
-| Late Third Trimester_Heart Rate - Zone: Peak - min                                  | maternal age                    | -0.724296 | 0.000205007 |              21 | 0.0194283   |
+| Early Second Trimester_Activities - Goals - caloriesOut                             | weight (kg)                     |  0.752747 | 2.91342e-15 |              77 | 2.25732e-12 |
+|                                                                                     | prepregnancy BMI self or record |  0.613907 | 2.89971e-09 |              77 | 5.34927e-07 |
+|                                                                                     | delivery bmi                    |  0.602778 | 6.60544e-09 |              77 | 1.16316e-06 |
+|                                                                                     | height (cm)                     |  0.371786 | 0.000870817 |              77 | 0.049611    |
+| Early Second Trimester_Activities - Summary - caloriesBMR                           | weight (kg)                     |  0.879144 | 7.51343e-26 |              77 | 2.9107e-22  |
+|                                                                                     | prepregnancy BMI self or record |  0.732689 | 3.61783e-14 |              77 | 2.33591e-11 |
+|                                                                                     | delivery bmi                    |  0.700275 | 1.36011e-12 |              77 | 4.79005e-10 |
+|                                                                                     | height (cm)                     |  0.427555 | 0.000105157 |              77 | 0.00727462  |
+| Early Second Trimester_Activities - Summary - caloriesOut                           | weight (kg)                     |  0.709862 | 4.89909e-13 |              77 | 1.89791e-10 |
+|                                                                                     | delivery bmi                    |  0.598839 | 8.77409e-09 |              77 | 1.47786e-06 |
+|                                                                                     | prepregnancy BMI self or record |  0.576818 | 4.00698e-08 |              77 | 5.00744e-06 |
+| Early Second Trimester_Heart Rate - Zone: Cardio - max                              | maternal age                    | -0.662283 | 2.01395e-08 |              57 | 2.88965e-06 |
+| Early Second Trimester_Heart Rate - Zone: Cardio - min                              | maternal age                    | -0.433335 | 0.000759628 |              57 | 0.0445879   |
+| Early Second Trimester_Heart Rate - Zone: Fat Burn - max                            | maternal age                    | -0.433335 | 0.000759628 |              57 | 0.0445879   |
+| Early Second Trimester_Heart Rate - Zone: Out of Range - caloriesOut                | weight (kg)                     |  0.702776 | 1.10179e-09 |              57 | 2.13417e-07 |
+|                                                                                     | prepregnancy BMI self or record |  0.614871 | 3.60744e-07 |              57 | 3.58339e-05 |
+|                                                                                     | delivery bmi                    |  0.57492  | 2.90698e-06 |              57 | 0.000234617 |
+| Early Second Trimester_Heart Rate - Zone: Peak - min                                | maternal age                    | -0.662283 | 2.01395e-08 |              57 | 2.88965e-06 |
+| First Trimester_Activities - Goals - caloriesOut                                    | weight (kg)                     |  0.732267 | 3.97243e-13 |              71 | 1.70991e-10 |
+|                                                                                     | prepregnancy BMI self or record |  0.604727 | 2.3369e-08  |              71 | 3.23327e-06 |
+|                                                                                     | delivery bmi                    |  0.590046 | 6.12709e-08 |              71 | 7.41761e-06 |
+|                                                                                     | height (cm)                     |  0.397585 | 0.000596191 |              71 | 0.0360882   |
+| First Trimester_Activities - Summary - caloriesBMR                                  | weight (kg)                     |  0.856128 | 1.83374e-21 |              71 | 2.36797e-18 |
+|                                                                                     | prepregnancy BMI self or record |  0.735494 | 2.776e-13   |              71 | 1.34428e-10 |
+|                                                                                     | delivery bmi                    |  0.684201 | 4.7789e-11  |              71 | 1.23423e-08 |
+|                                                                                     | height (cm)                     |  0.450885 | 7.94728e-05 |              71 | 0.00559778  |
+| First Trimester_Activities - Summary - caloriesOut                                  | weight (kg)                     |  0.717767 | 1.86904e-12 |              71 | 6.0339e-10  |
+|                                                                                     | delivery bmi                    |  0.611201 | 1.50388e-08 |              71 | 2.33041e-06 |
+|                                                                                     | prepregnancy BMI self or record |  0.611337 | 1.48981e-08 |              71 | 2.33041e-06 |
+| First Trimester_Heart Rate - Zone: Cardio - max                                     | maternal age                    | -0.666882 | 3.67562e-08 |              54 | 4.74645e-06 |
+| First Trimester_Heart Rate - Zone: Cardio - min                                     | maternal age                    | -0.457707 | 0.000501602 |              54 | 0.0308446   |
+| First Trimester_Heart Rate - Zone: Fat Burn - max                                   | maternal age                    | -0.457707 | 0.000501602 |              54 | 0.0308446   |
+| First Trimester_Heart Rate - Zone: Out of Range - caloriesOut                       | weight (kg)                     |  0.733296 | 2.86645e-10 |              54 | 6.16923e-08 |
+|                                                                                     | prepregnancy BMI self or record |  0.621569 | 5.27664e-07 |              54 | 4.86708e-05 |
+|                                                                                     | delivery bmi                    |  0.607376 | 1.11685e-06 |              54 | 9.40584e-05 |
+| First Trimester_Heart Rate - Zone: Peak - min                                       | maternal age                    | -0.666882 | 3.67562e-08 |              54 | 4.74645e-06 |
+| First Trimester_Sleep - Summary - total sleep records                               | chtn                            |  0.577194 | 4.10194e-05 |              44 | 0.00299829  |
+| Late Second and Early Third Trimester_Activities - Goals - caloriesOut              | weight (kg)                     |  0.74551  | 1.33339e-13 |              70 | 7.37939e-11 |
+|                                                                                     | delivery bmi                    |  0.570038 | 2.59223e-07 |              70 | 2.78952e-05 |
+|                                                                                     | prepregnancy BMI self or record |  0.566209 | 3.2452e-07  |              70 | 3.39781e-05 |
+| Late Second and Early Third Trimester_Activities - Summary - caloriesBMR            | weight (kg)                     |  0.874699 | 4.47144e-23 |              70 | 8.66119e-20 |
+|                                                                                     | prepregnancy BMI self or record |  0.668577 | 2.53717e-10 |              70 | 5.78175e-08 |
+|                                                                                     | delivery bmi                    |  0.665407 | 3.30205e-10 |              70 | 6.7327e-08  |
+|                                                                                     | height (cm)                     |  0.442119 | 0.000127167 |              70 | 0.00864288  |
+| Late Second and Early Third Trimester_Activities - Summary - caloriesOut            | weight (kg)                     |  0.695779 | 2.30256e-11 |              70 | 6.37151e-09 |
+|                                                                                     | delivery bmi                    |  0.549773 | 8.24817e-07 |              70 | 7.26214e-05 |
+|                                                                                     | prepregnancy BMI self or record |  0.545972 | 1.0163e-06  |              70 | 8.74917e-05 |
+| Late Second and Early Third Trimester_Heart Rate - Zone: Cardio - max               | maternal age                    | -0.664515 | 1.05309e-07 |              51 | 1.1999e-05  |
+| Late Second and Early Third Trimester_Heart Rate - Zone: Out of Range - caloriesOut | weight (kg)                     |  0.61536  | 1.54487e-06 |              51 | 0.000127337 |
+|                                                                                     | prepregnancy BMI self or record |  0.502274 | 0.000172933 |              51 | 0.0115508   |
+|                                                                                     | delivery bmi                    |  0.485972 | 0.000300063 |              51 | 0.0193741   |
+| Late Second and Early Third Trimester_Heart Rate - Zone: Peak - min                 | maternal age                    | -0.664515 | 1.05309e-07 |              51 | 1.1999e-05  |
+| Late Second and Early Third Trimester_Sleep - Summary - total sleep records         | chtn                            |  0.564076 | 5.4511e-05  |              45 | 0.00391066  |
+| Late Third Trimester_Activities - Goals - caloriesOut                               | weight (kg)                     |  0.749931 | 5.36082e-12 |              60 | 1.59752e-09 |
+|                                                                                     | prepregnancy BMI self or record |  0.552725 | 4.66752e-06 |              60 | 0.00036902  |
+|                                                                                     | delivery bmi                    |  0.550566 | 5.17313e-06 |              60 | 0.000400814 |
+| Late Third Trimester_Activities - Summary - caloriesBMR                             | weight (kg)                     |  0.82686  | 3.98683e-16 |              60 | 3.86124e-13 |
+|                                                                                     | delivery bmi                    |  0.602751 | 3.46936e-07 |              60 | 3.53692e-05 |
+|                                                                                     | prepregnancy BMI self or record |  0.587567 | 7.99781e-07 |              60 | 7.20546e-05 |
+|                                                                                     | height (cm)                     |  0.421841 | 0.000787957 |              60 | 0.0455604   |
+| Late Third Trimester_Activities - Summary - caloriesOut                             | weight (kg)                     |  0.616853 | 1.535e-07   |              60 | 1.69903e-05 |
+|                                                                                     | delivery bmi                    |  0.436889 | 0.000482866 |              60 | 0.0306659   |
+| Late Third Trimester_Heart Rate - Zone: Cardio - max                                | maternal age                    | -0.680121 | 3.81219e-07 |              44 | 3.60206e-05 |
+| Late Third Trimester_Heart Rate - Zone: Out of Range - caloriesOut                  | weight (kg)                     |  0.786734 | 2.43575e-10 |              44 | 5.78175e-08 |
+|                                                                                     | delivery bmi                    |  0.618198 | 7.76436e-06 |              44 | 0.000589787 |
+|                                                                                     | prepregnancy BMI self or record |  0.602812 | 1.48971e-05 |              44 | 0.00110984  |
+| Late Third Trimester_Heart Rate - Zone: Peak - min                                  | maternal age                    | -0.680121 | 3.81219e-07 |              44 | 3.60206e-05 |
+| Late Third Trimester_Sleep - Summary - total sleep records                          | apgar 5                         | -0.544405 | 0.000233592 |              41 | 0.0153379   |

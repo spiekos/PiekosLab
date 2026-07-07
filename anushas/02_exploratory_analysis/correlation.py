@@ -166,7 +166,7 @@ def main():
     ]
     delivery_metrics = [
         "maternal age", "height (cm)", "weight (kg)", "delivery bmi", "prepregnancy weight self or record", "prepregnancy BMI self or record", "gravida", 
-        "parity", "diabetes", "chtn", "Route of delivery 1-vag, 2-cs", "gest age del", "birthweight", "apgar 1", "apgar 5", "nicu days"
+        "parity", "diabetes", "chtn", "gest age del", "birthweight", "apgar 1", "apgar 5", "nicu days"
     ]
 
     placental_df, delivery_df = load_sheets()
@@ -182,7 +182,7 @@ def main():
     print_log(test1_assets, fdr_threshold=0.05, prefix="placenta_")
 
     # run and log test 2: fitbit data vs placental histopathology + delivery variables
-    master_fitbit_csv = "02_exploratory_analysis/outputs/master_fitbit_clinical_correlation_data.csv"
+    master_fitbit_csv = "01_data_cleaning/processed_data/master_fitbit_clinical_correlation_data.csv"
     
     test2_assets = run_test_2_fitbit_vs_all_outcomes(
         master_fitbit_path = master_fitbit_csv,
