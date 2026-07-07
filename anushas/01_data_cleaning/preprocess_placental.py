@@ -66,11 +66,11 @@ def delete_patients(sheet):
     return sheet
 
 
-# delete the following unnecessary columns: "slide a", "slide b", "slide membrane roll", "not in file"
+# delete the following unnecessary columns: "slide a", "slide b", "slide membrane roll", "not in file", "mr"
 # delete all empty columns, i.e. columns representing histopathology that is not present in any patient
 def delete_columns(sheet):
     sheet = sheet.drop(columns = [
-        "slide a", "slide b", "slide membrane roll", "not in file", 
+        "slide a", "slide b", "slide membrane roll", "not in file", "mr",
         "retroplacental hemorrhage", "vascular thrombosis", "villous stromal vascular karyorrhexis", "vascular intramural fibrin deposition", 
         "stem vessel obliteration/fibromuscular sclerosis", "vascular ectasia", "fetal inflammatory response stage/grade/location", "diffuse villous edema", 
         "placental hypoplasia"
@@ -96,10 +96,6 @@ def encode(sheet):
         "delayed villous maturation", "increased perivillous fibrin deposition", "chorangiosis"
     ]
     sheet[yes_no_columns] = sheet[yes_no_columns].apply(lambda x: x.map(yes_no_mapping))
-
-    sheet["mr"] = sheet["mr"].map({
-        "No MR": 1
-    })
     
     sheet["maternal inflammatory response stage/grade"] = sheet["maternal inflammatory response stage/grade"].map({
         "S1/G1": 1,
@@ -125,11 +121,6 @@ def encode(sheet):
         "yes/I": 2,
         "yes, large": 3
     })
-
-    # for the notes column, "no MR" corresponds to no data having been collected for decidual arteriopathy, maternal inflammatory response, and fetal 
-    # inflammatory response. therefore, if a participant is marked negative for MR, we fill in "NA" into these three columns.
-    sheet = fillna(sheet, "mr", "decidual arteriopathy membrane role/basal plate/both")
-    sheet = fillna(sheet, "mr", "maternal inflammatory response stage/grade")
 
     # fill all encoded columns with 0 as the corresponding N/A value
     numeric_cols = sheet.select_dtypes(include = "number").columns

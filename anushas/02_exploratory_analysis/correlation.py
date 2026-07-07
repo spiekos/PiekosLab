@@ -168,6 +168,9 @@ def main():
         "maternal age", "height (cm)", "weight (kg)", "delivery bmi", "prepregnancy weight self or record", "prepregnancy BMI self or record", "gravida", 
         "parity", "diabetes", "chtn", "gest age del", "birthweight", "apgar 1", "apgar 5", "nicu days"
     ]
+    strict_delivery_metrics = [
+        "gest age del", "birthweight", "apgar 1", "apgar 5", "nicu days"
+    ]
 
     placental_df, delivery_df = load_sheets()
     
@@ -186,7 +189,7 @@ def main():
     
     test2_assets = run_test_2_fitbit_vs_all_outcomes(
         master_fitbit_path = master_fitbit_csv,
-        clinical_vars = delivery_metrics,
+        clinical_vars = strict_delivery_metrics,
         placental_vars = placental_metrics,
         fdr_threshold = 0.05
     )

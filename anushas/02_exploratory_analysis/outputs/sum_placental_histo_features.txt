@@ -16,4 +16,3 @@ maternal inflammatory response stage/grade: 9
 villitis of unknown etiology, high/low grade, focal/diffuse: 14
 increased perivillous fibrin deposition: 2
 chorangiosis: 4
-mr: 6

@@ -1,2 +1,1 @@
-maternal age
-apgar 5
+--- No Negatively Associated Variables ---
