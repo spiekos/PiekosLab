@@ -196,6 +196,35 @@ def get_metric_representation_matrices(sheet, feature_cols):
     return final_table, pt_summary, metric_summary
 
 
+# returns a diagnostic summary of data missingness across all patients for the following information:
+# maternal age, fetal sex, prepregnancy BMI, delivery BMI, race/ethnicity, smoking status
+def summarize_missing_info(sheet):
+    features = ["maternal age", "infant sex", "prepregnancy BMI self or record", "delivery bmi", "race", "smoking"]
+
+    summary_data = []
+    total_patients = len(sheet)
+
+    for feature in features:
+        if feature not in sheet.columns:
+            summary_data.append({
+                "Feature / Metric": feature,
+                "Missing Count (NaNs)": "NOT FOUND",
+                "Percent Missing": "N/A"
+            })
+            continue
+
+        null_count = sheet[feature].isnull().sum()
+        pct_missing = (null_count / total_patients) * 100
+
+        summary_data.append({
+            "Feature / Metric": feature,
+            "Missing Count (NaNs)": int(null_count),
+            "Percent Missing": f"{pct_missing:.2f}%"
+        })
+
+    return pd.DataFrame(summary_data)
+
+
 # collapses multi-row trimester data into single-row patient averages for each metric
 # merges this with delivery and placental data
 # filters to only include patients who have placental reports
@@ -262,7 +291,7 @@ def prepare_correlation_data(sheet_bucketed, feature_cols, timeframe_names, clin
 
 # print all calculated data into a log file
 def print_log(total_patients, total_missing, per_patient, max_con_missing, unique_dates, summary_stats, 
-              patients_per_timeframe, metric_matrix, pt_summary, metric_summary, num_metrics):
+              patients_per_timeframe, metric_matrix, pt_summary, metric_summary, num_metrics, missing_report):
     log_path = "02_exploratory_analysis/outputs/fitbit_data_analysis.txt"
 
     with open(log_path, "w") as f:
@@ -306,6 +335,10 @@ def print_log(total_patients, total_missing, per_patient, max_con_missing, uniqu
         f.write(metric_summary.to_string(index = False))
         f.write("\n\n")
 
+        f.write("Patient missingness summary report:\n")
+        f.write(missing_report.to_string(index = False))
+        f.write("\n\n")
+
 
 def main():
     fitbit_sheet, placental_sheet, clinical_sheet = load_sheets()
@@ -332,9 +365,10 @@ def main():
     summary_stats = calc_summary_stats(sheet_filtered, feature_cols)
     patients_per_timeframe = get_patients_per_timeframe(sheet_bucketed, feature_cols, timeframe_names)
     metric_matrix, pt_summary, metric_summary = get_metric_representation_matrices(sheet_filtered, feature_cols)
+    missing_report = summarize_missing_info(clinical_sheet)
 
     print_log(total_patients, total_missing, per_patient, max_con_missing, unique_dates, summary_stats, 
-              patients_per_timeframe, metric_matrix, pt_summary, metric_summary, len(feature_cols))
+              patients_per_timeframe, metric_matrix, pt_summary, metric_summary, len(feature_cols), missing_report)
 
     correlation_ready_df = prepare_correlation_data(sheet_bucketed, feature_cols, timeframe_names, clinical_sheet, placental_sheet)
     if not correlation_ready_df.empty:

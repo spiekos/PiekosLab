@@ -1664,3 +1664,12 @@ Heart Rate - Zone: Out of Range - caloriesOut                           197
               Sleep - Summary - Stages - wake                           158
      Sleep - Summary - total minutes asleep_x                           143
 
+Patient missingness summary report:
+               Feature / Metric  Missing Count (NaNs) Percent Missing
+                   maternal age                     0           0.00%
+                     infant sex                     0           0.00%
+prepregnancy BMI self or record                     1           0.23%
+                   delivery bmi                     1           0.23%
+                           race                     0           0.00%
+                        smoking                     1           0.23%
+
