@@ -5,7 +5,7 @@ import pandas as pd
 def load_sheets():
     sheet1 = pd.read_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv", low_memory = False)
     sheet2 = pd.read_csv("01_data_cleaning/processed_data/processed_placental_data.csv")
-    sheet3 = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - variables of interest.csv")
+    sheet3 = pd.read_csv("01_data_cleaning/processed_data/clinical_sheet_cleaned.csv")
     return sheet1, sheet2, sheet3
 
 
@@ -41,25 +41,6 @@ def bucket_data(sheet):
         outputs.append(group_sheet)
 
     return outputs
-
-
-# creates binary indicator columns (1/0) for categorical features where text strings indicate missing data
-def add_missingness_indicators(sheet):
-    sheet_copy = sheet.copy()
-
-    custom_null_flags = {"DECLINED", "UNKNOWN", "NA"}
-
-    is_std_null = sheet_copy["race"].isnull()
-    is_cust_null = sheet_copy["race"].astype(str).str.strip().str.upper().isin(custom_null_flags)
-
-    race_missing_values = (is_std_null | is_cust_null).astype(int)
-
-    # insert the "race_is_missing" column immediately after the "race" column
-    race_index = sheet_copy.columns.get_loc("race")
-    target_index = race_index + 1
-    sheet_copy.insert(loc = target_index, column = "race_is_missing", value = race_missing_values)
-    
-    return sheet_copy
 
 
 # returns the total number of unique patients, after data has been filtered
@@ -389,9 +370,7 @@ def main():
     summary_stats = calc_summary_stats(sheet_filtered, feature_cols)
     patients_per_timeframe = get_patients_per_timeframe(sheet_bucketed, feature_cols, timeframe_names)
     metric_matrix, pt_summary, metric_summary = get_metric_representation_matrices(sheet_filtered, feature_cols)
-    
-    clinical_sheet_cleaned = add_missingness_indicators(clinical_sheet)
-    missing_report = summarize_missing_info(clinical_sheet_cleaned)
+    missing_report = summarize_missing_info(clinical_sheet)
 
     print_log(total_patients, total_missing, per_patient, max_con_missing, unique_dates, summary_stats, 
               patients_per_timeframe, metric_matrix, pt_summary, metric_summary, len(feature_cols), missing_report)
@@ -400,10 +379,6 @@ def main():
     if not correlation_ready_df.empty:
         output_csv_path = "01_data_cleaning/processed_data/master_fitbit_clinical_correlation_data.csv"
         correlation_ready_df.to_csv(output_csv_path, index = False)
-
-    if not clinical_sheet_cleaned.empty:
-        clinical_csv_path = "01_data_cleaning/processed_data/clinical_sheet_cleaned.csv"
-        clinical_sheet_cleaned.to_csv(clinical_csv_path, index = False)
 
 
 if __name__ == "__main__":

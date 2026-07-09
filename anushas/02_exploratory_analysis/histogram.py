@@ -6,7 +6,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 # loads and returns the dataset
 def load_sheet():
-    sheet = pd.read_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv")
+    sheet = pd.read_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv", low_memory = False)
     return sheet
 
 
@@ -47,7 +47,7 @@ def prepare_pregnancy_counts(df):
 # plotting function
 # takes both dataframes (all datapoints, pregnancy only) and plots the two histograms
 def make_histograms_pdf(all_data, pregnancy_data):
-    output_filename = "02_exploratory_analysis/outputs/pregnancy_plots_report.pdf"
+    output_filename = "02_exploratory_analysis/outputs/figures/pregnancy_plots_report.pdf"
 
     with PdfPages(output_filename) as pdf:
     
