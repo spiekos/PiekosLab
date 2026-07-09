@@ -43,6 +43,25 @@ def bucket_data(sheet):
     return outputs
 
 
+# creates binary indicator columns (1/0) for categorical features where text strings indicate missing data
+def add_missingness_indicators(sheet):
+    sheet_copy = sheet.copy()
+
+    custom_null_flags = {"DECLINED", "UNKNOWN", "NA"}
+
+    is_std_null = sheet_copy["race"].isnull()
+    is_cust_null = sheet_copy["race"].astype(str).str.strip().str.upper().isin(custom_null_flags)
+
+    race_missing_values = (is_std_null | is_cust_null).astype(int)
+
+    # insert the "race_is_missing" column immediately after the "race" column
+    race_index = sheet_copy.columns.get_loc("race")
+    target_index = race_index + 1
+    sheet_copy.insert(loc = target_index, column = "race_is_missing", value = race_missing_values)
+    
+    return sheet_copy
+
+
 # returns the total number of unique patients, after data has been filtered
 def get_total_patients(sheet):
     # filter for rows for which Record ID starts with "DP3-"
@@ -216,7 +235,11 @@ def summarize_missing_info(sheet):
             })
             continue
 
-        null_count = sheet[feature].isnull().sum()
+        if feature == "race" and "race_is_missing" in sheet.columns:
+            null_count = sheet["race_is_missing"].sum()
+        else:
+            null_count = sheet[feature].isnull().sum()
+
         pct_missing = (null_count / total_patients) * 100
 
         summary_data.append({
@@ -353,10 +376,10 @@ def main():
 
     # forcefully convert all feature columns + gest age columns into numeric types
     sheet_filtered[numeric_cols] = sheet_filtered[numeric_cols].apply(pd.to_numeric, errors = "coerce")
+    
+    sheet_bucketed = bucket_data(sheet_filtered)
 
     timeframe_names = ["First Trimester", "Early Second Trimester", "Late Second and Early Third Trimester", "Late Third Trimester"]
-
-    sheet_bucketed = bucket_data(sheet_filtered)
 
     total_patients = get_total_patients(sheet_filtered)
     total_missing = count_total_missing(sheet_filtered)
@@ -366,7 +389,9 @@ def main():
     summary_stats = calc_summary_stats(sheet_filtered, feature_cols)
     patients_per_timeframe = get_patients_per_timeframe(sheet_bucketed, feature_cols, timeframe_names)
     metric_matrix, pt_summary, metric_summary = get_metric_representation_matrices(sheet_filtered, feature_cols)
-    missing_report = summarize_missing_info(clinical_sheet)
+    
+    clinical_sheet_cleaned = add_missingness_indicators(clinical_sheet)
+    missing_report = summarize_missing_info(clinical_sheet_cleaned)
 
     print_log(total_patients, total_missing, per_patient, max_con_missing, unique_dates, summary_stats, 
               patients_per_timeframe, metric_matrix, pt_summary, metric_summary, len(feature_cols), missing_report)
@@ -375,6 +400,10 @@ def main():
     if not correlation_ready_df.empty:
         output_csv_path = "01_data_cleaning/processed_data/master_fitbit_clinical_correlation_data.csv"
         correlation_ready_df.to_csv(output_csv_path, index = False)
+
+    if not clinical_sheet_cleaned.empty:
+        clinical_csv_path = "01_data_cleaning/processed_data/clinical_sheet_cleaned.csv"
+        clinical_sheet_cleaned.to_csv(clinical_csv_path, index = False)
 
 
 if __name__ == "__main__":
