@@ -1,9 +1,9 @@
 import pandas as pd
 
 
-# load and return the fitbit dataset and the placental dataset
+# load and return the fitbit dataset, the placental dataset, and the clinical dataset
 def load_sheets():
-    sheet1 = pd.read_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv")
+    sheet1 = pd.read_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv", low_memory = False)
     sheet2 = pd.read_csv("01_data_cleaning/processed_data/processed_placental_data.csv")
     sheet3 = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - variables of interest.csv")
     return sheet1, sheet2, sheet3
@@ -45,7 +45,10 @@ def bucket_data(sheet):
 
 # returns the total number of unique patients, after data has been filtered
 def get_total_patients(sheet):
-    return sheet["Record ID"].nunique()
+    # filter for rows for which Record ID starts with "DP3-"
+    # this ensures we only count actual patients
+    dp3_patients = sheet[sheet["Record ID"].astype(str).str.startswith("DP3-")]
+    return dp3_patients["Record ID"].nunique()
 
 
 # returns the total number of missing (aka "NA") values in the dataset across all columns. excludes the "NA" values corresponding to the general information 
@@ -346,12 +349,10 @@ def main():
     sheet_filtered = filter_sheet(fitbit_sheet)
 
     feature_cols = [col for col in sheet_filtered.columns if col.startswith(("Activities", "Sleep", "Heart Rate"))]
+    numeric_cols = feature_cols + ["Gestational age by reported LMP", "gest age del"]
 
-    # forcefully convert all feature columns into numeric types
-    for col in feature_cols:
-        sheet_filtered[col] = pd.to_numeric(sheet_filtered[col], errors = "coerce")
-    sheet_filtered["Gestational age by reported LMP"] = pd.to_numeric(sheet_filtered["Gestational age by reported LMP"], errors = "coerce")
-    sheet_filtered["gest age del"] = pd.to_numeric(sheet_filtered["gest age del"], errors = "coerce")
+    # forcefully convert all feature columns + gest age columns into numeric types
+    sheet_filtered[numeric_cols] = sheet_filtered[numeric_cols].apply(pd.to_numeric, errors = "coerce")
 
     timeframe_names = ["First Trimester", "Early Second Trimester", "Late Second and Early Third Trimester", "Late Third Trimester"]
 

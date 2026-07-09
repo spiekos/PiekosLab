@@ -7,42 +7,42 @@ Activities - Summary - Steps                  | 132
 Activities - Summary - totalDistances_x       | 132
 Activities - Summary - veryActiveMinutes_x    | 132
 Sleep - Summary - total minutes asleep_x      | 195
-Activities - Goals - activeMinutes            | 146
-Activities - Goals - caloriesOut              | 146
-Activities - Goals - distance                 | 145
-Activities - Goals - steps                    | 145
-Activities - Summary - activeScore            | 145
-Activities - Summary - activityCalories       | 145
-Activities - Summary - caloriesBMR            | 145
-Activities - Summary - caloriesOut            | 145
-Activities - Summary - totalDistances_y       | 145
-Activities - Summary - fairlyActiveMinutes    | 145
-Activities - Summary - lightlyActiveMinutes   | 145
-Activities - Summary - marginalCalories       | 145
-Activities - Summary - sedentaryMinutes       | 145
-Activities - Summary - steps                  | 145
-Activities - Summary - veryActiveMinutes_y    | 145
-Heart Rate - Resting Heart Rate               | 184
-Heart Rate - Zone: Out of Range - caloriesOut | 184
-Heart Rate - Zone: Out of Range - min         | 184
-Heart Rate - Zone: Out of Range - max         | 184
-Heart Rate - Zone: Out of Range - minutes     | 184
-Heart Rate - Zone: Fat Burn - caloriesOut     | 184
-Heart Rate - Zone: Fat Burn - min             | 184
-Heart Rate - Zone: Fat Burn - max             | 184
-Heart Rate - Zone: Fat Burn - minutes         | 184
-Heart Rate - Zone: Cardio - caloriesOut       | 184
-Heart Rate - Zone: Cardio - min               | 184
-Heart Rate - Zone: Cardio - max               | 184
-Heart Rate - Zone: Cardio - minutes           | 184
-Heart Rate - Zone: Peak - caloriesOut         | 184
-Heart Rate - Zone: Peak - min                 | 184
-Heart Rate - Zone: Peak - max                 | 184
-Heart Rate - Zone: Peak - minutes             | 184
-Sleep - Summary - Stages - deep               | 211
-Sleep - Summary - Stages - light              | 211
-Sleep - Summary - Stages - rem                | 211
-Sleep - Summary - Stages - wake               | 211
-Sleep - Summary - total minutes asleep_y      | 208
-Sleep - Summary - total sleep records         | 208
-Sleep - Summary - total time in bed           | 208
+Activities - Goals - activeMinutes            | 132
+Activities - Goals - caloriesOut              | 132
+Activities - Goals - distance                 | 132
+Activities - Goals - steps                    | 132
+Activities - Summary - activeScore            | 132
+Activities - Summary - activityCalories       | 132
+Activities - Summary - caloriesBMR            | 132
+Activities - Summary - caloriesOut            | 132
+Activities - Summary - totalDistances_y       | 132
+Activities - Summary - fairlyActiveMinutes    | 132
+Activities - Summary - lightlyActiveMinutes   | 132
+Activities - Summary - marginalCalories       | 132
+Activities - Summary - sedentaryMinutes       | 132
+Activities - Summary - steps                  | 132
+Activities - Summary - veryActiveMinutes_y    | 132
+Heart Rate - Resting Heart Rate               | 168
+Heart Rate - Zone: Out of Range - caloriesOut | 168
+Heart Rate - Zone: Out of Range - min         | 168
+Heart Rate - Zone: Out of Range - max         | 168
+Heart Rate - Zone: Out of Range - minutes     | 168
+Heart Rate - Zone: Fat Burn - caloriesOut     | 168
+Heart Rate - Zone: Fat Burn - min             | 168
+Heart Rate - Zone: Fat Burn - max             | 168
+Heart Rate - Zone: Fat Burn - minutes         | 168
+Heart Rate - Zone: Cardio - caloriesOut       | 168
+Heart Rate - Zone: Cardio - min               | 168
+Heart Rate - Zone: Cardio - max               | 168
+Heart Rate - Zone: Cardio - minutes           | 168
+Heart Rate - Zone: Peak - caloriesOut         | 168
+Heart Rate - Zone: Peak - min                 | 168
+Heart Rate - Zone: Peak - max                 | 168
+Heart Rate - Zone: Peak - minutes             | 168
+Sleep - Summary - Stages - deep               | 200
+Sleep - Summary - Stages - light              | 200
+Sleep - Summary - Stages - rem                | 200
+Sleep - Summary - Stages - wake               | 200
+Sleep - Summary - total minutes asleep_y      | 195
+Sleep - Summary - total sleep records         | 195
+Sleep - Summary - total time in bed           | 195

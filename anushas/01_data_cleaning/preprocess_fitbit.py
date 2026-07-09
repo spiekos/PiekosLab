@@ -31,7 +31,7 @@ def merge_sheets(sheet1, sheet2):
     sheet1, sheet2 = rename_columns(sheet1, sheet2)
 
     # merge both sheets
-    merged = pd.merge(sheet1, sheet2, on = ["Record ID", "Date"], how = "outer")
+    merged = pd.merge(sheet1, sheet2, on = ["Record ID", "Date"], how = "inner")
 
     # combine the two gestational age columns
     merged['Gestational age by reported LMP'] = merged['Gestational age by reported LMP_x'].combine_first(merged['Gestational age by reported LMP_y'])
