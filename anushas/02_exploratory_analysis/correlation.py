@@ -165,8 +165,8 @@ def main():
         "chorangiosis"
     ]
     delivery_metrics = [
-        "maternal age", "height (cm)", "weight (kg)", "delivery bmi", "prepregnancy weight self or record", "prepregnancy BMI self or record", "gravida", 
-        "parity", "diabetes", "chtn", "gest age del", "birthweight", "apgar 1", "apgar 5", "nicu days"
+        "maternal age", "weight (kg)", "delivery bmi", "prepregnancy weight self or record", "prepregnancy BMI self or record", "gravida", "parity", 
+        "diabetes", "chtn"
     ]
     strict_delivery_metrics = [
         "gest age del", "birthweight", "apgar 1", "apgar 5", "nicu days"
