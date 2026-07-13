@@ -49,18 +49,7 @@ def one_hot_encode_demographics(sheet):
     row_2 = sheet_copy.iloc[[0]].copy()
     rest_of_df = sheet_copy.iloc[1:].copy()
 
-    # reset index to prevent alignment bugs
-    original_index = rest_of_df.index
-    rest_of_df = rest_of_df.reset_index(drop = True)
-
     race_clean = rest_of_df["race"].astype(str).str.strip().str.upper()
-
-    print("\n--- 🔍 DIAGNOSTIC: UNIQUE RAW RACE VALUES ---")
-    print(race_clean.unique())
-
-    rest_of_df["race_WHITE"] = 0
-    rest_of_df["race_BLACK"] = 0
-    rest_of_df["race_ASIAN"] = 0
 
     # map White
     white_mask = race_clean.str.contains("WHITE", na = False)
@@ -73,36 +62,6 @@ def one_hot_encode_demographics(sheet):
     # group Asian (including Korean)
     asian_mask = race_clean.str.contains("ASIAN|KOREAN", na = False)
     rest_of_df.loc[asian_mask, "race_ASIAN"] = 1
-
-    print("\n--- 🔍 DIAGNOSTIC: MASK ASSIGNMENT CHECKS ---")
-    print(f"Total rows processed: {len(rest_of_df)}")
-    print(f"Rows marked race_WHITE == 1: {rest_of_df['race_WHITE'].sum()}")
-    print(f"Rows marked race_BLACK == 1: {rest_of_df['race_BLACK'].sum()}")
-    print(f"Rows marked race_ASIAN == 1: {rest_of_df['race_ASIAN'].sum()}")
-    
-    # Show us rows that have 'AFRICAN' but race_BLACK is somehow still 0
-    failed_african_rows = rest_of_df[race_clean.str.contains("AFRICAN", na=False) & (rest_of_df["race_BLACK"] == 0)]
-    if not failed_african_rows.empty:
-        print("\n⚠️ ALERT! Found rows containing 'AFRICAN' that failed to map to race_BLACK:")
-        print(failed_african_rows["race"].unique())
-
-    # combine "race_AFRICAN AMERICAN" column and "race_BLACK" column
-    # check if the African American column exists
-    existing_aa_col = None
-    for col in rest_of_df.columns:
-        if col.strip().upper() in ["RACE_AFRICAN AMERICAN", "RACE_AFRICAN_AMERICAN", "AFRICAN AMERICAN"]:
-            existing_aa_col = col
-            break
-
-    if existing_aa_col is not None:
-        # copy postiive values to the "race_BLACK" column
-        aa_mask = rest_of_df[existing_aa_col].astype(str).str.strip() == "1"
-        rest_of_df.loc[aa_mask, "race_BLACK"] = 1
-
-        # drop old column frop dataframe and row_2
-        rest_of_df = rest_of_df.drop(columns = [existing_aa_col])
-        if existing_aa_col in row_2.columns:
-            row_2 = row_2.drop(columns = [existing_aa_col])
 
     # filter out categories we handled manually or that count as missing data
     ignore_keywords = [
@@ -151,14 +110,12 @@ def one_hot_encode_demographics(sheet):
 
     rest_of_df["HISPANIC/LATINO"] = rest_of_df["HISPANIC/LATINO"].astype(int)
 
-    rest_of_df.index = original_index
-
     # reconstruct the complete dataframe
     # add empty columns to row_2 with 0 values so it matches shape during merge
     new_cols = [col for col in rest_of_df.columns if col not in row_2.columns]
     for col in new_cols:
         row_2[col] = 0
-        rest_of_df[col] = rest_of_df[col].astype(int)
+        rest_of_df[col] = rest_of_df[col].fillna(0).astype(int)
     final_df = pd.concat([row_2, rest_of_df], axis = 0).reset_index(drop = True)
 
     # determine where to insert the new columns (after the "race_is_missing" column)
@@ -176,6 +133,8 @@ def one_hot_encode_demographics(sheet):
     for col in reversed(encoded_cols):
         col_series = final_df.pop(col)
         final_df.insert(loc = insert_idx, column = col, value = col_series)
+
+    final_df = final_df.drop(columns = ["race", "ethnicity"], errors = "ignore")
 
     return final_df
 
