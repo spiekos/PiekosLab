@@ -5,7 +5,7 @@ import pandas as pd
 def load_sheets():
     sheet1 = pd.read_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv", low_memory = False)
     sheet2 = pd.read_csv("01_data_cleaning/processed_data/processed_placental_data.csv")
-    sheet3 = pd.read_csv("01_data_cleaning/processed_data/clinical_sheet_cleaned.csv")
+    sheet3 = pd.read_csv("01_data_cleaning/processed_data/processed_clinical_data.csv")
     return sheet1, sheet2, sheet3
 
 
@@ -208,7 +208,7 @@ def summarize_missing_info(sheet):
     total_patients = len(sheet)
 
     for feature in features:
-        if feature not in sheet.columns:
+        if (feature != "race") and (feature not in sheet.columns):
             summary_data.append({
                 "Feature / Metric": feature,
                 "Missing Count (NaNs)": "NOT FOUND",
