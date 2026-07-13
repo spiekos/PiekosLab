@@ -21,6 +21,27 @@ def fix_typos(sheet):
     return sheet_copy
 
 
+# exclude patients with "loss to follow-up", "withdraw", or "excluded" (including partial matches) in their "status" column
+def filter_by_status(sheet):
+    sheet_copy = sheet.copy()
+
+    if "status" in sheet_copy.columns:
+        status_clean = sheet_copy["status"].astype(str).str.strip().str.upper()
+        
+        # build masks for exclusions
+        is_excluded = status_clean.str.contains("EXCLUDED", na=False)
+        is_loss_to_fu = status_clean.str.contains("LOSS TO FOLLOW-UP|LOSS TO FOLLOW UP", na=False)
+        is_withdraw = status_clean.str.contains("WITHDRAW", na=False)
+        
+        # combine masks to find records we want to keep
+        drop_mask = is_excluded | is_loss_to_fu | is_withdraw
+        keep_mask = ~drop_mask
+        
+        sheet_copy = sheet_copy[keep_mask].reset_index(drop=True)
+                
+    return sheet_copy
+
+
 # creates binary indicator columns (1/0) for categorical features where certain
 # currently, a binary indicator column is only being added for the "race" column
 def add_missingness_indicators(sheet):
@@ -56,7 +77,7 @@ def one_hot_encode_demographics(sheet):
     rest_of_df.loc[white_mask, "race_WHITE"] = 1
 
     # group Black/African American
-    black_mask = race_clean.str.contains("BLACK|AFRICAN AMERICAN|AFRICAN", na = False)
+    black_mask = race_clean.str.contains("BLACK|AFRICAN", na = False)
     rest_of_df.loc[black_mask, "race_BLACK"] = 1
 
     # group Asian (including Korean)
@@ -139,15 +160,68 @@ def one_hot_encode_demographics(sheet):
     return final_df
 
 
+# creates and returns a table tracking total counts for each race/ethnicity
+def get_race_counts(sheet):
+    patient_df = sheet.iloc[1:]
+    total_patients = len(patient_df)
+
+    race_cols = sorted([col for col in patient_df.columns if col.startswith("race_") and col != "race_is_missing"])
+    eth_cols = ["HISPANIC/LATINO"]
+
+    lines = []
+    
+    def build_section(title, columns):
+        section_lines = []
+        section_lines.append(f"## {title}")
+        section_lines.append("-" * 55)
+        section_lines.append(f"{'Feature Name':<40} | {'Count':<6} | {'Percentage':<8}")
+        section_lines.append("-" * 55)
+        for col in columns:
+            if col in patient_df.columns:
+                count = (patient_df[col] == 1).sum()
+                pct = (count / total_patients) * 100 if total_patients > 0 else 0
+                section_lines.append(f"{col:<40} | {count:<6} | {pct:>6.1f}%")
+        section_lines.append("-" * 55 + "\n")
+        return section_lines
+
+    # Build individual sections
+    lines.extend(build_section("RACE CATEGORIES", race_cols))
+    
+    if "race_is_missing" in patient_df.columns:
+        lines.extend(build_section("DATA QUALITY / MISSINGNESS", ["race_is_missing"]))
+        
+    lines.extend(build_section("ETHNICITY HISTOGRAM", eth_cols))
+
+    return lines, total_patients
+
+
+# prints outputs to a log file
+def print_log(race_table, total_patients):
+    log_path = "02_exploratory_analysis/outputs/clinical_sheet_race_counts.txt"
+
+    race_table_str = "\n".join(race_table)
+
+    with open(log_path, "w") as f:
+        f.write("Clinical Sheet Demographics Summary Report\n")
+        f.write(f"Total Patient Records Analyzed: {total_patients}")
+        f.write("\n\n")
+        f.write(race_table_str)
+
+
 def main():
     sheet = load_sheet()
 
     sheet_cleaned = fix_typos(sheet)
+    sheet_cleaned = filter_by_status(sheet_cleaned)
     sheet_cleaned = add_missingness_indicators(sheet_cleaned)
     sheet_encoded = one_hot_encode_demographics(sheet_cleaned)
 
+    race_table, total_patients = get_race_counts(sheet_encoded)
+
+    print_log(race_table, total_patients)
+
     if not sheet_encoded.empty:
-        clinical_csv_path = "01_data_cleaning/processed_data/clinical_sheet_encoded.csv"
+        clinical_csv_path = "01_data_cleaning/processed_data/processed_clinical_data.csv"
         sheet_encoded.to_csv(clinical_csv_path, index = False)
 
 
