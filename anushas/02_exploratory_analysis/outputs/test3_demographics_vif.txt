@@ -1,10 +1,9 @@
-| Variable                        |     VIF |
-|:--------------------------------|--------:|
-| race_WHITE                      | 6.54074 |
-| race_BLACK                      | 6.03592 |
-| race_ASIAN                      | 1.72116 |
-| prepregnancy BMI self or record | 1.05273 |
-| smoking_encoded                 | 1.04848 |
-| HISPANIC/LATINO                 | 1.03849 |
-| maternal age                    | 1.02388 |
-| infant_sex_encoded              | 1.02097 |
+| Variable           |     VIF |
+|:-------------------|--------:|
+| race_white         | 6.65229 |
+| race_black         | 6.13161 |
+| race_asian         | 1.71183 |
+| hispanic/latino    | 1.03552 |
+| smoking_encoded    | 1.02863 |
+| infant_sex_encoded | 1.02005 |
+| maternal_age       | 1.01896 |

@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 
 # load and return the fitbit dataset, the placental dataset, and the clinical dataset
@@ -9,16 +10,16 @@ def load_sheets():
     return sheet1, sheet2, sheet3
 
 
-# filters the sheet to only include "Fitbit Data" events and only include events during pregnancy
+# filters the sheet to only include "fitbit data" events and only include events during pregnancy
 def filter_sheet(sheet):
-    # filter out all events from the sheet except the "Fitbit Data" ones
-    sheet_filtered = sheet[sheet["Event Name"] == "Fitbit Data"].copy()
+    # filter out all events from the sheet except the "fitbit data" ones
+    sheet_filtered = sheet[sheet["event_name"] == "fitbit data"].copy()
 
     # only include events during pregnancy
     # if gestational age at delivery is not in the dataset, assume that delivery occurred at 40 weeks
     sheet_filtered["current_weeks"] = sheet_filtered["timepoint"] / 7
-    sheet_filtered = sheet_filtered[(sheet_filtered["current_weeks"] <= sheet_filtered["gest age del"]) | 
-                                    (sheet_filtered["gest age del"].isna() & sheet_filtered["current_weeks"] <= 40)]
+    sheet_filtered = sheet_filtered[(sheet_filtered["current_weeks"] <= sheet_filtered["gest_age_del"]) | 
+                                    (sheet_filtered["gest_age_del"].isna() & sheet_filtered["current_weeks"] <= 40)]
     return sheet_filtered
 
 
@@ -28,6 +29,8 @@ def filter_sheet(sheet):
 # note that the input dataset has already been filtered and only includes events during pregnancy
 def bucket_data(sheet):
     local_sheet = sheet.copy()
+
+    local_sheet["current_weeks"] = pd.to_numeric(local_sheet["current_weeks"], errors="coerce")
 
     bins = [float("-inf"), 14, 22, 32, float("inf")]
     labels = ["first", "early_second", "late_second_early_third", "late_third"]
@@ -45,32 +48,32 @@ def bucket_data(sheet):
 
 # returns the total number of unique patients, after data has been filtered
 def get_total_patients(sheet):
-    # filter for rows for which Record ID starts with "DP3-"
+    # filter for rows for which record id starts with "dp3-"
     # this ensures we only count actual patients
-    dp3_patients = sheet[sheet["Record ID"].astype(str).str.startswith("DP3-")]
-    return dp3_patients["Record ID"].nunique()
+    dp3_patients = sheet[sheet["record_id"].astype(str).str.startswith("dp3-")]
+    return dp3_patients["record_id"].nunique()
 
 
-# returns the total number of missing (aka "NA") values in the dataset across all columns. excludes the "NA" values corresponding to the general information 
+# returns the total number of missing (aka "na") values in the dataset across all columns. excludes the "na" values corresponding to the general information 
 # rows for each patient, as these do not represent missing values in the data.
 def count_total_missing(sheet):
-    # sum all NaN values across the whole sheet
+    # sum all nan values across the whole sheet
     return sheet.isna().sum().sum()
 
 
 # returns a table containing the number of days missing per patient
-# a day is only considered missing if every value for that day is NaN
+# a day is only considered missing if every value for that day is nan
 def get_missing_per_patient(sheet, feature_cols):
     local_sheet = sheet.copy()
-    # check if all values in each row are NaN
+    # check if all values in each row are nan
     local_sheet["is_missing"] = local_sheet[feature_cols].isna().all(axis = 1)
 
-    # sum the True values by patient ID
+    # sum the true values by patient id
     result = (
-        local_sheet.groupby("Record ID")["is_missing"]
+        local_sheet.groupby("record_id")["is_missing"]
         .sum()
         .reset_index()
-        .rename(columns = {"Record ID": "ID", "is_missing": "Missing Days"})
+        .rename(columns = {"record_id": "id", "is_missing": "missing_days"})
     )
 
     return result
@@ -81,48 +84,53 @@ def get_max_consecutive_missing(sheet, feature_cols):
     feature_results = {}
 
     # ensure the dataframe is sorted chronologically per patient
-    sorted_sheet = sheet.sort_values(by = ["Record ID", "Date"]).reset_index(drop = True)
+    sorted_sheet = sheet.sort_values(by = ["record_id", "date"]).reset_index(drop = True)
 
     for col in feature_cols:
         is_missing = sorted_sheet[col].isna()
 
-        # create a block_id that changes only when a non-NaN value is seen
-        # i.e. if a non-NaN value is seen, the is_missing value is false. therefore, the ~is_missing value is true. adding this to a sum would add 1 to the sum.
+        # create a block_id that changes only when a non-nan value is seen
+        # i.e. if a non-nan value is seen, the is_missing value is false. therefore, the ~is_missing value is true. adding this to a sum would add 1 to the sum.
         # this means consecutive missing values will all share the same block_id number
         block_id = (~is_missing).cumsum()
 
-        # group is_missing by (patient id, block id). since block_id only changes when a non-NaN value is seen, these groups will each contain streaks of NaN 
+        # group is_missing by (patient id, block id). since block_id only changes when a non-nan value is seen, these groups will each contain streaks of nan 
         # values, organized in chronological order, for each patient.
         # then sum the true values (by groups) in is_missing. this gives the lengths of every missing streak for that patient
-        streak_lengths = is_missing.groupby([sorted_sheet["Record ID"], block_id]).sum()
+        streak_lengths = is_missing.groupby([sorted_sheet["record_id"], block_id]).sum()
 
         # find the maximum streak length for each patient
-        max_streak = streak_lengths.groupby("Record ID").max()
+        max_streak = streak_lengths.groupby("record_id").max()
 
         feature_results[col] = max_streak
 
     # combine results for all features into a table
     final_table = pd.DataFrame(feature_results).reset_index()
-    final_table = final_table.rename(columns = {"Record ID": "id"})
+    final_table = final_table.rename(columns = {"record_id": "id"})
 
     return final_table
 
 
 # returns total number of unique dates recorded across all patients
 def count_unique_dates(sheet):
-    return sheet["Date"].nunique()
+    return sheet["date"].nunique()
 
 
 # returns median + interquartile range for each relevant metric:
 # gestational age at start of study, gestational age at delivery, steps, total distance, very active minutes, total minutes asleep
 def calc_summary_stats(sheet, feature_cols):
-    new_cols = feature_cols + ["Gestational age by reported LMP", "gest age del"]
+    new_cols = feature_cols + ["gestational_age_by_reported_lmp", "gest_age_del"]
 
     def iqr(x):
         return x.quantile(0.75) - x.quantile(0.25)
     
-    # aggregate across the entire dataset for median and IQR
-    summary = sheet[new_cols].agg(["median", iqr]).T
+    # force-convert to numeric
+    summary_df = sheet[new_cols].copy()
+    for col in new_cols:
+        summary_df[col] = pd.to_numeric(summary_df[col], errors="coerce")
+    
+    # aggregate across the entire dataset for median and iqr
+    summary = summary_df.agg(["median", iqr]).T
 
     summary = summary.reset_index()
     summary.columns = ["Feature", "Median", "IQR"]
@@ -130,7 +138,7 @@ def calc_summary_stats(sheet, feature_cols):
     return summary
 
 
-# returns a table containing the number of patients with Fitbit data for at least one metric during each timeframe
+# returns a table containing the number of patients with fitbit data for at least one metric during each timeframe
 # the timeframes are: 1st trimester, early 2nd trimester, late 2nd/early 3rd trimester, late 3rd trimester
 # @param sheets: a list containing four datasets, each containing the data for one of the above timeframes
 def get_patients_per_timeframe(sheets, feature_cols, timeframe_names):
@@ -140,7 +148,7 @@ def get_patients_per_timeframe(sheets, feature_cols, timeframe_names):
         # drop rows for which all metric columns are missing
         df_cleaned = df.dropna(subset = feature_cols, how = "all")
 
-        patient_count = df_cleaned["Record ID"].nunique()
+        patient_count = df_cleaned["record_id"].nunique()
 
         summary_data.append({
             "Timeframe": timeframe,
@@ -154,15 +162,15 @@ def get_patients_per_timeframe(sheets, feature_cols, timeframe_names):
 # also returns a table containing the number of metrics with 80+% of valid data, per patient
 # also returns a table containing the number of patients with 80+% of valid data, per metric
 def get_metric_representation_matrices(sheet, feature_cols):
-    df = sheet.sort_values(by = ["Record ID", "timepoint"]).copy()
+    df = sheet.sort_values(by = ["record_id", "timepoint"]).copy()
 
     # extract start and end dates per patient
     # start date marks the day the patient enrolled/started data collection
     # end data marks delivery
-    enrollment_days = df.groupby("Record ID")["timepoint"].min()
-    max_recorded_days = df.groupby("Record ID")["timepoint"].max()
+    enrollment_days = df.groupby("record_id")["timepoint"].min()
+    max_recorded_days = df.groupby("record_id")["timepoint"].max()
 
-    delivery_weeks = df.groupby("Record ID")["gest age del"].first()
+    delivery_weeks = df.groupby("record_id")["gest_age_del"].first()
     delivery_days = delivery_weeks * 7
 
     # apply fallback logic for the end of the tracking window:
@@ -173,17 +181,17 @@ def get_metric_representation_matrices(sheet, feature_cols):
     recorded_data_lengths = recorded_data_lengths.clip(lower = 1) # ensure values are positive
 
     # count how many days of valid data exist per metric per patient
-    active_days_per_metric = df.groupby("Record ID")[feature_cols].agg(lambda x: x.notna().sum())
+    active_days_per_metric = df.groupby("record_id")[feature_cols].agg(lambda x: x.notna().sum())
 
     # contains percent of data that is valid per metric per patient
     representation_matrix = active_days_per_metric.div(active_days_per_metric, axis = 0)
     
     final_table = representation_matrix >= 0.80
-    final_table = final_table.reset_index().rename(columns = {"Record ID": "Patient ID"})
+    final_table = final_table.reset_index().rename(columns = {"record_id": "patient_id"})
 
     # contains the number of metrics with 80+% of valid data, per patient
     pt_summary = pd.DataFrame({
-        "Patient ID": final_table["Patient ID"],
+        "Patient ID": final_table["patient_id"],
         "Compliant Metrics Count": final_table[feature_cols].sum(axis = 1)
     })
     pt_summary = pt_summary.sort_values(by = "Compliant Metrics Count", ascending = False).reset_index(drop = True)
@@ -192,33 +200,42 @@ def get_metric_representation_matrices(sheet, feature_cols):
     patient_counts_per_metric = final_table[feature_cols].sum(axis = 0)
     metric_summary = pd.DataFrame({
         "Fitbit Metric": patient_counts_per_metric.index,
-        "Patients with >= 80% Density": patient_counts_per_metric.values
+        "Patients With >= 80% Density": patient_counts_per_metric.values
     })
-    metric_summary = metric_summary.sort_values(by = "Patients with >= 80% Density", ascending = False).reset_index(drop = True)
+    metric_summary = metric_summary.sort_values(by = "Patients With >= 80% Density", ascending = False).reset_index(drop = True)
 
     return final_table, pt_summary, metric_summary
 
 
 # returns a diagnostic summary of data missingness across all patients for the following information:
-# maternal age, fetal sex, prepregnancy BMI, race, ethnicity, smoking status
+# maternal age, fetal sex, prepregnancy bmi, race, ethnicity, smoking status
 def summarize_missing_info(sheet):
-    features = ["maternal age", "infant sex", "prepregnancy BMI self or record", "race", "ethnicity", "smoking"]
+    features = ["maternal_age", "infant_sex", "prepregnancy_bmi_self_or_record", "race", "ethnicity", "smoking"]
 
     summary_data = []
     total_patients = len(sheet)
 
+    local_sheet = sheet.copy()
+
     for feature in features:
-        if (feature != "race") and (feature != "ethnicity") and (feature not in sheet.columns):
+        if (feature != "race") and (feature != "ethnicity") and (feature not in local_sheet.columns):
             summary_data.append({
                 "Feature / Metric": feature,
-                "Missing Count (NaNs)": "NOT FOUND",
+                "Missing Count (NaNs)": "Not Found",
                 "Percent Missing": "N/A"
             })
             continue
 
+        if feature in local_sheet.columns:
+            local_sheet[feature] = local_sheet[feature].replace(
+                ["nan", "na", "none", "", "null", "n/a"], np.nan
+            )
+        
         if feature == "race" and "race_is_missing" in sheet.columns:
+            local_sheet["race_is_missing"] = pd.to_numeric(local_sheet["race_is_missing"], errors="coerce")
             null_count = sheet["race_is_missing"].sum()
         elif feature == "ethnicity" and "eth_is_missing" in sheet.columns:
+            local_sheet["eth_is_missing"] = pd.to_numeric(local_sheet["eth_is_missing"], errors="coerce")
             null_count = sheet["eth_is_missing"].sum()
         else:
             null_count = sheet[feature].isnull().sum()
@@ -249,7 +266,7 @@ def prepare_correlation_data(sheet_bucketed, feature_cols, timeframe_names, clin
 
         # take the mean of each metric by patient in this timeframe
         # rename the columns
-        pt_trimester_avg = df.groupby("Record ID")[feature_cols].mean()
+        pt_trimester_avg = df.groupby("record_id")[feature_cols].mean()
         pt_trimester_avg.columns = [f"{label}_{col}" for col in pt_trimester_avg.columns]
         trimester_dfs.append(pt_trimester_avg)
 
@@ -262,31 +279,31 @@ def prepare_correlation_data(sheet_bucketed, feature_cols, timeframe_names, clin
 
     # isolate target clinical variables
     clinical_targets = [
-        "maternal age", "height (cm)", "weight (kg)", "delivery bmi", "prepregnancy weight self or record", "prepregnancy BMI self or record", 
-        "gravida", "parity", "diabetes", "chtn", "Route of delivery 1-vag, 2-cs", "gest age del", "birthweight", "apgar 1", "apgar 5", "nicu days"
+        "maternal_age", "height_(cm)", "weight_(kg)", "delivery_bmi", "prepregnancy_weight_self_or_record", "prepregnancy_bmi_self_or_record", 
+        "gravida", "parity", "diabetes", "chtn", "route_of_delivery_1-vag,_2-cs", "gest_age_del", "birthweight", "apgar_1", "apgar_5", "nicu_days"
     ]
     # keep only the columns that exist in the spreadsheet
     existing_clinical = [col for col in clinical_targets if col in clinical_raw.columns]
     # aggregate all clinical data for each patient into a dataframe
-    clinical_clean = clinical_raw.rename(columns = {"id": "record id"})
-    clinical_clean = clinical_clean.groupby("record id")[existing_clinical].first().reset_index()
+    clinical_clean = clinical_raw.rename(columns = {"id": "record_id"})
+    clinical_clean = clinical_clean.groupby("record_id")[existing_clinical].first().reset_index()
 
     # isolate target placental variables
     placental_targets = [
-        "placental infarction", "distal villous hypoplasia focal/diffuse", "accelerated villous maturation", "increased syncytial knots", 
-        "decidual arteriopathy membrane role/basal plate/both", "segmental avascular villi small/intermediate/large", "delayed villous maturation", 
-        "maternal inflammatory response stage/grade", "villitis of unknown etiology, high/low grade, focal/diffuse", "increased perivillous fibrin deposition", 
+        "placental_infarction", "distal_villous_hypoplasia_focal/diffuse", "accelerated_villous_maturation", "increased_syncytial_knots", 
+        "decidual_arteriopathy_membrane_role/basal_plate/both", "segmental_avascular_villi_small/intermediate/large", "delayed_villous_maturation", 
+        "maternal_inflammatory_response_stage/grade", "villitis_of_unknown_etiology,_high/low_grade,_focal/diffuse", "increased_perivillous_fibrin_deposition", 
         "chorangiosis"
     ]
     # keep only the columns that exist in the spreadsheet
     existing_placental = [col for col in placental_targets if col in placental_raw.columns]
     # aggregate all placental data for each patient into a dataframe
-    placental_clean = placental_raw.rename(columns = {"id": "Record ID"})
-    placental_clean = placental_clean.groupby("Record ID")[existing_placental].first().reset_index()
+    placental_clean = placental_raw.rename(columns = {"id": "record_id"})
+    placental_clean = placental_clean.groupby("record_id")[existing_placental].first().reset_index()
 
     # merge fitbit, clinical, and placental data
-    master_corr_df = pd.merge(fitbit_pivoted, clinical_clean, left_on = "record id", right_on = "Record ID", how = "inner")
-    master_corr_df = pd.merge(master_corr_df, placental_clean, on = "record id", how = "inner")
+    master_corr_df = pd.merge(fitbit_pivoted, clinical_clean, on = "record_id", how = "inner")
+    master_corr_df = pd.merge(master_corr_df, placental_clean, on = "record_id", how = "inner")
 
     # determine which placental columns survived the merge process
     final_placental_cols = [col for col in existing_placental if col in master_corr_df.columns]
@@ -354,8 +371,8 @@ def main():
 
     sheet_filtered = filter_sheet(fitbit_sheet)
 
-    feature_cols = [col for col in sheet_filtered.columns if col.startswith(("Activities", "Sleep", "Heart Rate"))]
-    numeric_cols = feature_cols + ["Gestational age by reported LMP", "gest age del"]
+    feature_cols = [col for col in sheet_filtered.columns if col.startswith(("activities", "sleep", "heart_rate"))]
+    numeric_cols = feature_cols + ["gestational_age_by_reported_lmp", "gest_age_del"]
 
     # forcefully convert all feature columns + gest age columns into numeric types
     sheet_filtered[numeric_cols] = sheet_filtered[numeric_cols].apply(pd.to_numeric, errors = "coerce")

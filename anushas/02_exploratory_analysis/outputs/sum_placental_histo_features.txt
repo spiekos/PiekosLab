@@ -5,14 +5,15 @@ retroplacental hemorrhage, vascular thrombosis, villous stromal vascular karyorr
 stem vessel obliteration/fibromuscular sclerosis, vascular ectasia, fetal inflammatory response stage/grade/location, diffuse villous edema,
 and placental hypoplasia.
 
-placental infarction: 2
-distal villous hypoplasia focal/diffuse: 14
-accelerated villous maturation: 48
-increased syncytial knots: 46
-decidual arteriopathy membrane role/basal plate/both: 5
-segmental avascular villi small/intermediate/large: 9
-delayed villous maturation: 4
-maternal inflammatory response stage/grade: 9
-villitis of unknown etiology, high/low grade, focal/diffuse: 14
-increased perivillous fibrin deposition: 2
+gestational_age_at_delivery: 4492.8
+placental_infarction: 2
+distal_villous_hypoplasia_focal/diffuse: 14
+accelerated_villous_maturation: 48
+increased_syncytial_knots: 46
+decidual_arteriopathy_membrane_role/basal_plate/both: 3
+segmental_avascular_villi_small/intermediate/large: 4
+delayed_villous_maturation: 4
+maternal_inflammatory_response_stage/grade: 9
+villitis_of_unknown_etiology,_high/low_grade,_focal/diffuse: 7
+increased_perivillous_fibrin_deposition: 2
 chorangiosis: 4

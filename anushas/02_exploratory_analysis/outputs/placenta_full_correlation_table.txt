@@ -1,90 +1,30 @@
-| independent_var                                             | dependent_var                      |         rho |   p_value |   sample_size_N |      FDR |
-|:------------------------------------------------------------|:-----------------------------------|------------:|----------:|----------------:|---------:|
-| accelerated villous maturation                              | weight (kg)                        |  0.118341   | 0.203808  |             117 | 0.9461   |
-|                                                             | prepregnancy weight self or record |  0.0702682  | 0.451548  |             117 | 0.9461   |
-|                                                             | prepregnancy BMI self or record    | -0.100587   | 0.280555  |             117 | 0.9461   |
-|                                                             | gravida                            | -0.126504   | 0.174107  |             117 | 0.9461   |
-|                                                             | chtn                               |  0.0867188  | 0.352532  |             117 | 0.9461   |
-|                                                             | maternal age                       |  0.0503245  | 0.589997  |             117 | 0.988781 |
-|                                                             | parity                             | -0.0156706  | 0.866824  |             117 | 0.988781 |
-|                                                             | diabetes                           | -0.0120281  | 0.897586  |             117 | 0.988781 |
-| chorangiosis                                                | prepregnancy BMI self or record    |  0.105849   | 0.256028  |             117 | 0.9461   |
-|                                                             | gravida                            | -0.077301   | 0.407443  |             117 | 0.9461   |
-|                                                             | diabetes                           | -0.0824835  | 0.376629  |             117 | 0.9461   |
-|                                                             | parity                             |  0.0680167  | 0.466211  |             117 | 0.954106 |
-|                                                             | maternal age                       |  0.0209576  | 0.822538  |             117 | 0.988781 |
-|                                                             | weight (kg)                        |  0.0208917  | 0.823087  |             117 | 0.988781 |
-|                                                             | prepregnancy weight self or record |  0.00975439 | 0.916868  |             117 | 0.988781 |
-|                                                             | chtn                               |  0.0384122  | 0.680939  |             117 | 0.988781 |
-| decidual arteriopathy membrane role/basal plate/both        | maternal age                       |  0.0947705  | 0.309447  |             117 | 0.9461   |
-|                                                             | weight (kg)                        |  0.184565   | 0.0463611 |             117 | 0.9461   |
-|                                                             | prepregnancy weight self or record |  0.125818   | 0.176472  |             117 | 0.9461   |
-|                                                             | diabetes                           | -0.0926301  | 0.32055   |             117 | 0.9461   |
-|                                                             | prepregnancy BMI self or record    |  0.0187689  | 0.840812  |             117 | 0.988781 |
-|                                                             | gravida                            | -0.0356976  | 0.702384  |             117 | 0.988781 |
-|                                                             | parity                             | -0.00131413 | 0.988781  |             117 | 0.988781 |
-|                                                             | chtn                               |  0.0153378  | 0.869628  |             117 | 0.988781 |
-| delayed villous maturation                                  | prepregnancy weight self or record |  0.0905765  | 0.331442  |             117 | 0.9461   |
-|                                                             | prepregnancy BMI self or record    | -0.108634   | 0.243657  |             117 | 0.9461   |
-|                                                             | diabetes                           | -0.0824835  | 0.376629  |             117 | 0.9461   |
-|                                                             | chtn                               | -0.0853604  | 0.360153  |             117 | 0.9461   |
-|                                                             | maternal age                       |  0.0391209  | 0.675381  |             117 | 0.988781 |
-|                                                             | weight (kg)                        | -0.00974946 | 0.91691   |             117 | 0.988781 |
-|                                                             | gravida                            | -0.00216732 | 0.981498  |             117 | 0.988781 |
-|                                                             | parity                             |  0.00804498 | 0.931397  |             117 | 0.988781 |
-| distal villous hypoplasia focal/diffuse                     | weight (kg)                        |  0.0748583  | 0.422467  |             117 | 0.9461   |
-|                                                             | gravida                            | -0.078063   | 0.402822  |             117 | 0.9461   |
-|                                                             | parity                             | -0.114241   | 0.220025  |             117 | 0.9461   |
-|                                                             | prepregnancy BMI self or record    | -0.0596513  | 0.522908  |             117 | 0.970596 |
-|                                                             | maternal age                       | -0.0211204  | 0.821183  |             117 | 0.988781 |
-|                                                             | prepregnancy weight self or record | -0.0397886  | 0.670161  |             117 | 0.988781 |
-|                                                             | diabetes                           | -0.00486105 | 0.958516  |             117 | 0.988781 |
-|                                                             | chtn                               | -0.0167267  | 0.85794   |             117 | 0.988781 |
-| increased perivillous fibrin deposition                     | prepregnancy weight self or record |  0.070325   | 0.451181  |             117 | 0.9461   |
-|                                                             | gravida                            | -0.0830463  | 0.37337   |             117 | 0.9461   |
-|                                                             | diabetes                           | -0.0578152  | 0.535804  |             117 | 0.970596 |
-|                                                             | chtn                               | -0.0598318  | 0.521649  |             117 | 0.970596 |
-|                                                             | maternal age                       | -0.0274211  | 0.769159  |             117 | 0.988781 |
-|                                                             | weight (kg)                        |  0.00585745 | 0.950023  |             117 | 0.988781 |
-|                                                             | prepregnancy BMI self or record    | -0.0117146  | 0.900241  |             117 | 0.988781 |
-|                                                             | parity                             |  0.042036   | 0.652706  |             117 | 0.988781 |
-| increased syncytial knots                                   | weight (kg)                        |  0.123057   | 0.186233  |             117 | 0.9461   |
-|                                                             | prepregnancy BMI self or record    | -0.12979    | 0.163099  |             117 | 0.9461   |
-|                                                             | gravida                            | -0.120673   | 0.194975  |             117 | 0.9461   |
-|                                                             | chtn                               |  0.0571597  | 0.540445  |             117 | 0.970596 |
-|                                                             | maternal age                       |  0.0332654  | 0.721799  |             117 | 0.988781 |
-|                                                             | prepregnancy weight self or record |  0.0326591  | 0.726667  |             117 | 0.988781 |
-|                                                             | parity                             | -0.0367305  | 0.694195  |             117 | 0.988781 |
-|                                                             | diabetes                           | -0.0496615  | 0.594912  |             117 | 0.988781 |
-| maternal inflammatory response stage/grade                  | maternal age                       | -0.131702   | 0.156936  |             117 | 0.9461   |
-|                                                             | prepregnancy BMI self or record    | -0.092244   | 0.32258   |             117 | 0.9461   |
-|                                                             | gravida                            | -0.0753474  | 0.419433  |             117 | 0.9461   |
-|                                                             | parity                             |  0.0959038  | 0.303671  |             117 | 0.9461   |
-|                                                             | diabetes                           | -0.0824741  | 0.376684  |             117 | 0.9461   |
-|                                                             | chtn                               | -0.0853508  | 0.360208  |             117 | 0.9461   |
-|                                                             | weight (kg)                        | -0.0334229  | 0.720536  |             117 | 0.988781 |
-|                                                             | prepregnancy weight self or record | -0.0172915  | 0.853196  |             117 | 0.988781 |
-| placental infarction                                        | maternal age                       |  0.154733   | 0.0957584 |             117 | 0.9461   |
-|                                                             | weight (kg)                        |  0.0741944  | 0.426605  |             117 | 0.9461   |
-|                                                             | parity                             |  0.107653   | 0.247965  |             117 | 0.9461   |
-|                                                             | chtn                               |  0.11368    | 0.222313  |             117 | 0.9461   |
-|                                                             | diabetes                           | -0.0578152  | 0.535804  |             117 | 0.970596 |
-|                                                             | prepregnancy weight self or record | -0.00390695 | 0.966653  |             117 | 0.988781 |
-|                                                             | prepregnancy BMI self or record    | -0.0156195  | 0.867254  |             117 | 0.988781 |
-|                                                             | gravida                            |  0.0243062  | 0.794765  |             117 | 0.988781 |
-| segmental avascular villi small/intermediate/large          | prepregnancy weight self or record | -0.130512   | 0.16075   |             117 | 0.9461   |
-|                                                             | prepregnancy BMI self or record    | -0.120059   | 0.197273  |             117 | 0.9461   |
-|                                                             | gravida                            |  0.0804122  | 0.388771  |             117 | 0.9461   |
-|                                                             | diabetes                           | -0.11055    | 0.23539   |             117 | 0.9461   |
-|                                                             | chtn                               |  0.0719405  | 0.440826  |             117 | 0.9461   |
-|                                                             | weight (kg)                        | -0.0610656  | 0.513083  |             117 | 0.970596 |
-|                                                             | maternal age                       | -0.0492866  | 0.597699  |             117 | 0.988781 |
-|                                                             | parity                             | -0.0269819  | 0.772755  |             117 | 0.988781 |
-| villitis of unknown etiology, high/low grade, focal/diffuse | prepregnancy weight self or record | -0.0926764  | 0.320307  |             117 | 0.9461   |
-|                                                             | prepregnancy BMI self or record    |  0.112368   | 0.227731  |             117 | 0.9461   |
-|                                                             | gravida                            | -0.0906068  | 0.33128   |             117 | 0.9461   |
-|                                                             | maternal age                       |  0.0477887  | 0.608892  |             117 | 0.988781 |
-|                                                             | weight (kg)                        | -0.00709306 | 0.939498  |             117 | 0.988781 |
-|                                                             | parity                             |  0.0374308  | 0.688664  |             117 | 0.988781 |
-|                                                             | diabetes                           | -0.0216482  | 0.816791  |             117 | 0.988781 |
-|                                                             | chtn                               |  0.0522397  | 0.575906  |             117 | 0.988781 |
+| independent_var                         | dependent_var   |        rho |   p_value |   sample_size_N |      FDR |
+|:----------------------------------------|:----------------|-----------:|----------:|----------------:|---------:|
+| accelerated_villous_maturation          | gravida         | -0.0974986 |  0.466552 |              58 | 0.727565 |
+|                                         | parity          | -0.0902016 |  0.500708 |              58 | 0.727565 |
+|                                         | diabetes        |  0.197709  |  0.136841 |              58 | 0.727565 |
+|                                         | chtn            |  0.187114  |  0.15959  |              58 | 0.727565 |
+| chorangiosis                            | gravida         | -0.0995993 |  0.456958 |              58 | 0.727565 |
+|                                         | diabetes        | -0.151986  |  0.254735 |              58 | 0.727565 |
+|                                         | chtn            |  0.0559017 |  0.67683  |              58 | 0.823967 |
+|                                         | parity          |  0.0316702 |  0.813432 |              58 | 0.876003 |
+| delayed_villous_maturation              | diabetes        | -0.105534  |  0.430446 |              58 | 0.727565 |
+|                                         | chtn            | -0.0862582 |  0.519689 |              58 | 0.727565 |
+|                                         | parity          |  0.067438  |  0.614974 |              58 | 0.819966 |
+|                                         | gravida         |  0.0235432 |  0.860749 |              58 | 0.887436 |
+| distal_villous_hypoplasia_focal/diffuse | gravida         |  0.0911227 |  0.496327 |              58 | 0.727565 |
+|                                         | parity          | -0.124569  |  0.351504 |              58 | 0.727565 |
+|                                         | chtn            |  0.0559017 |  0.67683  |              58 | 0.823967 |
+|                                         | diabetes        |  0.0189982 |  0.887436 |              58 | 0.887436 |
+| increased_perivillous_fibrin_deposition | gravida         | -0.114773  |  0.390948 |              58 | 0.727565 |
+|                                         | diabetes        | -0.105534  |  0.430446 |              58 | 0.727565 |
+|                                         | chtn            | -0.0862582 |  0.519689 |              58 | 0.727565 |
+|                                         | parity          |  0.0439813 |  0.743049 |              58 | 0.849841 |
+| increased_syncytial_knots               | gravida         | -0.0913091 |  0.495443 |              58 | 0.727565 |
+|                                         | parity          | -0.120899  |  0.365986 |              58 | 0.727565 |
+|                                         | diabetes        |  0.141561  |  0.289154 |              58 | 0.727565 |
+|                                         | chtn            |  0.126773  |  0.342981 |              58 | 0.727565 |
+| placental_infarction                    | parity          |  0.114351  |  0.392703 |              58 | 0.727565 |
+|                                         | diabetes        | -0.105534  |  0.430446 |              58 | 0.727565 |
+|                                         | chtn            |  0.163891  |  0.218954 |              58 | 0.727565 |
+|                                         | gravida         |  0.0412007 |  0.758786 |              58 | 0.849841 |

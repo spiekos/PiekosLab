@@ -8,7 +8,7 @@ def load_sheet():
     return sheet
 
 
-# standardizes all values to lowercase
+# standardizes all values to lowercase (except the values in the "id" column)
 # replaces spaces with underscores
 def standardize_sheet(df):
     if df is not None and not df.empty:
@@ -17,7 +17,8 @@ def standardize_sheet(df):
 
         df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_", regex=False)
 
-        df = df.map(lambda x: str(x).strip().lower() if pd.notnull(x) else np.nan)
+        cols_to_lower = [col for col in df.columns if col != "id"]
+        df[cols_to_lower] = df[cols_to_lower].map(lambda x: str(x).strip().lower() if pd.notnull(x) else np.nan)
 
     return df
 

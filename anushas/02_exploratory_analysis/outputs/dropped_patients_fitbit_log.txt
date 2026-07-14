@@ -3,46 +3,46 @@ per metric. Patients had their data nulled out for a certain metric if they had 
 days of data missing for that metric.
 
 Metric                                        | Patients Excluded
-Activities - Summary - Steps                  | 132
-Activities - Summary - totalDistances_x       | 132
-Activities - Summary - veryActiveMinutes_x    | 132
-Sleep - Summary - total minutes asleep_x      | 195
-Activities - Goals - activeMinutes            | 132
-Activities - Goals - caloriesOut              | 132
-Activities - Goals - distance                 | 132
-Activities - Goals - steps                    | 132
-Activities - Summary - activeScore            | 132
-Activities - Summary - activityCalories       | 132
-Activities - Summary - caloriesBMR            | 132
-Activities - Summary - caloriesOut            | 132
-Activities - Summary - totalDistances_y       | 132
-Activities - Summary - fairlyActiveMinutes    | 132
-Activities - Summary - lightlyActiveMinutes   | 132
-Activities - Summary - marginalCalories       | 132
-Activities - Summary - sedentaryMinutes       | 132
-Activities - Summary - steps                  | 132
-Activities - Summary - veryActiveMinutes_y    | 132
-Heart Rate - Resting Heart Rate               | 168
-Heart Rate - Zone: Out of Range - caloriesOut | 168
-Heart Rate - Zone: Out of Range - min         | 168
-Heart Rate - Zone: Out of Range - max         | 168
-Heart Rate - Zone: Out of Range - minutes     | 168
-Heart Rate - Zone: Fat Burn - caloriesOut     | 168
-Heart Rate - Zone: Fat Burn - min             | 168
-Heart Rate - Zone: Fat Burn - max             | 168
-Heart Rate - Zone: Fat Burn - minutes         | 168
-Heart Rate - Zone: Cardio - caloriesOut       | 168
-Heart Rate - Zone: Cardio - min               | 168
-Heart Rate - Zone: Cardio - max               | 168
-Heart Rate - Zone: Cardio - minutes           | 168
-Heart Rate - Zone: Peak - caloriesOut         | 168
-Heart Rate - Zone: Peak - min                 | 168
-Heart Rate - Zone: Peak - max                 | 168
-Heart Rate - Zone: Peak - minutes             | 168
-Sleep - Summary - Stages - deep               | 200
-Sleep - Summary - Stages - light              | 200
-Sleep - Summary - Stages - rem                | 200
-Sleep - Summary - Stages - wake               | 200
-Sleep - Summary - total minutes asleep_y      | 195
-Sleep - Summary - total sleep records         | 195
-Sleep - Summary - total time in bed           | 195
+activities_summary_steps                      | 132
+activities_summary_totaldistances             | 132
+activities_summary_veryactiveminutes          | 132
+sleep_summary_total_minutes_asleep            | 195
+activities_-_goals_-_activeminutes            | 132
+activities_-_goals_-_caloriesout              | 132
+activities_-_goals_-_distance                 | 132
+activities_-_goals_-_steps                    | 132
+activities_-_summary_-_activescore            | 132
+activities_-_summary_-_activitycalories       | 132
+activities_-_summary_-_caloriesbmr            | 132
+activities_-_summary_-_caloriesout            | 132
+activities_-_summary_-_totaldistances         | 132
+activities_-_summary_-_fairlyactiveminutes    | 132
+activities_-_summary_-_lightlyactiveminutes   | 132
+activities_-_summary_-_marginalcalories       | 132
+activities_-_summary_-_sedentaryminutes       | 132
+activities_-_summary_-_steps                  | 132
+activities_-_summary_-_veryactiveminutes      | 132
+heart_rate_-_resting_heart_rate               | 168
+heart_rate_-_zone:_out_of_range_-_caloriesout | 168
+heart_rate_-_zone:_out_of_range_-_min         | 168
+heart_rate_-_zone:_out_of_range_-_max         | 168
+heart_rate_-_zone:_out_of_range_-_minutes     | 168
+heart_rate_-_zone:_fat_burn_-_caloriesout     | 168
+heart_rate_-_zone:_fat_burn_-_min             | 168
+heart_rate_-_zone:_fat_burn_-_max             | 168
+heart_rate_-_zone:_fat_burn_-_minutes         | 168
+heart_rate_-_zone:_cardio_-_caloriesout       | 168
+heart_rate_-_zone:_cardio_-_min               | 168
+heart_rate_-_zone:_cardio_-_max               | 168
+heart_rate_-_zone:_cardio_-_minutes           | 168
+heart_rate_-_zone:_peak_-_caloriesout         | 168
+heart_rate_-_zone:_peak_-_min                 | 168
+heart_rate_-_zone:_peak_-_max                 | 168
+heart_rate_-_zone:_peak_-_minutes             | 168
+sleep_-_summary_-_stages_-_deep               | 200
+sleep_-_summary_-_stages_-_light              | 200
+sleep_-_summary_-_stages_-_rem                | 200
+sleep_-_summary_-_stages_-_wake               | 200
+sleep_-_summary_-_total_minutes_asleep        | 195
+sleep_-_summary_-_total_sleep_records         | 195
+sleep_-_summary_-_total_time_in_bed           | 195

@@ -12,6 +12,7 @@ def load_sheets():
     sheet1 = pd.read_csv("01_data_cleaning/processed_data/processed_placental_data.csv")
     sheet2 = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - variables of interest.csv")
     sheet3 = pd.read_csv("01_data_cleaning/processed_data/processed_clinical_data.csv")
+
     return sheet1, sheet2, sheet3
 
 
@@ -127,8 +128,8 @@ def run_test_3_demographics_collinearity(df):
     df.columns = df.columns.str.strip()
 
     # encode the "fetal sex" column: male = 1, female = 0
-    if "infant sex" in df.columns:
-        df["infant_sex_encoded"] = df["infant sex"].astype(str).str.strip().str.upper().map({"M": 1, "MALE": 1, "F": 0, "FEMALE": 0}).fillna(0).astype(int)
+    if "infant_sex" in df.columns:
+        df["infant_sex_encoded"] = df["infant_sex"].astype(str).str.strip().str.upper().map({"M": 1, "MALE": 1, "F": 0, "FEMALE": 0}).fillna(0).astype(int)
     else:
         df["infant_sex_encoded"] = np.nan
 
@@ -145,7 +146,7 @@ def run_test_3_demographics_collinearity(df):
     race_cols = [c for c in df.columns if c.startswith("race_") and c != "race_is_missing"]
 
     # create column list to run correlation test on
-    target_base = ["maternal age", "infant_sex_encoded", "prepregnancy BMI self or record", "smoking_encoded", "HISPANIC/LATINO"]    
+    target_base = ["maternal_age", "infant_sex_encoded", "prepregnancy_BMI_self_or_record", "smoking_encoded", "hispanic/latino"]    
     analysis_vars = [v for v in target_base if v in df.columns and not df[v].isna().all()] + race_cols
 
     # extract modeling slice and drop complete NaN arrays
@@ -244,16 +245,16 @@ def print_log(df_assets, fdr_threshold, prefix=""):
 
 def main():
     placental_metrics = [
-        "placental infarction", "distal villous hypoplasia focal/diffuse", "accelerated villous maturation", "increased syncytial knots", 
-        "decidual arteriopathy membrane role/basal plate/both", "segmental avascular villi small/intermediate/large", "delayed villous maturation", 
-        "maternal inflammatory response stage/grade", "villitis of unknown etiology, high/low grade, focal/diffuse", "increased perivillous fibrin deposition", 
+        "placental_infarction", "distal_villous_hypoplasia_focal/diffuse", "accelerated_villous_maturation", "increased_syncytial_knots", 
+        "decidual_arteriopathy_membrane_role/basal_plate/both", "segmental_avascular_villi_small/intermediate/large", "delayed_villous_maturation", 
+        "maternal_inflammatory_response_stage/grade", "villitis_of_unknown_etiology,_high/low_grade,_focal/diffuse", "increased_perivillous_fibrin_deposition", 
         "chorangiosis"
     ]
     delivery_metrics = [
-        "maternal age", "weight (kg)", "prepregnancy weight self or record", "prepregnancy BMI self or record", "gravida", "parity", "diabetes", "chtn"
+        "maternal_age", "weight_(kg)", "prepregnancy_weight_self_or_record", "prepregnancy_bmi_self_or_record", "gravida", "parity", "diabetes", "chtn"
     ]
     strict_delivery_metrics = [
-        "gest age del", "birthweight", "apgar 1", "apgar 5", "nicu days"
+        "gest_age_del", "birthweight", "apgar_1", "apgar_5", "nicu_days"
     ]
 
     placental_df, delivery_df, clinical_df = load_sheets()
