@@ -117,7 +117,7 @@ def run_test_2_fitbit_vs_all_outcomes(master_fitbit_path, clinical_vars, placent
 
 
 # test 3: runs correlation test comparing the following variables with each other:
-# age, race, fetal sex, prepregnancy BMI, delivery BMI, smoking
+# age, race, ethnicity, fetal sex, prepregnancy BMI, smoking
 # builds a correlation matrix, creates an annotated heatmap figure, and calculates VIF scores
 def run_test_3_demographics_collinearity(df):
     # skip first structural header/metadata row if present
@@ -136,8 +136,8 @@ def run_test_3_demographics_collinearity(df):
     if "smoking" in df.columns:
         df["smoking_encoded"] = df["smoking"].astype(str).str.strip().str.upper().map({
             "NEVER": 0,
-            "QUIT": 1,
-            "YES": 2
+            "QUIT": 0,
+            "YES": 1
         })
     else:
         df["smoking_encoded"] = np.nan
@@ -145,7 +145,7 @@ def run_test_3_demographics_collinearity(df):
     race_cols = [c for c in df.columns if c.startswith("race_") and c != "race_is_missing"]
 
     # create column list to run correlation test on
-    target_base = ["maternal age", "infant_sex_encoded", "prepregnancy BMI self or record", "delivery bmi", "smoking_encoded"]    
+    target_base = ["maternal age", "infant_sex_encoded", "prepregnancy BMI self or record", "smoking_encoded", "HISPANIC/LATINO"]    
     analysis_vars = [v for v in target_base if v in df.columns and not df[v].isna().all()] + race_cols
 
     # extract modeling slice and drop complete NaN arrays

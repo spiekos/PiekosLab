@@ -200,15 +200,15 @@ def get_metric_representation_matrices(sheet, feature_cols):
 
 
 # returns a diagnostic summary of data missingness across all patients for the following information:
-# maternal age, fetal sex, prepregnancy BMI, delivery BMI, race/ethnicity, smoking status
+# maternal age, fetal sex, prepregnancy BMI, race, ethnicity, smoking status
 def summarize_missing_info(sheet):
-    features = ["maternal age", "infant sex", "prepregnancy BMI self or record", "delivery bmi", "race", "smoking"]
+    features = ["maternal age", "infant sex", "prepregnancy BMI self or record", "race", "ethnicity", "smoking"]
 
     summary_data = []
     total_patients = len(sheet)
 
     for feature in features:
-        if (feature != "race") and (feature not in sheet.columns):
+        if (feature != "race") and (feature != "ethnicity") and (feature not in sheet.columns):
             summary_data.append({
                 "Feature / Metric": feature,
                 "Missing Count (NaNs)": "NOT FOUND",
@@ -218,6 +218,8 @@ def summarize_missing_info(sheet):
 
         if feature == "race" and "race_is_missing" in sheet.columns:
             null_count = sheet["race_is_missing"].sum()
+        elif feature == "ethnicity" and "eth_is_missing" in sheet.columns:
+            null_count = sheet["eth_is_missing"].sum()
         else:
             null_count = sheet[feature].isnull().sum()
 
@@ -266,8 +268,8 @@ def prepare_correlation_data(sheet_bucketed, feature_cols, timeframe_names, clin
     # keep only the columns that exist in the spreadsheet
     existing_clinical = [col for col in clinical_targets if col in clinical_raw.columns]
     # aggregate all clinical data for each patient into a dataframe
-    clinical_clean = clinical_raw.rename(columns = {"ID": "Record ID"})
-    clinical_clean = clinical_clean.groupby("Record ID")[existing_clinical].first().reset_index()
+    clinical_clean = clinical_raw.rename(columns = {"id": "record id"})
+    clinical_clean = clinical_clean.groupby("record id")[existing_clinical].first().reset_index()
 
     # isolate target placental variables
     placental_targets = [
@@ -283,8 +285,8 @@ def prepare_correlation_data(sheet_bucketed, feature_cols, timeframe_names, clin
     placental_clean = placental_clean.groupby("Record ID")[existing_placental].first().reset_index()
 
     # merge fitbit, clinical, and placental data
-    master_corr_df = pd.merge(fitbit_pivoted, clinical_clean, on = "Record ID", how = "inner")
-    master_corr_df = pd.merge(master_corr_df, placental_clean, on = "Record ID", how = "inner")
+    master_corr_df = pd.merge(fitbit_pivoted, clinical_clean, left_on = "record id", right_on = "Record ID", how = "inner")
+    master_corr_df = pd.merge(master_corr_df, placental_clean, on = "record id", how = "inner")
 
     # determine which placental columns survived the merge process
     final_placental_cols = [col for col in existing_placental if col in master_corr_df.columns]
