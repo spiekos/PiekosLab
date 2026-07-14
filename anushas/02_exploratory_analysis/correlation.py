@@ -1,14 +1,18 @@
 import pandas as pd
 import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
 from scipy.stats import spearmanr
 from statsmodels.stats.multitest import multipletests
+from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 
-# loads both sheets (sheet1 contains the placental histopathology data, and sheet2 contains the variables of interest data)
+# loads sheets (sheet1 contains the placental histopathology data, sheet2 contains the variables of interest data, sheet3 contains the cleaned clinical data)
 def load_sheets():
     sheet1 = pd.read_csv("01_data_cleaning/processed_data/processed_placental_data.csv")
     sheet2 = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - variables of interest.csv")
-    return sheet1, sheet2
+    sheet3 = pd.read_csv("01_data_cleaning/processed_data/processed_clinical_data.csv")
+    return sheet1, sheet2, sheet3
 
 
 # runs vectorized Spearman tests across given sets of independent and dependent variables
@@ -112,6 +116,87 @@ def run_test_2_fitbit_vs_all_outcomes(master_fitbit_path, clinical_vars, placent
     return run_spearman_core(master_df, fitbit_features, all_outcome_targets, id_col="id", fdr_threshold=fdr_threshold)
 
 
+# test 3: runs correlation test comparing the following variables with each other:
+# age, race, fetal sex, prepregnancy BMI, delivery BMI, smoking
+# builds a correlation matrix, creates an annotated heatmap figure, and calculates VIF scores
+def run_test_3_demographics_collinearity(df):
+    # skip first structural header/metadata row if present
+    if df.index.max() > 0:
+        df = df.iloc[1:].copy()
+
+    df.columns = df.columns.str.strip()
+
+    # encode the "fetal sex" column: male = 1, female = 0
+    if "infant sex" in df.columns:
+        df["infant_sex_encoded"] = df["infant sex"].astype(str).str.strip().str.upper().map({"M": 1, "MALE": 1, "F": 0, "FEMALE": 0}).fillna(0).astype(int)
+    else:
+        df["infant_sex_encoded"] = np.nan
+
+    # encode the "smoking" column
+    if "smoking" in df.columns:
+        df["smoking_encoded"] = df["smoking"].astype(str).str.strip().str.upper().map({
+            "NEVER": 0,
+            "QUIT": 1,
+            "YES": 2
+        })
+    else:
+        df["smoking_encoded"] = np.nan
+
+    race_cols = [c for c in df.columns if c.startswith("race_") and c != "race_is_missing"]
+
+    # create column list to run correlation test on
+    target_base = ["maternal age", "infant_sex_encoded", "prepregnancy BMI self or record", "delivery bmi", "smoking_encoded"]    
+    analysis_vars = [v for v in target_base if v in df.columns and not df[v].isna().all()] + race_cols
+
+    # extract modeling slice and drop complete NaN arrays
+    modeling_df = df[analysis_vars].dropna().apply(pd.to_numeric, errors='coerce').dropna()
+    
+    modeling_df = modeling_df.dropna(how = "all")
+    
+    if modeling_df.empty or len(modeling_df) < 5:
+        print("Warning: Insufficient numeric overlap entries to evaluate Test 3.")
+        return
+
+    # build the Spearman correlation matrix
+    corr_matrix = modeling_df.corr(method = "spearman")
+
+    # render and save the annotated heatmap figure
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(
+        corr_matrix, 
+        annot=True,
+        fmt=".2f",
+        cmap="coolwarm",
+        vmin=-1, vmax=1,
+        square=True, 
+        linewidths=0.5
+    )
+    plt.title("Baseline Demographics Correlation Matrix (Spearman $\\rho$)", fontsize=14, pad=15)
+    plt.tight_layout()
+    plt.savefig("02_exploratory_analysis/outputs/figures/demographics_correlation_heatmap.png", dpi=300)
+    plt.close()
+
+    # process Variance Inflation Factors (VIF)
+    vif_df_clean = modeling_df.dropna(how = "any").copy()
+    if len(vif_df_clean) > 10:
+        vif_records = []
+        X = vif_df_clean.copy()
+        X['intercept'] = 1.0
+
+        for col in vif_df_clean.columns:
+            col_idx = X.columns.get_loc(col)
+            vif_val = variance_inflation_factor(X.values, col_idx)
+            vif_records.append({"Variable": col, "VIF": vif_val})
+
+        vif_df = pd.DataFrame(vif_records).sort_values(by="VIF", ascending=False)
+        with open("02_exploratory_analysis/outputs/test3_demographics_vif.txt", "w") as vif_file:
+            vif_file.write(vif_df.to_markdown(index=False))
+    else:
+        print(f"VIF Warning: Too many missing values across columns (only {len(vif_df_clean)} complete rows). Skipping VIF calculation to avoid biased scores.")
+    
+    return corr_matrix
+
+
 # print calculated correlation data into respective file destinations
 def print_log(df_assets, fdr_threshold, prefix=""):
     # if master results came back empty, break early
@@ -171,7 +256,7 @@ def main():
         "gest age del", "birthweight", "apgar 1", "apgar 5", "nicu days"
     ]
 
-    placental_df, delivery_df = load_sheets()
+    placental_df, delivery_df, clinical_df = load_sheets()
     
     # run and log test 1: placental histopathology variables vs delivery variables
     test1_assets = run_test_1_placental_vs_delivery(
@@ -192,8 +277,10 @@ def main():
         placental_vars = placental_metrics,
         fdr_threshold = 0.05
     )
-    
     print_log(test2_assets, fdr_threshold = 0.05, prefix = "fitbit_")
+
+    test3_results = run_test_3_demographics_collinearity(clinical_df)
+    test3_results.to_csv("02_exploratory_analysis/outputs/demographics_correlation_matrix.csv")
 
 
 if __name__ == "__main__":
