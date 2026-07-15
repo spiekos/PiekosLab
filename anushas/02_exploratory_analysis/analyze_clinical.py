@@ -51,7 +51,48 @@ def summarize_missing_info(sheet):
     return pd.DataFrame(summary_data), missing_ids
 
 
-def print_log(missing_report, missing_ids):
+# calculates summary statistics for clinical demographic features
+# returns two tables containing these statistics:
+# one calculates median/IQR for continuous features, and the other calculates count/% for categorical features
+def calc_demographic_stats(df):
+    continuous_features = ["maternal_age", "prepregnancy_bmi_self_or_record"]
+    categorical_features = ["infant_sex", "race", "ethnicity", "smoking_encoded"]
+    
+    continuous_stats = []
+    categorical_stats = []
+    total_n = len(df)
+
+    # continuous features: calculate median, IQR
+    for col in continuous_features:
+        if col in df.columns:
+            clean_col = df[col].dropna()
+            median = clean_col.median()
+            q1 = clean_col.quantile(0.25)
+            q3 = clean_col.quantile(0.75)
+            iqr = q3 - q1
+            continuous_stats.append({
+                "Feature": col,
+                "Median": f"{median:.2f}",
+                "IQR": f"{iqr:.2f}"
+            })
+
+    # categorical features: calculate count, %
+    for col in categorical_features:
+        if col in df.columns:
+            counts = df[col].value_counts(dropna=False)
+            for val, count in counts.items():
+                pct = (count / total_n) * 100
+                categorical_stats.append({
+                    "Feature": col,
+                    "Category": val,
+                    "Count": f"{count}",
+                    "%": f"{pct:.1f}%"
+                })
+
+    return pd.DataFrame(continuous_stats), pd.DataFrame(categorical_stats)
+
+
+def print_log(missing_report, missing_ids, cont_summary_table, cat_summary_table):
     log_path = "02_exploratory_analysis/outputs/clinical_data_analysis.txt"
 
     with open(log_path, "w") as f:
@@ -68,13 +109,27 @@ def print_log(missing_report, missing_ids):
             f.write(f"{feature}: {', '.join(map(str, ids)) if ids else 'None'}\n")
         f.write("\n")
 
+        f.write("Summary statistics for clinical demographic features:\n")
+        f.write("Continuous Features (Median, IQR):\n")
+        f.write(f"{'Feature':<35} {'Median':<15} {'IQR':<15}\n")
+        for _, row in cont_summary_table.iterrows():
+            f.write(f"{row['Feature']:<35} {row['Median']:<15} {row['IQR']:<15}\n")
+        f.write("\n\n")
+        
+        f.write("Categorical Features (Count, %):\n")
+        f.write(f"{'Feature':<25} {'Category':<20} {'Count':<15} {'%':<15}\n")
+        for _, row in cat_summary_table.iterrows():
+            f.write(f"{row['Feature']:<25} {str(row['Category']):<20} {row['Count']:<15} {row['%']:<15}\n")
+        f.write("\n\n")
+
 
 def main():
     clinical_sheet = load_sheet()
 
     missing_report, missing_ids = summarize_missing_info(clinical_sheet)
+    cont_summary_table, cat_summary_table = calc_demographic_stats(clinical_sheet)
 
-    print_log(missing_report, missing_ids)
+    print_log(missing_report, missing_ids, cont_summary_table, cat_summary_table)
 
 
 if __name__ == "__main__":
