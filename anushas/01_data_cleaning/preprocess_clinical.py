@@ -52,20 +52,19 @@ def filter_by_status(sheet):
 def unmask_missing_data(df):    
     missing_placeholders = [
         "n/a", "na", "unknown", "declined", "unspecified", 
-        "not applicable", "missing", "nan", "none"
+        "not applicable", "missing", "nan", "none", "null"
     ]
     
-    # standardize text and swap placeholders with true nan values
     for col in df.columns:
         if df[col].dtype == "object":
-            clean_series = df[col].astype(str).str.strip()
-            df.loc[clean_series.isin(missing_placeholders), col] = np.nan
-
+            pattern = r'^\s*(' + '|'.join(missing_placeholders) + r')\s*$'
+            df[col] = df[col].replace(pattern, np.nan, regex=True)
+            
     return df
 
 
 # creates binary indicator columns (1/0) for categorical features
-# currently, a binary indicator column is being added for the "race" and "ethnicity" columns
+# currently, a binary indicator column is being added for the "race", "ethnicity", and "smoking" columns
 def add_missingness_indicators(sheet):
     sheet_copy = sheet.copy()
 
@@ -84,8 +83,40 @@ def add_missingness_indicators(sheet):
     eth_index = sheet_copy.columns.get_loc("ethnicity")
     target_eth_index = eth_index + 1
     sheet_copy.insert(loc = target_eth_index, column = "eth_is_missing", value = eth_missing_values)
-    
+
+    # add missingness indicators for smoking
+    missing_placeholders = ["nan", "na", "n/a", "unknown", "declined", "missing"]
+    smoking_series = sheet["smoking"].astype(str)
+    missing_smoking_mask = smoking_series.isin(missing_placeholders) | sheet["smoking"].isnull()
+
+    # insert the "smoking_is_missing" column immediately after the "smoking" column
+    smoking_index = sheet_copy.columns.get_loc("smoking")
+    target_smoking_index = smoking_index + 1
+    sheet_copy.insert(loc = target_smoking_index, column = "smoking_is_missing", value = missing_smoking_mask)
+
     return sheet_copy
+
+
+# encodes smoking column: "never" and "quit" -> 0, "yes" -> 1
+def encode_smoking_status(df):
+    df_copy = df.copy()
+    
+    if "smoking" in df_copy.columns:
+        s = df_copy["smoking"].astype(str).str.strip()
+        mapping = {
+            'never': 0, 
+            'quit': 0, 
+            'yes': 1
+        }
+        encoded_series = s.map(mapping)
+        encoded_series = encoded_series.fillna(0).astype(int)
+
+        smoking_idx = df_copy.columns.get_loc("smoking")
+        df_copy.insert(smoking_idx + 1, "smoking_encoded", encoded_series)
+
+        # df_copy = df_copy.drop(columns = ["smoking"], errors = "ignore")
+                        
+    return df_copy
 
 
 # imputes missing values in "prepregnancy_bmi_self_or_record" with the median of the existing non-missing values
@@ -269,6 +300,7 @@ def main():
     sheet_cleaned = filter_by_status(sheet_cleaned)
     sheet_cleaned = unmask_missing_data(sheet_cleaned)
     sheet_cleaned = add_missingness_indicators(sheet_cleaned)
+    sheet_cleaned = encode_smoking_status(sheet_cleaned)
     sheet_cleaned = impute_bmi_median(sheet_cleaned)
     sheet_encoded = one_hot_encode_demographics(sheet_cleaned)
 

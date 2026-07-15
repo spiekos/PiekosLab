@@ -1,4 +1,4 @@
-Following are various statistics about the clinical dataset, focusing on information about missing data.
+Following are various statistics about the clinical dataset.
 
 Patient missingness summary report:
 (Note that there are truly 5 missing values for the feature "prepregnancy_bmi_self_or_record".

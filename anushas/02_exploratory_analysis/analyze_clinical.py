@@ -31,6 +31,9 @@ def summarize_missing_info(sheet):
         elif feature == "ethnicity" and "eth_is_missing" in local_sheet.columns:
             local_sheet["eth_is_missing"] = pd.to_numeric(local_sheet["eth_is_missing"], errors="coerce")
             mask = local_sheet["eth_is_missing"] == 1
+        elif feature == "smoking" and "smoking_is_missing" in local_sheet.columns:
+            local_sheet["smoking_is_missing"] = pd.to_numeric(local_sheet["smoking_is_missing"], errors="coerce")
+            mask = local_sheet["smoking_is_missing"] == 1
         else:
             mask = local_sheet[feature].isnull()
 
@@ -52,7 +55,7 @@ def print_log(missing_report, missing_ids):
     log_path = "02_exploratory_analysis/outputs/clinical_data_analysis.txt"
 
     with open(log_path, "w") as f:
-        f.write("Following are various statistics about the clinical dataset, focusing on information about missing data.\n\n")
+        f.write("Following are various statistics about the clinical dataset.\n\n")
 
         f.write("Patient missingness summary report:\n")
         f.write('(Note that there are truly 5 missing values for the feature "prepregnancy_bmi_self_or_record".\n')
