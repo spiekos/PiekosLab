@@ -88,6 +88,23 @@ def add_missingness_indicators(sheet):
     return sheet_copy
 
 
+# imputes missing values in "prepregnancy_bmi_self_or_record" with the median of the existing non-missing values
+def impute_bmi_median(df):
+    df_clean = df.copy()
+
+    col_name = "prepregnancy_bmi_self_or_record"
+
+    if col_name in df_clean.columns:
+        # ensure the column is numeric; convert errors to NaN
+        df_clean[col_name] = pd.to_numeric(df_clean[col_name], errors="coerce")
+        
+        bmi_median = df_clean[col_name].median()
+        
+        df_clean[col_name] = df_clean[col_name].fillna(bmi_median)
+            
+    return df_clean
+
+
 # one-hot encodes the "race" and "ethnicity" columns of the clinical sheet, prefixes the new features, and places them directly after the "race_is_missing" column
 def one_hot_encode_demographics(sheet):
     final_df = sheet.copy()
@@ -197,9 +214,6 @@ def get_race_counts(sheet):
     patient_df = sheet.copy()
     total_patients = len(patient_df)
 
-    print(f"DEBUG: Total patients in dataframe: {total_patients}")
-    print(patient_df["id"].unique())
-
     race_cols = sorted([col for col in patient_df.columns if col.startswith("race_") and col != "race_is_missing"])
     eth_col = "hispanic/latino"
 
@@ -255,6 +269,7 @@ def main():
     sheet_cleaned = filter_by_status(sheet_cleaned)
     sheet_cleaned = unmask_missing_data(sheet_cleaned)
     sheet_cleaned = add_missingness_indicators(sheet_cleaned)
+    sheet_cleaned = impute_bmi_median(sheet_cleaned)
     sheet_encoded = one_hot_encode_demographics(sheet_cleaned)
 
     race_table, total_patients = get_race_counts(sheet_encoded)

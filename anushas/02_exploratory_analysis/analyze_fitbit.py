@@ -213,34 +213,30 @@ def summarize_missing_info(sheet):
     features = ["maternal_age", "infant_sex", "prepregnancy_bmi_self_or_record", "race", "ethnicity", "smoking"]
 
     summary_data = []
+    missing_ids = {}
     total_patients = len(sheet)
 
     local_sheet = sheet.copy()
 
     for feature in features:
-        if (feature != "race") and (feature != "ethnicity") and (feature not in local_sheet.columns):
-            summary_data.append({
-                "Feature / Metric": feature,
-                "Missing Count (NaNs)": "Not Found",
-                "Percent Missing": "N/A"
-            })
-            continue
-
         if feature in local_sheet.columns:
             local_sheet[feature] = local_sheet[feature].replace(
                 ["nan", "na", "none", "", "null", "n/a"], np.nan
             )
         
-        if feature == "race" and "race_is_missing" in sheet.columns:
+        if feature == "race" and "race_is_missing" in local_sheet.columns:
             local_sheet["race_is_missing"] = pd.to_numeric(local_sheet["race_is_missing"], errors="coerce")
-            null_count = sheet["race_is_missing"].sum()
-        elif feature == "ethnicity" and "eth_is_missing" in sheet.columns:
+            mask = local_sheet["race_is_missing"] == 1
+        elif feature == "ethnicity" and "eth_is_missing" in local_sheet.columns:
             local_sheet["eth_is_missing"] = pd.to_numeric(local_sheet["eth_is_missing"], errors="coerce")
-            null_count = sheet["eth_is_missing"].sum()
+            mask = local_sheet["eth_is_missing"] == 1
         else:
-            null_count = sheet[feature].isnull().sum()
+            mask = local_sheet[feature].isnull()
 
+        null_count = mask.sum()
         pct_missing = (null_count / total_patients) * 100
+
+        missing_ids[feature] = local_sheet.loc[mask, "id"].tolist()
 
         summary_data.append({
             "Feature / Metric": feature,
@@ -248,7 +244,7 @@ def summarize_missing_info(sheet):
             "Percent Missing": f"{pct_missing:.2f}%"
         })
 
-    return pd.DataFrame(summary_data)
+    return pd.DataFrame(summary_data), missing_ids
 
 
 # collapses multi-row trimester data into single-row patient averages for each metric
@@ -317,7 +313,7 @@ def prepare_correlation_data(sheet_bucketed, feature_cols, timeframe_names, clin
 
 # print all calculated data into a log file
 def print_log(total_patients, total_missing, per_patient, max_con_missing, unique_dates, summary_stats, 
-              patients_per_timeframe, metric_matrix, pt_summary, metric_summary, num_metrics, missing_report):
+              patients_per_timeframe, metric_matrix, pt_summary, metric_summary, num_metrics, missing_report, missing_ids):
     log_path = "02_exploratory_analysis/outputs/fitbit_data_analysis.txt"
 
     with open(log_path, "w") as f:
@@ -365,6 +361,11 @@ def print_log(total_patients, total_missing, per_patient, max_con_missing, uniqu
         f.write(missing_report.to_string(index = False))
         f.write("\n\n")
 
+        f.write("Patient IDs of patients with missing data per feature:\n")
+        for feature, ids in missing_ids.items():
+            f.write(f"{feature}: {', '.join(map(str, ids)) if ids else 'None'}\n")
+        f.write("\n")
+
 
 def main():
     fitbit_sheet, placental_sheet, clinical_sheet = load_sheets()
@@ -389,10 +390,10 @@ def main():
     summary_stats = calc_summary_stats(sheet_filtered, feature_cols)
     patients_per_timeframe = get_patients_per_timeframe(sheet_bucketed, feature_cols, timeframe_names)
     metric_matrix, pt_summary, metric_summary = get_metric_representation_matrices(sheet_filtered, feature_cols)
-    missing_report = summarize_missing_info(clinical_sheet)
+    missing_report, missing_ids = summarize_missing_info(clinical_sheet)
 
     print_log(total_patients, total_missing, per_patient, max_con_missing, unique_dates, summary_stats, 
-              patients_per_timeframe, metric_matrix, pt_summary, metric_summary, len(feature_cols), missing_report)
+              patients_per_timeframe, metric_matrix, pt_summary, metric_summary, len(feature_cols), missing_report, missing_ids)
 
     correlation_ready_df = prepare_correlation_data(sheet_bucketed, feature_cols, timeframe_names, clinical_sheet, placental_sheet)
     if not correlation_ready_df.empty:
