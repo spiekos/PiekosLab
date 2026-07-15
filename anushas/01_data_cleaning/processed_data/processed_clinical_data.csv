@@ -22,7 +22,6 @@ DP3-0027,delivered,2,control,control,34,165,97.6,35.8,86.3,31.7,0,1,0,0,0,0,neve
 DP3-0028,delivered,1,control,control,31,163,84.6,31.8,67.1,25.3,0,1,0,0,0,0,never,5,4,0,0,?,2,38.1,2940,m,5,7,0,no
 DP3-0029E,delivered,1,control,control,36,152,104,45.0,104.3,45.2,0,1,0,0,0,0,never,5,1,0,1,induced (does not include prom,1,37.0,2350,f,9,9,0,<20
 DP3-0030,delivered,0,control,control,30,152,86,37.2,70.3,30.4,0,0,1,0,0,0,quit,1,3,0,0,spontaneous,2,40.3,3000,f,3,8,0,no
-DP3-0031,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,6,0,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0032,delivered,0,control,control,35,157,79.1,32.1,58.6,23.8,0,1,0,0,0,0,never,2,0,0,0,induced (does not include prom,1,39.3,3590,f,8,9,0,no
 DP3-0033E,delivered,0,control,control,35,157,98,39.8,97.1,39.4,0,1,0,0,0,0,never,5,0,0,1,spontaneous,1,39.7,3810,m,9,9,0,<14
 DP3-0034,delivered,1,control,control,38,177.8,102.7,32.5,na,26.9,0,1,0,0,0,0,quit,1,0,0,0,1,0,40.7,3300,f,8,9,1.5,<14
@@ -48,7 +47,6 @@ DP3-0055E,delivered,0,control,control,32,160,101,39.5,97.5,38.1,0,1,0,0,0,0,neve
 DP3-0056,delivered,1,hdp,lo severe sipe,34,173,93,31.1,78.0,26.1,0,1,0,0,0,0,never,3,1,2,1,?,2,36.7,4060,m,2,7,0,no
 DP3-0057,delivered,1,control,control,0,165.1,75.1,27.6,64.4,23.6,0,1,0,0,0,0,quit,1,0,na,na,induced,chart,37.0,2590,m,7,8,0,no
 DP3-0060E,delivered,0,control,control,26,163,85,32.0,76.2,28.7,0,1,0,0,0,0,never,2,1,0,0,?,2,39.0,3210,m,9,9,0,no
-DP3-0061E,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,2,0,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0062,delivered,2,control,control,38,157,80,32.5,68.3,27.7,0,1,0,0,0,0,never,2,0,0,0,?,2,39.0,3440,f,8,9,0,<20
 DP3-0064,delivered,0,control,control,38,160,66,25.8,54.7,21.4,0,0,0,1,0,0,never,4,0,0,0,spontaneous,1,39.0,3310,f,9,9,0,no
 DP3-0065,delivered,0,control,control,34,162,72.1,27.5,65.2,24.9,0,1,0,0,0,0,quit,2,1,1,0,spontaneous,1,39.9,3040,f,7,9,0,no
@@ -63,7 +61,6 @@ DP3-0074,delivered,0,control,control,34,173,72,24.1,61.2,20.5,0,1,0,0,0,0,never,
 DP3-0075,delivered,2,control,control,38,176,80,25.8,64.4,20.8,0,1,0,0,0,0,never,3,0,0,0,induced (does not include prom,1,37.0,3030,f,9,9,0,<14
 DP3-0076E,delivered,0,hdp,lo mild pe,38,170,113,39.1,98.9,34.2,0,1,0,0,0,0,quit,3,1,0,0,spontaneous,1,37.0,3880,f,7,8,0,no
 DP3-0077,delivered,0,control,control,48,178,73,23.0,na,na,0,0,1,0,0,0,never,2,1,0,0,0,0,38.1,3800,m,9,9,2.58,<14
-DP3-0078E,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,2,2,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0080,delivered,1,hdp,eo severe pe,34,150,61.6,27.4,na,20.8,0,1,0,0,0,0,never,2,0,0,0,0,1,33.6,3000,m,5,6,22.38,no
 DP3-0082,delivered,0,control,control,33,168,85.2,30.2,71.4,25.3,0,1,0,0,0,0,never,2,3,0,0,induced (does not include prom,1,41.1,4450,m,7,8,0,no
 DP3-0083E,delivered,0,control,control,27,160,66,25.8,54.0,21.1,0,1,0,0,0,0,never,2,1,0,0,spontaneous,1,39.4,3715,m,9,9,0,no
@@ -76,9 +73,7 @@ DP3-0091E,delivered,1,hdp,lo mild pe,31,150,104,46.2,98.8,43.9,0,1,0,0,0,0,never
 DP3-0092,delivered,1,hdp,lo severe sipe,35,168,102.2,36.2,na,na,0,1,0,0,0,0,never,5,0,1,1,1,0,37.1,3220,m,7,8,2.21,no
 DP3-0093,delivered,2,control,control,31,152,62.9,27.2,49.4,21.4,0,1,0,0,0,0,never,3,2,0,0,?,2,39.4,3400,f,9,9,0,no
 DP3-0094,delivered,1,control,control,28,165,110.6,40.6,116.3,42.7,0,1,0,0,0,0,yes,4,2,0,0,?,2,40.0,4120,f,8,9,0,no
-DP3-0096,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,1,0,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0097,delivered,0,control,control,27,165,82.3,30.2,64.3,23.6,0,1,0,0,0,0,never,1,0,0,0,prom,1,40.3,3270,f,9,9,0,no
-DP3-0098,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,1,0,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0100E,delivered,0,control,control,31,167,79,28.3,64.3,24.2,0,1,0,0,0,0,never,1,2,0,0,induced (does not include prom,1,40.4,3580,m,8,9,0,no
 DP3-0101,delivered,1,sptb,sptb,35,157.5,70,28.2,60.5,24.4,0,1,0,0,0,0,never,3,0,0,0,spontaneous,2,35.3,2340,f,9,9,0,no
 DP3-0102,delivered,0,control,control,28,160,149,58.2,142.4,55.6,0,0,1,0,0,0,quit,4,4,0,0,spontaneous,1,39.9,4480,m,9,9,0,no
@@ -96,7 +91,6 @@ DP3-0118E,delivered,0,hdp,ghtn,32,165,116,42.6,99.1,36.4,0,1,0,0,0,0,never,1,2,0
 DP3-0119E,delivered,0,control,control,22,165,95,34.9,87.5,32.2,0,1,0,0,0,0,never,4,0,0,0,induced (does not include prom,1,39.3,4070,m,9,9,0,no
 DP3-0120,delivered,1,control,control,37,164,83,30.9,70.8,26.3,0,1,0,0,0,0,quit,2,2,0,0,?,2,39.0,3390,f,9,10,0,no
 DP3-0121,delivered,1,control,control,31,162,102,38.9,na,34.6,0,1,0,0,0,0,never,4,1,0,0,1,0,39.5,3910,m,3,7,2,<14
-DP3-0122,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,4,0,na,na,na,na,sab,na,na,na,na,na,<14
 DP3-0123,delivered,0,control,control,32,157,62.8,25.5,49.5,20.1,0,1,0,0,0,0,never,2,0,0,0,induced (does not include prom,1,40.6,3125,f,9,9,0,<20
 DP3-0124,delivered,1,hdp,lo severe sipe,39,160,98.9,38.6,76.2,29.8,0,0,1,0,0,0,never,2,0,0,1,induced (does not include prom,2,37.4,2920,f,7,8,0,<20
 DP3-0125,delivered,0,control,control,27,158.8,73.8,29.3,57.2,22.7,0,0,0,1,0,0,never,2,0,0,0,spontaneous,1,39.0,3370,m,8,9,0,no
@@ -110,22 +104,16 @@ DP3-0134E,delivered,0,control,control,31,165,96,35.3,86.0,31.6,0,1,0,0,0,0,never
 DP3-0135E,delivered,0,hdp,ghtn,34,175,84,27.4,67.9,22.2,0,1,0,0,0,0,never,2,1,0,0,spontaneous,1,39.7,3460,f,9,9,0,no
 DP3-0136E,delivered,1,hdp,lo mild pe,34,163,73,27.5,59.0,22.2,0,1,0,0,0,0,never,1,0,0,0,spontaneous,2,38.4,3480,f,8,9,0,no
 DP3-0137E,delivered,0,control,control,40,168,71,25.2,60.5,21.4,0,1,0,0,0,0,never,2,0,0,0,spontaneous,1,38.7,2930,m,7,9,0,no
-DP3-0139,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,1,2,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0140E,delivered,1,sptb,sptb,32,163,88.9,33.5,77.5,29.2,0,1,0,0,0,0,never,1,2,0,0,spontaneous,1,35.6,2660,f,9,9,0,no
 DP3-0142,delivered,2,control,control,31,154.9,84,35.0,64.9,27.0,0,1,0,0,0,0,never,1,0,0,1,spontaneous,1,37.7,2870,m,9,9,0,<14
 DP3-0143,delivered,0,control,control,0,170,87,30.1,77.1,24.6,0,0,1,0,0,0,never,7,0,0,0,1,2,36.6,2450,f,8,9,2.08,<14
 DP3-0144,delivered,0,control,control,32,,,na,na,na,0,1,0,0,0,0,never,1,1,0,0,1,0,37.9,2580,f,8,9,2.17,no
-DP3-0147E,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,2,2,na,na,na,na,sab,na,na,na,na,na,no
-DP3-0150E,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,4,1,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0151E,delivered,0,control,control,30,163,128,48.2,120.8,45.5,0,1,0,0,0,0,never,2,4,0,1,?,2,39.7,3310,f,8,9,0,<14
 DP3-0152,delivered,2,control,control,31,173,76.6,25.6,na,23.1,0,1,0,0,0,0,never,2,0,0,0,0,0,40.0,3200,f,7,9,1.25,no
-DP3-0153,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,2,0,na,na,na,na,sab,na,na,na,na,na,no
-DP3-0154,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,1,1,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0155E,delivered,2,fgr,fgr <5,21,157,103,41.8,89.6,36.4,0,1,0,0,0,0,never,2,3,0,0,spontaneous,1,40.0,2850,m,8,9,0,no
 DP3-0156,delivered,2,hdp,ghtn,30,175.3,85.3,27.8,70.4,22.9,0,1,0,0,1,0,never,3,0,0,0,induced (does not include prom,1,39.3,3260,f,8,9,0,<20
 DP3-0157,delivered,0,control,control,35,155,66,27.5,59.4,24.7,0,1,0,0,0,0,never,3,1,0,0,spontaneous,1,38.4,3040,m,9,9,0,no
 DP3-0158,delivered,2,hdp,lo mild pe,22,175,99,32.3,80.3,26.2,0,1,0,0,0,0,quit,1,0,0,0,induced (does not include prom,1,37.3,3320,f,9,9,0,no
-DP3-0159E,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,1,1,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0160,delivered,0,hdp,ghtn,31,163,65.9,24.8,54.9,20.7,0,1,0,0,0,0,never,1,2,0,0,induced (does not include prom,1,39.1,3210,f,9,9,0,no
 DP3-0161,delivered,2,fgr,lo fgr <5,30,165,83.8,30.8,75.7,27.8,0,1,0,0,0,0,never,2,0,0,0,induced (does not include prom,1,38.0,2590,m,9,9,0,<14
 DP3-0162,delivered,0,hdp,ghtn,35,152,71.7,31.0,50.4,21.8,0,1,0,0,0,0,never,2,3,0,0,induced (does not include prom,2,37.3,2910,m,8,9,0,<20
@@ -158,7 +146,6 @@ DP3-0193,delivered,0,control,control,29,162.6,105.9,40.1,85.3,32.3,0,1,0,0,0,0,n
 DP3-0195,delivered,0,control,control,38,155,67.4,28.1,56.2,23.4,0,1,0,0,1,0,never,3,1,0,0,?,2,39.7,3500,f,9,9,0,<20
 DP3-0196E,delivered,0,control,control,41,165,82,30.1,77.1,28.3,0,1,0,0,0,0,never,3,0,1,0,?,2,38.3,2590,f,1,3,0,<14
 DP3-0197,delivered,2,hdp,eo severe pe,36,165.1,80.1,29.4,na,23.6,0,0,0,1,0,0,never,1,1,0,0,1,0,34.1,2070,m,1,5,7.38,no
-DP3-0198,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,4,0,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0199,delivered,0,control,control,37,170,123.1,42.6,108.0,37.4,0,1,0,0,0,0,quit,2,0,3,0,induced (does not include prom,2,37.4,4270,m,8,9,0,<20
 DP3-0200,delivered,2,control,control,33,170,76.4,26.4,65.6,22.7,0,1,0,0,0,0,never,1,2,0,0,spontaneous,1,39.4,3320,m,9,9,0,<20
 DP3-0201E,delivered,2,hdp,lo severe pe,26,173,153.6,51.3,143.6,48.0,0,1,0,0,0,0,never,1,1,0,0,?,2,38.4,2930,f,8,9,0,no
@@ -204,10 +191,8 @@ DP3-0245,delivered,0,control,control,33,168,101.4,35.9,86.6,30.7,0,1,0,0,0,0,qui
 DP3-0246,delivered,0,hdp,pp severe sipe,30,170,153.6,53.1,135.2,46.8,0,1,0,0,0,0,yes,1,0,0,1,?,1,39.1,3630,f,8,9,0,>28
 DP3-0247,delivered,3,fgr,fgr <5,36,175.26,75.9,24.7,56.7,18.5,0,0,1,0,0,0,yes,4,2,0,0,spontaneous,1,38.7,2420,f,8,9,0,<14
 DP3-0248E,delivered,2,hdp,lo mild pe,30,168,118,41.8,99.4,35.2,0,1,0,0,0,0,never,1,1,0,0,induced (does not include prom,2,38.3,2540,f,7,9,0,no
-DP3-0249,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,1,1,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0250,delivered,0,control,control,39,157,66,26.8,na,24.7,0,1,0,0,0,0,quit,5,0,0,0,1,0,39.1,3510,m,8,9,,no
 DP3-0251,delivered,0,control,control,35,150,62.4,27.7,50.3,22.4,0,1,0,0,0,0,never,3,0,0,0,?,1,40.6,2990,m,9,9,0,no
-DP3-0252,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,3,0,na,na,na,na,sab,na,na,na,na,na,<14
 DP3-0253,delivered,0,control,control,29,161,97.1,37.5,83.0,32.0,0,1,0,0,0,0,never,1,0,0,0,prom,1,39.3,3510,m,8,8,0,<14
 DP3-0254,delivered,3,control,control,38,168,83,29.4,66.2,23.5,0,1,0,0,0,0,never,3,0,0,0,induced (does not include prom,1,40.0,3570,m,9,9,0,<14
 DP3-0255,delivered,0,control,control,36,157,59.4,24.1,54.8,22.2,0,1,0,0,0,0,never,3,1,1,0,?,2,39.4,3030,m,8,9,0,no
@@ -264,32 +249,27 @@ DP3-0313,delivered,3,control,control,29,168,89.6,31.7,71.2,25.2,0,0,1,0,0,0,neve
 DP3-0314,delivered,0,control,control,36,175,63,20.6,53.6,17.5,0,1,0,0,0,0,never,4,1,0,0,?,1,39.7,3000,f,9,9,0,no
 DP3-0315,delivered,0,control,control,37,185,134,39.2,119.3,34.9,0,1,0,0,0,0,never,6,0,0,1,?,1,38.1,3109,f,9,9,0,<14
 DP3-0316,delivered,0,control,control,30,170,87,30.1,65.6,22.7,0,1,0,0,0,0,never,1,2,0,0,induced (does not include prom,1,39.1,4170,f,2,8,0,<20
-DP3-0317,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,6,1,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0318,delivered,0,control,control,43,157,76.3,31.0,67.6,27.4,0,1,0,0,0,0,yes,10,2,0,0,?,2,39.7,3430,f,8,9,0,no
 DP3-0319,delivered,0,control,control,33,175.3,95.5,31.1,87.8,28.6,0,0,1,0,0,0,quit,5,1,0,0,spontaneous,1,40.7,2960,f,8,9,0,no
 DP3-0320,delivered,0,control,control,37,157,70.5,28.6,56.2,22.8,0,1,0,0,0,0,never,6,2,0,0,spontaneous,1,38.6,2860,f,9,9,0,no
-DP3-0322E,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,4,0,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0323,delivered,3,fgr,fgr <3+chtn,28,148,78,35.6,67.0,30.6,0,1,0,0,0,0,never,3,0,1,1,?,2,39.0,2280,f,8,9,0,<20
 DP3-0324,delivered,0,control,control,33,163,85.1,32.0,na,28.5,0,1,0,0,0,0,never,1,3,1,0,0,1,,3540,m,9,9,2.75,no
 DP3-0325E,delivered,0,control,control,38,147.3,85,39.2,71.9,33.2,0,1,0,0,0,0,quit,2,8,1,1,?,2,38.1,3195,f,8,9,0,<20
 DP3-0326,delivered,0,control,control,32,160,78.5,30.7,67.8,26.5,0,1,0,0,0,0,never,3,0,0,0,spontaneous,1,38.3,3130,m,9,9,0,no
 DP3-0327,delivered,3,sptb,sptb,32,170,85,29.4,75.7,26.2,0,1,0,0,0,0,never,2,1,0,0,spontaneous,1,35.9,3040,m,9,9,0,no
 DP3-0328,delivered,0,control,control,31,155,96,40.0,73.4,30.5,0,1,0,0,0,0,never,4,1,2,1,?,2,36.6,3630,m,7,8,0,<28
-DP3-0329,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,5,0,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0330,delivered,3,sptb,sptb,34,168,92.1,32.6,74.0,26.2,0,1,0,0,0,0,never,2,1,0,0,prom,2,36.7,2790,m,8,9,0,<14
 DP3-0332,delivered,0,control,control,39,157.5,75,30.2,na,26.1,0,1,0,0,0,0,yes,11,1,0,0,0,0,38.1,3080,m,9,9,2.08,no
 DP3-0333,delivered,3,hdp,lo severe pe,28,168,78,27.6,65.1,23.1,0,0,1,0,0,0,never,2,3,0,0,induced (does not include prom,1,36.1,2400,m,3,5,0,<14
 DP3-0334,delivered,3,sptb,sptb,26,165,137.4,50.5,104.0,38.2,0,0,0,0,0,0,never,3,0,0,0,spontaneous,1,30.6,1375,m,9,9,0,<14
 DP3-0335,delivered,0,control,control,33,163,115.9,43.6,89.2,33.6,0,1,0,0,0,0,quit,2,5,1,0,induced (does not include prom,1,39.1,3080,f,9,9,0,no
 DP3-0336,delivered,0,hdp,lo mild pe,33,162.6,69.7,26.4,61.7,23.3,0,1,0,0,0,0,never,1,1,0,0,spontaneous,1,39.1,3560,m,8,9,0,no
-DP3-0337E,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,1,1,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0338,delivered,0,control,control,26,165.1,72.1,26.5,58.1,21.3,0,1,0,0,0,0,never,1,1,0,0,spontaneous,1,39.7,3730,f,9,9,0,no
 DP3-0339,delivered,0,sptb,sptb,37,158,77,30.8,73.9,29.6,0,0,1,0,0,0,yes,10,1,0,0,prom,2,25.6,610,f,4,8,0,<14
 DP3-0340,delivered,0,control,control,31,168,92.5,32.8,78.9,28.0,0,1,0,0,0,0,never,2,0,0,0,spontaneous,1,40.1,3820,m,9,9,0,no
 DP3-0342,delivered,3,hdp,eo severe pe,31,163,109.2,41.1,98.0,36.9,0,1,0,0,0,0,never,3,4,0,0,induced (does not include prom,1,34.1,2290,f,8,9,0,no
 DP3-0343,delivered,3,sptb,fgr <5+sptb,22,157,69.7,28.3,65.3,26.5,0,0,1,0,0,0,quit,2,0,0,0,prom,1,36.9,2090,f,8,9,0,<14
 DP3-0344,delivered,0,control,control,29,163,81.5,30.7,67.1,25.3,0,1,0,0,0,0,never,1,3,0,0,spontaneous,1,37.0,2890,m,9,9,0,no
-DP3-0345,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,1,4,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0346,delivered,3,control,control,29,165.1,80.6,29.6,65.3,24.0,0,1,0,0,0,0,never,1,1,0,0,spontaneous,1,40.4,3940,f,9,9,0,<14
 DP3-0347,delivered,0,control,control,36,170,85,29.4,68.0,23.5,0,1,0,0,0,0,never,2,1,0,0,spontaneous,1,39.4,3370,f,9,9,0,no
 DP3-0348,delivered,0,control,control,36,157.5,65.9,26.6,52.6,21.2,0,1,0,0,0,0,never,2,0,0,0,spontaneous,1,39.9,3300,f,9,9,0,<14
@@ -308,9 +288,7 @@ DP3-0361,delivered,3,fgr,lo fgr <3,34,173,105.6,35.3,79.4,26.5,0,1,0,0,0,0,quit,
 DP3-0362E,delivered,0,control,control,36,168,86,30.5,76.4,27.1,0,1,0,0,0,0,never,1,0,2,0,?,2,39.0,3665,m,7,9,0,no
 DP3-0363,delivered,0,control,control,33,175,107.7,35.2,93.9,30.7,0,1,0,0,0,0,never,3,1,0,1,?,2,39.4,3670,f,9,9,0,<14
 DP3-0364,delivered,3,hdp,lo mild pe,32,171,70,23.9,66.7,22.8,0,1,0,0,0,0,yes,2,1,0,0,induced (does not include prom,1,40.4,3480,m,9,9,0,no
-DP3-0365,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,4,1,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0366,delivered,0,control,control,36,180,159.5,49.2,147.4,45.5,0,0,1,0,0,0,never,3,1,1,1,?,1,38.1,3280,m,8,9,0,<14
-DP3-0367E,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,5,2,na,na,na,na,sab,na,na,na,na,na,<14
 DP3-0368,delivered,0,control,control,32,165,83.5,30.7,74.4,27.3,0,0,0,0,1,0,never,1,1,0,0,spontaneous,1,39.7,3670,f,8,9,0,<14
 DP3-0369,delivered,0,control,control,31,168,79,28.0,65.0,23.0,0,1,0,0,0,0,never,1,0,0,0,induced (does not include prom,1,37.1,2850,m,9,9,0,no
 DP3-0371E,delivered,3,hdp,ghtn,35,160,130,50.8,120.2,47.0,0,1,0,0,0,0,never,3,3,0,0,?,2,38.0,3805,f,9,9,0,<14
@@ -322,9 +300,7 @@ DP3-0376E,delivered,0,control,control,20,158,70,28.0,75.3,30.2,0,1,0,0,0,0,never
 DP3-0377E,delivered,0,control,control,33,157,122,49.5,106.6,43.2,0,1,0,0,0,0,quit,5,4,0,0,?,2,38.7,3315,f,9,9,0,no
 DP3-0378E,delivered,3,fgr,fgr <3,32,157,98,39.8,87.5,35.5,0,1,0,0,0,0,quit,2,2,0,0,?,2,39.9,2610,m,8,8,0,<14
 DP3-0379,delivered,3,sptb,sptb,24,160,103,40.2,109.3,42.7,0,1,0,0,0,0,yes,3,3,0,0,spontaneous,1,36.0,2410,m,9,9,0,<14
-DP3-0380,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,3,na,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0381,delivered,3,control,control,36,157,87.5,35.5,69.9,28.3,0,1,0,0,0,0,never,1,1,0,0,induced (does not include prom,2,39.9,3680,m,6,5,0,<14
-DP3-0384,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,10,na,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0385,delivered,0,hdp,lo  (37+1) mild sipe + dm2,33,163,124.8,47.0,115.2,43.4,0,0,1,0,0,0,never,4,1,3,1,?,2,37.1,3360,m,8,8,0,<14
 DP3-0386,delivered,0,hdp,eo severe sipe,37,174.6,158,51.8,144.8,47.5,0,0,1,0,0,0,yes,1,1,3,1,?,2,33.9,2440,m,6,8,0,<14
 DP3-0387,delivered,3,control,control,0,167.6,104,37.0,94.8,33.7,0,1,0,0,0,0,never,2,2,0,1,?,2,39.0,3980,f,8,8,0,<14
@@ -334,13 +310,11 @@ DP3-0390,delivered,0,control,control,38,170,85,29.4,71.7,24.8,0,1,0,0,0,0,quit,2
 DP3-0392,delivered,3,hdp,lo mild pe,36,163,79.6,30.0,64.9,24.4,0,1,0,0,0,0,quit,2,2,0,0,induced (does not include prom,1,37.0,2870,m,9,9,0,<14
 DP3-0393E,delivered,0,control,control,0,na,na,na,na,na,0,0,0,0,0,0,na,7,na,na,na,na,na,38.0,na,na,na,na,na,no
 DP3-0394,delivered,0,control,control,36,178,101.7,32.1,93.9,29.6,0,1,0,0,0,0,never,2,1,0,0,induced (does not include prom,1,41.1,3840,m,8,9,0,<20
-DP3-0395,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,6,na,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0396,delivered,0,hdp,ghtn,26,165.1,68.9,25.3,na,24.1,0,1,0,0,0,0,never,2,2,0,0,0,0,37.0,2830,m,8,9,2.33,no
 DP3-0397,delivered,0,control,control,31,170,81.4,28.2,71.7,24.8,0,1,0,0,0,0,never,3,1,0,0,induced (does not include prom,1,38.9,3490,m,8,9,0,no
 DP3-0398E,delivered,3,hdp,lo severe pe,33,165,95,34.9,97.0,35.6,0,1,0,0,0,0,quit,2,2,0,0,?,2,39.1,3690,f,8,8,0,<14
 DP3-0399,delivered,3,fgr,fgr <3,27,165,104.2,38.3,91.6,33.6,0,1,0,0,0,0,never,3,2,1,0,induced (does not include prom,1,35.1,1710,f,5,6,0,no
 DP3-0400E,delivered,0,control,control,30,165,74,27.2,65.3,24.0,0,1,0,0,0,0,never,2,2,0,0,?,2,39.0,3180,f,9,9,0,<28
-DP3-0401E,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,1,na,na,na,na,na,sab,na,na,na,na,na,<14
 DP3-0404,delivered,3,hdp,lo mild sipe,32,167,114.4,41.0,na,36.6,0,1,0,0,0,0,never,1,1,3,1,1,0,37.1,3710,f,5,7,2.13,<14
 DP3-0405,delivered,0,hdp,lo mild sipe,39,193,183.4,49.2,187.3,50.3,0,1,0,0,0,0,never,5,4,1,1,induced (does not include prom,1,39.4,3530,f,9,9,0,<14
 DP3-0406E,delivered,0,control,control,35,165,102,37.5,94.6,34.8,0,1,0,0,0,0,yes,5,2,0,0,spontaneous,1,39.7,3070,f,8,9,0,no
@@ -348,7 +322,6 @@ DP3-0407,delivered,0,control,control,37,167,99.4,35.6,85.3,30.6,0,1,0,0,0,0,quit
 DP3-0408,delivered,0,control,control,44,157,97.1,39.4,93.0,37.7,0,0,1,0,0,0,yes,9,5,0,0,?,1,38.3,3470,m,8,9,0,<14
 DP3-0409,delivered,3,hdp,eo severe pe,30,161,98.8,38.1,91.2,35.2,0,0,1,0,0,0,never,2,2,2,0,?,2,33.6,2450,m,8,9,0,<14
 DP3-0410E,delivered,0,control,control,27,160,95,37.1,na,30.7,0,1,0,0,0,0,never,2,2,0,0,1,0,,3140,m,8,8,1.08,<20
-DP3-0411,early miscarriage,sab,sab,sab,0,na,na,na,na,na,0,0,0,0,0,0,na,1,na,na,na,na,na,sab,na,na,na,na,na,no
 DP3-0412E,delivered,0,control,control,33,160,87,34.0,na,30.1,0,1,0,0,0,0,never,2,2,0,1,1,0,,3300,m,7,8,2,<14
 DP3-0413E,delivered,0,control,control,31,160,64,25.0,na,21.0,0,1,0,0,0,0,never,6,4,0,0,1,0,,3540,f,8,9,1.17,no
 DP3-0414E,delivered,0,control,control,33,168,104,36.8,na,35.2,0,1,0,0,0,0,quit,1,1,0,1,1,0,,3970,f,8,9,2.33,<14
@@ -358,7 +331,6 @@ DP3-0417E,delivered,0,control,control,27,178,120,37.9,na,33.4,0,1,0,0,0,0,quit,3
 DP3-0418,delivered,0,control,control,39,170,84.6,29.3,75.0,26.0,0,1,0,0,0,0,quit,8,3,0,0,?,1,39.3,4030,m,1,7,0,<14
 DP3-0419,delivered,3,hdp,lo severe sipe,31,170,139.1,48.1,116.8,40.4,0,1,0,0,0,0,quit,1,1,1,1,spontaneous,1,36.3,3120,m,8,9,0,<14
 DP3-0420,delivered,3,fgr,fgr <3,42,160,72.9,28.5,65.8,25.7,0,0,1,0,0,0,never,1,1,0,0,?,2,40.0,2770,m,1,6,0,no
-DP3-0421,delivered off site,0,control,control,0,160,94.3,36.8,na,33.0,0,1,0,0,0,0,never,5,2,0,0,0,0,38.1,3635,m,8,9,0,no
 DP3-0422E,delivered,0,control,iufd,24,155,104,43.3,na,35.1,0,1,0,0,0,0,never,4,2,1,0,0,1,36.1,4460,m,0,0,,no
 DP3-0423E,delivered,3,hdp,lo mild sipe,21,170,107,37.0,101.1,35.0,0,1,0,0,0,0,never,1,1,0,1,?,2,38.1,3655,m,8,9,0,<14
 DP3-0424,delivered,0,control,control,34,152,68.1,29.5,56.2,24.3,0,1,0,0,0,0,never,2,2,0,0,spontaneous,2,38.4,3660,m,9,9,0,no

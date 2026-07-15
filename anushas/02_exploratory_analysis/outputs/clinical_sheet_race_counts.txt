@@ -1,12 +1,12 @@
-clinical sheet demographics summary report
-total patient records analyzed: 374
+Clinical Sheet Demographics Summary Report
+Total Patient Records Analyzed: 346
 
-## race & ethnicity intersections
+## Race & Ethnicity Intersections
 ---------------------------------------------------------------------------
-demographic group subtype                          | count  | percentage
+Demographic Group Subtype                          | Count  | Percentage
 ---------------------------------------------------------------------------
-Asian / non-hispanic                               | 5      |    1.3%
-Black / non-hispanic                               | 40     |   10.7%
-White / hispanic                                   | 6      |    1.6%
-White / non-hispanic                               | 287    |   76.7%
+Asian / Non-Hispanic                               | 5      |    1.4%
+Black / Non-Hispanic                               | 40     |   11.6%
+White / Hispanic                                   | 6      |    1.7%
+White / Non-Hispanic                               | 286    |   82.7%
 

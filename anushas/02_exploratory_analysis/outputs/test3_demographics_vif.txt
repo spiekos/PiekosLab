@@ -1,9 +1,9 @@
 | Variable           |     VIF |
 |:-------------------|--------:|
-| race_white         | 6.65229 |
-| race_black         | 6.13161 |
-| race_asian         | 1.71183 |
-| hispanic/latino    | 1.03552 |
-| smoking_encoded    | 1.02863 |
-| infant_sex_encoded | 1.02005 |
-| maternal_age       | 1.01896 |
+| race_white         | 6.65535 |
+| race_black         | 6.13033 |
+| race_asian         | 1.71199 |
+| hispanic/latino    | 1.0359  |
+| smoking_encoded    | 1.02849 |
+| maternal_age       | 1.02062 |
+| infant_sex_encoded | 1.02003 |

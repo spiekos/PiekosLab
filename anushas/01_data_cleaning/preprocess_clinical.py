@@ -36,22 +36,13 @@ def fix_typos(sheet):
     return sheet_copy
 
 
-# exclude patients with "loss to follow-up", "withdraw", or "excluded" (including partial matches) in their "status" column
+# include only patients with "delivered" in their "status" column
 def filter_by_status(sheet):
     sheet_copy = sheet.copy()
 
     if "status" in sheet_copy.columns:
         status_clean = sheet_copy["status"].astype(str).str.strip()
-        
-        # build masks for exclusions
-        is_excluded = status_clean.str.contains("excluded", na=False)
-        is_loss_to_fu = status_clean.str.contains("loss to follow-up|loss to follow up", na=False)
-        is_withdraw = status_clean.str.contains("withdraw", na=False)
-        
-        # combine masks to find records we want to keep
-        drop_mask = is_excluded | is_loss_to_fu | is_withdraw
-        keep_mask = ~drop_mask
-        
+        keep_mask = status_clean == "delivered"
         sheet_copy = sheet_copy[keep_mask].reset_index(drop=True)
                 
     return sheet_copy
@@ -206,14 +197,17 @@ def get_race_counts(sheet):
     patient_df = sheet.copy()
     total_patients = len(patient_df)
 
+    print(f"DEBUG: Total patients in dataframe: {total_patients}")
+    print(patient_df["id"].unique())
+
     race_cols = sorted([col for col in patient_df.columns if col.startswith("race_") and col != "race_is_missing"])
     eth_col = "hispanic/latino"
 
     lines = []
 
-    lines.append(f"## race & ethnicity intersections")
+    lines.append(f"## Race & Ethnicity Intersections")
     lines.append("-" * 75)
-    lines.append(f"{'demographic group subtype':<50} | {'count':<6} | {'percentage':<8}")
+    lines.append(f"{'Demographic Group Subtype':<50} | {'Count':<6} | {'Percentage':<8}")
     lines.append("-" * 75)
 
     for r_col in race_cols:
@@ -226,14 +220,14 @@ def get_race_counts(sheet):
             hisp_count = hisp_mask.sum()
             hisp_pct = (hisp_count / total_patients) * 100 if total_patients > 0 else 0
             if hisp_count > 0:
-                lines.append(f"{f'{display_race} / hispanic':<50} | {hisp_count:<6} | {hisp_pct:>6.1f}%")
+                lines.append(f"{f'{display_race} / Hispanic':<50} | {hisp_count:<6} | {hisp_pct:>6.1f}%")
 
             # calculate non-hispanic intersection
             non_hisp_mask = (patient_df[r_col] == 1) & (patient_df[eth_col] == 0)
             non_hisp_count = non_hisp_mask.sum()
             non_hisp_pct = (non_hisp_count / total_patients) * 100 if total_patients > 0 else 0
             if non_hisp_count > 0:
-                lines.append(f"{f'{display_race} / non-hispanic':<50} | {non_hisp_count:<6} | {non_hisp_pct:>6.1f}%")
+                lines.append(f"{f'{display_race} / Non-Hispanic':<50} | {non_hisp_count:<6} | {non_hisp_pct:>6.1f}%")
                         
     lines.append("\n")
         
@@ -247,8 +241,8 @@ def print_log(race_table, total_patients):
     race_table_str = "\n".join(race_table)
 
     with open(log_path, "w") as f:
-        f.write("clinical sheet demographics summary report\n")
-        f.write(f"total patient records analyzed: {total_patients}")
+        f.write("Clinical Sheet Demographics Summary Report\n")
+        f.write(f"Total Patient Records Analyzed: {total_patients}")
         f.write("\n\n")
         f.write(race_table_str)
 
