@@ -1,96 +1,78 @@
 # anushas
 
-## Pregnancy Data Pipeline & Exploratory Analysis
+## Pregnancy data pipeline and exploratory analysis
 
-This project provides a complete end-to-end data processing and exploratory analysis pipeline for analyzing the longitudinal relationships between maternal Fitbit metrics, placental histopathology features, and clinical delivery outcomes.
+This project contains an end-to-end workflow for cleaning and analyzing maternal Fitbit data, placental histopathology findings, and clinical delivery outcomes. The pipeline standardizes raw inputs, generates cleaned intermediate datasets, and produces summary tables and figures for downstream analysis.
 
-```
----
+## What this project does
 
-## Project Architecture
+- Cleans and harmonizes clinical, Fitbit, and placental data
+- Applies quality-control rules for missingness and feature completeness
+- Builds analysis-ready datasets for correlation and exploratory work
+- Produces logs, plots, and summary files in the outputs folders
 
+## Project structure
+
+```text
 anushas/
-├── README.md                           # This file (Global Project Overview)
-│
-├── 00_raw_data/                        # Immutable raw datasets (Inputs)
-│   ├── dp3 3rd set gest age for Tony assessed final.xlsx - Sheet1.csv  
-│   ├── dp3 master table v2.xlsx - variables of interest.csv  
-│   ├── DP3 slides Tony's analysis batches 1-2.xlsx - Sheet2.csv
-│   ├── DP3_playset_PE.csv
-│   ├── DP3_playset.csv
-│   └── DP3-FitbitFullReport_DATA_LABELS_2025-02-18_1356.csv   
-│
-├── 01_data_cleaning/                   # Stage 1: Preprocessing & Harmonization
-│   ├── README.md
+├── 00_raw_data/                      # Immutable source files
+├── 01_data_cleaning/                 # Data cleaning and preprocessing
+│   ├── preprocess_clinical.py
 │   ├── preprocess_fitbit.py
 │   ├── preprocess_placental.py
-│   └── processed_data/                 # Cleaned output datasets
-│       ├── master_fitbit_clinical_correlation_data.csv
-│       ├── processed_fitbit_data.csv
-│       └── processed_placental_data.csv
-│
-└── 02_exploratory_analysis/            # Stage 2: Statistical Modeling & Profiling
-    ├── README.md
-    ├── analyze_fitbit.py
-    ├── correlation.py
-    ├── histogram.py
-    └── outputs/                        # Final logs, plots, and statistical tables
-        ├── [prefix]filtered_correlation_table.txt
-        ├── [prefix]full_correlation_table.txt
-        ├── [prefix]negatively_associated_vars.txt
-        ├── [prefix]positively_associated_vars.txt
-        ├── fitbit_data_analysis.txt
-        └── pregnancy_plots_report.pdf
+│   ├── preprocess_correlation.py
+│   └── processed_data/               # Cleaned intermediate datasets
+├── 02_exploratory_analysis/          # Analysis, correlation, and plotting
+│   ├── analyze_clinical.py
+│   ├── analyze_fitbit.py
+│   ├── correlation.py
+│   ├── histogram.py
+│   └── outputs/                      # Final logs, tables, and figures
+└── README.md                         # Project overview
 ```
 
-## Module Directory Breakdown
+## Workflow
 
-### 00_raw_data
+Run the scripts from the `anushas` project directory in the following order.
 
-Contains the baseline clinical spreadsheet registries, patient biometric timeseries data, and histopathology sheets. **Files in this folder must be kept immutable to ensure analysis reproducibility.**
+### 1. Clean and preprocess the raw data
 
-### 01_data_cleaning
-
-Ingests the raw data configurations to clean, filter, and structure features ready for downstream compute.
-
-* **Fitbit Quality Control:** Rather than dropping full patient cohorts, individual tracking features are screened chronologically. If a patient has **7 or more consecutive days of missing data** for a specific activity, sleep, or heart rate feature, that specific metric is nulled out (**$\text{NaN}$**) for that patient.
-* **Placental Categorization:** Eliminates zero-variance clinical features (where no patients in the cohort tested positive) and converts qualitative pathology observations into discrete numerical labels (`0`, `1`, `2`, `3`, etc.).
-
-### 02_exploratory_analysis
-
-Takes clean intermediate artifacts and executes the longitudinal statistical profiling layer.
-
-* **Trimester-Level Aggregation:** Collapses multi-row tracking streams into single-row patient **means** across 4 discrete pregnancy trimesters, compiling them alongside clinical variables into a master table.
-* **Hypothesis Testing:** Calculates pairwise **Spearman Rank Correlation (**$\rho$**)** coefficients between cross-set pairs (e.g., Placental Architecture vs. Delivery Metrics; Trimester Fitbit habits vs. Outcomes). It automatically controls for multiple comparisons using the **Benjamini-Hochberg False Discovery Rate (FDR)** procedure (**$FDR \le 0.05$**).
-
-## Getting Started & Execution Order
-
-To run or replicate this pipeline from scratch, execute the following commands sequentially from the root of the `anushas` workspace:
-
-### Step 1: Preprocess and Clean Raw Data
-
-Run the data cleaning scripts to extract raw inputs, handle schemas, and enforce missingness quality gates:
-
-```
+```bash
+python 01_data_cleaning/preprocess_clinical.py
 python 01_data_cleaning/preprocess_fitbit.py
 python 01_data_cleaning/preprocess_placental.py
+python 01_data_cleaning/preprocess_correlation.py
 ```
 
-### Step 2: Generate Exploratory Statistics, Plots, and Correlation Tables
+These steps generate the cleaned files in `01_data_cleaning/processed_data/`.
 
-Run the exploratory analysis scripts to aggregate metrics into trimester windows, generate tracking plots, and execute multi-hypothesis correlation engines:
+### 2. Run exploratory analysis and generate outputs
 
-```
+```bash
+python 02_exploratory_analysis/analyze_clinical.py
 python 02_exploratory_analysis/analyze_fitbit.py
 python 02_exploratory_analysis/correlation.py
 python 02_exploratory_analysis/histogram.py
 ```
 
-> **Pipeline Note:** The intermediate dataset `01_data_cleaning/processed_data/master_fitbit_clinical_correlation_data.csv` is compiled during Step 2 by `analyze_fitbit.py` and is immediately consumed by `correlation.py`. Ensure you run the scripts in the exact sequence specified above.
+These steps create the summary outputs, correlation tables, and figures in `02_exploratory_analysis/outputs/`.
 
-## System Requirements & Environment
+## Key outputs
 
-* **Runtime Environment:** Python 3.8+
-* **Core Dependencies:** `numpy`, `pandas`, `scipy`, `matplotlib`
+- Processed clinical, Fitbit, and placental datasets in `01_data_cleaning/processed_data/`
+- Correlation results and supporting lists in `02_exploratory_analysis/outputs/`
+- Figures in `02_exploratory_analysis/outputs/figures/`
 
-*(For exact package version specifications, please refer to the local script headers or environment configuration files where applicable).*
+## Environment requirements
+
+Recommended Python environment:
+
+- Python 3.9+
+- pandas
+- numpy
+- scipy
+- matplotlib
+- seaborn
+- statsmodels
+
+> The raw files in `00_raw_data/` should remain unchanged so the pipeline stays reproducible.

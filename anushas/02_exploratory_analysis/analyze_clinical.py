@@ -51,6 +51,45 @@ def summarize_missing_info(sheet):
     return pd.DataFrame(summary_data), missing_ids
 
 
+# creates and returns a table tracking total counts for each race/ethnicity intersection
+def get_race_counts(sheet):
+    patient_df = sheet.copy()
+    total_patients = len(patient_df)
+
+    race_cols = sorted([col for col in patient_df.columns if col.startswith("race_") and col != "race_is_missing"])
+    eth_col = "hispanic/latino"
+
+    lines = []
+
+    lines.append(f"## Race & Ethnicity Intersections")
+    lines.append("-" * 75)
+    lines.append(f"{'Demographic Group Subtype':<50} | {'Count':<6} | {'Percentage':<8}")
+    lines.append("-" * 75)
+
+    for r_col in race_cols:
+        if r_col in patient_df.columns and eth_col in patient_df.columns:
+            # clean name for presentation
+            display_race = r_col.replace("race_", "").title()
+
+            # calculate hispanic intersection
+            hisp_mask = (patient_df[r_col] == 1) & (patient_df[eth_col] == 1)
+            hisp_count = hisp_mask.sum()
+            hisp_pct = (hisp_count / total_patients) * 100 if total_patients > 0 else 0
+            if hisp_count > 0:
+                lines.append(f"{f'{display_race} / Hispanic':<50} | {hisp_count:<6} | {hisp_pct:>6.1f}%")
+
+            # calculate non-hispanic intersection
+            non_hisp_mask = (patient_df[r_col] == 1) & (patient_df[eth_col] == 0)
+            non_hisp_count = non_hisp_mask.sum()
+            non_hisp_pct = (non_hisp_count / total_patients) * 100 if total_patients > 0 else 0
+            if non_hisp_count > 0:
+                lines.append(f"{f'{display_race} / Non-Hispanic':<50} | {non_hisp_count:<6} | {non_hisp_pct:>6.1f}%")
+                        
+    lines.append("\n")
+        
+    return lines, total_patients
+
+
 # calculates summary statistics for clinical demographic features
 # returns two tables containing these statistics:
 # one calculates median/IQR for continuous features, and the other calculates count/% for categorical features
@@ -92,7 +131,7 @@ def calc_demographic_stats(df):
     return pd.DataFrame(continuous_stats), pd.DataFrame(categorical_stats)
 
 
-def print_log(missing_report, missing_ids, cont_summary_table, cat_summary_table):
+def print_log(missing_report, missing_ids, race_table, total_patients, cont_summary_table, cat_summary_table):
     log_path = "02_exploratory_analysis/outputs/clinical_data_analysis.txt"
 
     with open(log_path, "w") as f:
@@ -109,27 +148,32 @@ def print_log(missing_report, missing_ids, cont_summary_table, cat_summary_table
             f.write(f"{feature}: {', '.join(map(str, ids)) if ids else 'None'}\n")
         f.write("\n")
 
+        f.write("Clinical Sheet Demographics Summary Report\n")
+        f.write(f"Total Patient Records Analyzed: {total_patients}")
+        f.write("\n\n")
+        f.write("\n".join(race_table))
+
         f.write("Summary statistics for clinical demographic features:\n")
-        f.write("Continuous Features (Median, IQR):\n")
-        f.write(f"{'Feature':<35} {'Median':<15} {'IQR':<15}\n")
+        f.write("\n--- Continuous Features (Median, IQR) ---\n")
+        f.write(f"{'Feature':<40} | {'Median':<20} | {'IQR':<20}\n")
         for _, row in cont_summary_table.iterrows():
-            f.write(f"{row['Feature']:<35} {row['Median']:<15} {row['IQR']:<15}\n")
-        f.write("\n\n")
-        
-        f.write("Categorical Features (Count, %):\n")
-        f.write(f"{'Feature':<25} {'Category':<20} {'Count':<15} {'%':<15}\n")
+            f.write(f"{row['Feature']:<40} | {row['Median']:<20} | {row['IQR']:<20}\n")
+
+        f.write("\n--- Categorical/Binary Features (Count, %) ---\n")
+        f.write(f"{'Feature':<25} | {'Category':<20} | {'Count':<10} | {'%':<10}\n")
+        f.write("-" * 75 + "\n")
         for _, row in cat_summary_table.iterrows():
-            f.write(f"{row['Feature']:<25} {str(row['Category']):<20} {row['Count']:<15} {row['%']:<15}\n")
-        f.write("\n\n")
+            f.write(f"{row['Feature']:<25} | {str(row['Category']):<20} | {row['Count']:<10} | {row['%']:<10}\n")
 
 
 def main():
     clinical_sheet = load_sheet()
 
     missing_report, missing_ids = summarize_missing_info(clinical_sheet)
+    race_table, total_patients = get_race_counts(clinical_sheet)
     cont_summary_table, cat_summary_table = calc_demographic_stats(clinical_sheet)
 
-    print_log(missing_report, missing_ids, cont_summary_table, cat_summary_table)
+    print_log(missing_report, missing_ids, race_table, total_patients, cont_summary_table, cat_summary_table)
 
 
 if __name__ == "__main__":

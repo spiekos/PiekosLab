@@ -19,19 +19,30 @@ race: None
 ethnicity: None
 smoking: DP3-0242, DP3-0393E
 
+Clinical Sheet Demographics Summary Report
+Total Patient Records Analyzed: 346
+
+## Race & Ethnicity Intersections
+---------------------------------------------------------------------------
+Demographic Group Subtype                          | Count  | Percentage
+---------------------------------------------------------------------------
+Asian / Non-Hispanic                               | 5      |    1.4%
+Black / Non-Hispanic                               | 40     |   11.6%
+White / Hispanic                                   | 6      |    1.7%
+White / Non-Hispanic                               | 286    |   82.7%
+
 Summary statistics for clinical demographic features:
-Continuous Features (Median, IQR):
-Feature                             Median          IQR            
-maternal_age                        32.00           7.00           
-prepregnancy_bmi_self_or_record     27.70           10.48          
 
+--- Continuous Features (Median, IQR) ---
+Feature                                  | Median               | IQR                 
+maternal_age                             | 32.00                | 7.00                
+prepregnancy_bmi_self_or_record          | 27.70                | 10.48               
 
-Categorical Features (Count, %):
-Feature                   Category             Count           %              
-infant_sex                m                    188             54.3%          
-infant_sex                f                    157             45.4%          
-infant_sex                na                   1               0.3%           
-smoking_encoded           0                    325             93.9%          
-smoking_encoded           1                    21              6.1%           
-
-
+--- Categorical/Binary Features (Count, %) ---
+Feature                   | Category             | Count      | %         
+---------------------------------------------------------------------------
+infant_sex                | m                    | 188        | 54.3%     
+infant_sex                | f                    | 157        | 45.4%     
+infant_sex                | na                   | 1          | 0.3%      
+smoking_encoded           | 0                    | 325        | 93.9%     
+smoking_encoded           | 1                    | 21         | 6.1%      

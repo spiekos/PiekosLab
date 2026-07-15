@@ -240,58 +240,6 @@ def one_hot_encode_demographics(sheet):
     return final_df
 
 
-# creates and returns a table tracking total counts for each race/ethnicity intersection
-def get_race_counts(sheet):
-    patient_df = sheet.copy()
-    total_patients = len(patient_df)
-
-    race_cols = sorted([col for col in patient_df.columns if col.startswith("race_") and col != "race_is_missing"])
-    eth_col = "hispanic/latino"
-
-    lines = []
-
-    lines.append(f"## Race & Ethnicity Intersections")
-    lines.append("-" * 75)
-    lines.append(f"{'Demographic Group Subtype':<50} | {'Count':<6} | {'Percentage':<8}")
-    lines.append("-" * 75)
-
-    for r_col in race_cols:
-        if r_col in patient_df.columns and eth_col in patient_df.columns:
-            # clean name for presentation
-            display_race = r_col.replace("race_", "").title()
-
-            # calculate hispanic intersection
-            hisp_mask = (patient_df[r_col] == 1) & (patient_df[eth_col] == 1)
-            hisp_count = hisp_mask.sum()
-            hisp_pct = (hisp_count / total_patients) * 100 if total_patients > 0 else 0
-            if hisp_count > 0:
-                lines.append(f"{f'{display_race} / Hispanic':<50} | {hisp_count:<6} | {hisp_pct:>6.1f}%")
-
-            # calculate non-hispanic intersection
-            non_hisp_mask = (patient_df[r_col] == 1) & (patient_df[eth_col] == 0)
-            non_hisp_count = non_hisp_mask.sum()
-            non_hisp_pct = (non_hisp_count / total_patients) * 100 if total_patients > 0 else 0
-            if non_hisp_count > 0:
-                lines.append(f"{f'{display_race} / Non-Hispanic':<50} | {non_hisp_count:<6} | {non_hisp_pct:>6.1f}%")
-                        
-    lines.append("\n")
-        
-    return lines, total_patients
-
-
-# prints outputs to a log file
-def print_log(race_table, total_patients):
-    log_path = "02_exploratory_analysis/outputs/clinical_sheet_race_counts.txt"
-
-    race_table_str = "\n".join(race_table)
-
-    with open(log_path, "w") as f:
-        f.write("Clinical Sheet Demographics Summary Report\n")
-        f.write(f"Total Patient Records Analyzed: {total_patients}")
-        f.write("\n\n")
-        f.write(race_table_str)
-
-
 def main():
     sheet = load_sheet()
 
@@ -303,10 +251,6 @@ def main():
     sheet_cleaned = encode_smoking_status(sheet_cleaned)
     sheet_cleaned = impute_bmi_median(sheet_cleaned)
     sheet_encoded = one_hot_encode_demographics(sheet_cleaned)
-
-    race_table, total_patients = get_race_counts(sheet_encoded)
-
-    print_log(race_table, total_patients)
 
     if not sheet_encoded.empty:
         clinical_csv_path = "01_data_cleaning/processed_data/processed_clinical_data.csv"
