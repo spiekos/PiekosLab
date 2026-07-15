@@ -261,9 +261,21 @@ def prepare_correlation_data(sheet_bucketed, feature_cols, timeframe_names, clin
             continue
 
         # take the mean of each metric by patient in this timeframe
+        # taking the mean manually ensures that we are only counting possible days for which data could have been collected
+        plausible_mask = df[feature_cols].notna() & (df[feature_cols] >= 0) 
+
+        df_plausible = df.copy()
+        df_plausible[feature_cols] = df_plausible[feature_cols].where(plausible_mask)
+
+        pt_sums = df_plausible.groupby("record_id")[feature_cols].sum()
+        pt_counts = df_plausible.groupby("record_id")[feature_cols].count()
+
+        # using replace(0, np.nan) prevents division by zero errors for patients with no data
+        pt_trimester_avg = pt_sums / pt_counts.replace(0, np.nan)
+
         # rename the columns
-        pt_trimester_avg = df.groupby("record_id")[feature_cols].mean()
         pt_trimester_avg.columns = [f"{label}_{col}" for col in pt_trimester_avg.columns]
+        pt_trimester_avg = pt_trimester_avg.copy() # de-fragment the DataFrame
         trimester_dfs.append(pt_trimester_avg)
 
     if not trimester_dfs:
