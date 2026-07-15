@@ -1488,20 +1488,3 @@ heart_rate_-_zone:_out_of_range_-_caloriesout                           171
                sleep_-_summary_-_stages_-_rem                           133
               sleep_-_summary_-_stages_-_wake                           133
 
-Patient missingness summary report:
-               Feature / Metric  Missing Count (NaNs) Percent Missing
-                   maternal_age                     0           0.00%
-                     infant_sex                     1           0.29%
-prepregnancy_bmi_self_or_record                     0           0.00%
-                           race                     0           0.00%
-                      ethnicity                     0           0.00%
-                        smoking                     2           0.58%
-
-Patient IDs of patients with missing data per feature:
-maternal_age: None
-infant_sex: DP3-0393E
-prepregnancy_bmi_self_or_record: None
-race: None
-ethnicity: None
-smoking: DP3-0242, DP3-0393E
-

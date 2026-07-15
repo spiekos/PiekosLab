@@ -2,12 +2,10 @@ import pandas as pd
 import numpy as np
 
 
-# load and return the fitbit dataset, the placental dataset, and the clinical dataset
-def load_sheets():
-    sheet1 = pd.read_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv", low_memory = False)
-    sheet2 = pd.read_csv("01_data_cleaning/processed_data/processed_placental_data.csv")
-    sheet3 = pd.read_csv("01_data_cleaning/processed_data/processed_clinical_data.csv")
-    return sheet1, sheet2, sheet3
+# load and return the fitbit dataset
+def load_sheet():
+    sheet = pd.read_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv", low_memory = False)
+    return sheet
 
 
 # filters the sheet to only include "fitbit data" events and only include events during pregnancy
@@ -207,125 +205,9 @@ def get_metric_representation_matrices(sheet, feature_cols):
     return final_table, pt_summary, metric_summary
 
 
-# returns a diagnostic summary of data missingness across all patients for the following information:
-# maternal age, fetal sex, prepregnancy bmi, race, ethnicity, smoking status
-def summarize_missing_info(sheet):
-    features = ["maternal_age", "infant_sex", "prepregnancy_bmi_self_or_record", "race", "ethnicity", "smoking"]
-
-    summary_data = []
-    missing_ids = {}
-    total_patients = len(sheet)
-
-    local_sheet = sheet.copy()
-
-    for feature in features:
-        if feature in local_sheet.columns:
-            local_sheet[feature] = local_sheet[feature].replace(
-                ["nan", "na", "none", "", "null", "n/a"], np.nan
-            )
-        
-        if feature == "race" and "race_is_missing" in local_sheet.columns:
-            local_sheet["race_is_missing"] = pd.to_numeric(local_sheet["race_is_missing"], errors="coerce")
-            mask = local_sheet["race_is_missing"] == 1
-        elif feature == "ethnicity" and "eth_is_missing" in local_sheet.columns:
-            local_sheet["eth_is_missing"] = pd.to_numeric(local_sheet["eth_is_missing"], errors="coerce")
-            mask = local_sheet["eth_is_missing"] == 1
-        else:
-            mask = local_sheet[feature].isnull()
-
-        null_count = mask.sum()
-        pct_missing = (null_count / total_patients) * 100
-
-        missing_ids[feature] = local_sheet.loc[mask, "id"].tolist()
-
-        summary_data.append({
-            "Feature / Metric": feature,
-            "Missing Count (NaNs)": int(null_count),
-            "Percent Missing": f"{pct_missing:.2f}%"
-        })
-
-    return pd.DataFrame(summary_data), missing_ids
-
-
-# collapses multi-row trimester data into single-row patient averages for each metric
-# merges this with delivery and placental data
-# filters to only include patients who have placental reports
-# returns a table containing fitbit data (averaged by metric by trimester) and delivery + placental metrics by patient
-# table contains all timeframes; column names reflect which timeframe the data was collected in
-def prepare_correlation_data(sheet_bucketed, feature_cols, timeframe_names, clinical_raw, placental_raw):
-    trimester_dfs = []
-
-    # collapse each trimester bucket into metric averages by patient
-    for df, label in zip(sheet_bucketed, timeframe_names):
-        if df.empty:
-            continue
-
-        # take the mean of each metric by patient in this timeframe
-        # taking the mean manually ensures that we are only counting possible days for which data could have been collected
-        plausible_mask = df[feature_cols].notna() & (df[feature_cols] >= 0) 
-
-        df_plausible = df.copy()
-        df_plausible[feature_cols] = df_plausible[feature_cols].where(plausible_mask)
-
-        pt_sums = df_plausible.groupby("record_id")[feature_cols].sum()
-        pt_counts = df_plausible.groupby("record_id")[feature_cols].count()
-
-        # using replace(0, np.nan) prevents division by zero errors for patients with no data
-        pt_trimester_avg = pt_sums / pt_counts.replace(0, np.nan)
-
-        # rename the columns
-        pt_trimester_avg.columns = [f"{label}_{col}" for col in pt_trimester_avg.columns]
-        pt_trimester_avg = pt_trimester_avg.copy() # de-fragment the DataFrame
-        trimester_dfs.append(pt_trimester_avg)
-
-    if not trimester_dfs:
-        print("Warning: No trimester data found to collapse.")
-        return pd.DataFrame()
-    
-    # join all trimesters side-by-side
-    fitbit_pivoted = pd.concat(trimester_dfs, axis = 1).reset_index()
-
-    # isolate target clinical variables
-    clinical_targets = [
-        "maternal_age", "height_(cm)", "weight_(kg)", "delivery_bmi", "prepregnancy_weight_self_or_record", "prepregnancy_bmi_self_or_record", 
-        "gravida", "parity", "diabetes", "chtn", "route_of_delivery_1-vag,_2-cs", "gest_age_del", "birthweight", "apgar_1", "apgar_5", "nicu_days"
-    ]
-    # keep only the columns that exist in the spreadsheet
-    existing_clinical = [col for col in clinical_targets if col in clinical_raw.columns]
-    # aggregate all clinical data for each patient into a dataframe
-    clinical_clean = clinical_raw.rename(columns = {"id": "record_id"})
-    clinical_clean = clinical_clean.groupby("record_id")[existing_clinical].first().reset_index()
-
-    # isolate target placental variables
-    placental_targets = [
-        "placental_infarction", "distal_villous_hypoplasia_focal/diffuse", "accelerated_villous_maturation", "increased_syncytial_knots", 
-        "decidual_arteriopathy_membrane_role/basal_plate/both", "segmental_avascular_villi_small/intermediate/large", "delayed_villous_maturation", 
-        "maternal_inflammatory_response_stage/grade", "villitis_of_unknown_etiology,_high/low_grade,_focal/diffuse", "increased_perivillous_fibrin_deposition", 
-        "chorangiosis"
-    ]
-    # keep only the columns that exist in the spreadsheet
-    existing_placental = [col for col in placental_targets if col in placental_raw.columns]
-    # aggregate all placental data for each patient into a dataframe
-    placental_clean = placental_raw.rename(columns = {"id": "record_id"})
-    placental_clean = placental_clean.groupby("record_id")[existing_placental].first().reset_index()
-
-    # merge fitbit, clinical, and placental data
-    master_corr_df = pd.merge(fitbit_pivoted, clinical_clean, on = "record_id", how = "inner")
-    master_corr_df = pd.merge(master_corr_df, placental_clean, on = "record_id", how = "inner")
-
-    # determine which placental columns survived the merge process
-    final_placental_cols = [col for col in existing_placental if col in master_corr_df.columns]
-    
-    if final_placental_cols:
-        # drop rows for which all placental metrics are missing
-        master_corr_df = master_corr_df.dropna(subset = final_placental_cols, how = "all")
-    
-    return master_corr_df
-
-
 # print all calculated data into a log file
 def print_log(total_patients, total_missing, per_patient, max_con_missing, unique_dates, summary_stats, 
-              patients_per_timeframe, metric_matrix, pt_summary, metric_summary, num_metrics, missing_report, missing_ids):
+              patients_per_timeframe, metric_matrix, pt_summary, metric_summary, num_metrics):
     log_path = "02_exploratory_analysis/outputs/fitbit_data_analysis.txt"
 
     with open(log_path, "w") as f:
@@ -369,18 +251,9 @@ def print_log(total_patients, total_missing, per_patient, max_con_missing, uniqu
         f.write(metric_summary.to_string(index = False))
         f.write("\n\n")
 
-        f.write("Patient missingness summary report:\n")
-        f.write(missing_report.to_string(index = False))
-        f.write("\n\n")
-
-        f.write("Patient IDs of patients with missing data per feature:\n")
-        for feature, ids in missing_ids.items():
-            f.write(f"{feature}: {', '.join(map(str, ids)) if ids else 'None'}\n")
-        f.write("\n")
-
 
 def main():
-    fitbit_sheet, placental_sheet, clinical_sheet = load_sheets()
+    fitbit_sheet = load_sheet()
 
     sheet_filtered = filter_sheet(fitbit_sheet)
 
@@ -402,15 +275,9 @@ def main():
     summary_stats = calc_summary_stats(sheet_filtered, feature_cols)
     patients_per_timeframe = get_patients_per_timeframe(sheet_bucketed, feature_cols, timeframe_names)
     metric_matrix, pt_summary, metric_summary = get_metric_representation_matrices(sheet_filtered, feature_cols)
-    missing_report, missing_ids = summarize_missing_info(clinical_sheet)
 
     print_log(total_patients, total_missing, per_patient, max_con_missing, unique_dates, summary_stats, 
-              patients_per_timeframe, metric_matrix, pt_summary, metric_summary, len(feature_cols), missing_report, missing_ids)
-
-    correlation_ready_df = prepare_correlation_data(sheet_bucketed, feature_cols, timeframe_names, clinical_sheet, placental_sheet)
-    if not correlation_ready_df.empty:
-        output_csv_path = "01_data_cleaning/processed_data/master_fitbit_clinical_correlation_data.csv"
-        correlation_ready_df.to_csv(output_csv_path, index = False)
+              patients_per_timeframe, metric_matrix, pt_summary, metric_summary, len(feature_cols))
 
 
 if __name__ == "__main__":

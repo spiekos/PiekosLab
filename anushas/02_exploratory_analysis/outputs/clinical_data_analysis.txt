@@ -1,0 +1,21 @@
+Following are various statistics about the clinical dataset, focusing on information about missing data.
+
+Patient missingness summary report:
+(Note that there are truly 5 missing values for the feature "prepregnancy_bmi_self_or_record".
+However, median imputation has been performed on this feature, so 0 missing values are currently displayed.)
+               Feature / Metric  Missing Count (NaNs) Percent Missing
+                   maternal_age                     0           0.00%
+                     infant_sex                     1           0.29%
+prepregnancy_bmi_self_or_record                     0           0.00%
+                           race                     0           0.00%
+                      ethnicity                     0           0.00%
+                        smoking                     2           0.58%
+
+Patient IDs of patients with missing data per feature:
+maternal_age: None
+infant_sex: DP3-0393E
+prepregnancy_bmi_self_or_record: None
+race: None
+ethnicity: None
+smoking: DP3-0242, DP3-0393E
+
