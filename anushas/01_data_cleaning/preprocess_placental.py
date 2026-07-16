@@ -2,11 +2,12 @@ import pandas as pd
 import numpy as np
 
 
-# load both sheets and returns both sheets
+# load and return sheets
 def load_sheets():
     sheet1 = pd.read_csv("00_raw_data/dp3 3rd set gest age for Tony assessed final.xlsx - Sheet1.csv")
     sheet2 = pd.read_csv("00_raw_data/DP3 slides Tony's analysis batches 1-2.xlsx - Sheet2.csv")
-    return sheet1, sheet2
+    sheet3 = pd.read_csv("01_data_cleaning/processed_data/processed_clinical_data.csv")
+    return sheet1, sheet2, sheet3
 
 
 # standardizes all values to lowercase (except the values in the "id" column)
@@ -147,6 +148,40 @@ def encode(sheet):
     return sheet
 
 
+# adds a column to the placental sheet for spontaneous preterm births
+# based on if the patient's group/subgroup was marked as sptb
+# or if the patient went into spontaneous labor at <37 weeks
+def add_sptb_column(placental_sheet, clinical_sheet):
+    clinical_temp = clinical_sheet.copy()
+    
+    def categorize_sptb(row):
+        group = str(row.get("group", "")).lower()
+        subgroup = str(row.get("subgroup", "")).lower()
+        labor = str(row.get("labor_onset", "")).lower()
+        try:
+            gest_age = float(row.get("gest_age_del", np.nan))
+        except (ValueError, TypeError):
+            gest_age = np.nan
+            
+        if "sptb" in group or "sptb" in subgroup:
+            return 1
+        if (labor in ["spontaneous", "0"]) and (not np.isnan(gest_age) and gest_age < 37):
+            return 1
+        return 0
+
+    # create the temporary "spontaneous_preterm_birth" column on the clinical sheet
+    clinical_temp["spontaneous_preterm_birth"] = clinical_temp.apply(categorize_sptb, axis=1)
+    
+    # map this single column back to the placental_sheet
+    sptb_map = clinical_temp.set_index("id")["spontaneous_preterm_birth"]
+    placental_sheet["spontaneous_preterm_birth"] = placental_sheet["id"].map(sptb_map)
+    
+    # fill NaN with 0 if patient didn't exist in clinical sheet
+    placental_sheet["spontaneous_preterm_birth"] = placental_sheet["spontaneous_preterm_birth"].fillna(0).astype(int)
+    
+    return placental_sheet
+
+
 # print the total of each appropriate column (excluding text columns and gestational age) into a log file
 def print_totals(sheet):
     log_path = "02_exploratory_analysis/outputs/sum_placental_histo_features.txt"
@@ -167,13 +202,14 @@ def print_totals(sheet):
 
 
 def main():
-    sheet1, sheet2 = load_sheets()
+    sheet1, sheet2, clinical_sheet = load_sheets()
     sheet1 = standardize_sheet(sheet1)
     sheet2 = standardize_sheet(sheet2)
     merged = merge_sheets(sheet1, sheet2)
     merged = delete_patients(merged)
     merged = delete_columns(merged)
     merged = encode(merged)
+    merged = add_sptb_column(merged, clinical_sheet)
 
     print_totals(merged)
 
