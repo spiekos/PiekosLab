@@ -2,21 +2,22 @@ Following are various statistics about the clinical dataset.
 
 Patient missingness summary report:
 (Note that there are truly 5 missing values for the feature "prepregnancy_bmi_self_or_record".
-However, median imputation has been performed on this feature, so 0 missing values are currently displayed.)
+However, median imputation has been performed on this feature, so 0 missing values are displayed
+to accurately reflect the current status of the dataset.)
                Feature / Metric  Missing Count (NaNs) Percent Missing
-                   maternal_age                     0           0.00%
+                   maternal_age                     7           2.02%
                      infant_sex                     1           0.29%
 prepregnancy_bmi_self_or_record                     0           0.00%
-                           race                     0           0.00%
-                      ethnicity                     0           0.00%
+                           race                     9           2.60%
+                      ethnicity                    25           7.23%
                         smoking                     2           0.58%
 
 Patient IDs of patients with missing data per feature:
-maternal_age: None
+maternal_age: DP3-0057, DP3-0111, DP3-0143, DP3-0188, DP3-0242, DP3-0387, DP3-0393E
 infant_sex: DP3-0393E
 prepregnancy_bmi_self_or_record: None
-race: None
-ethnicity: None
+race: DP3-0072, DP3-0128, DP3-0202, DP3-0217, DP3-0242, DP3-0256, DP3-0334, DP3-0368, DP3-0393E
+ethnicity: DP3-0024, DP3-0041E, DP3-0057, DP3-0070, DP3-0118E, DP3-0120, DP3-0125, DP3-0127, DP3-0128, DP3-0196E, DP3-0217, DP3-0222, DP3-0242, DP3-0256, DP3-0264, DP3-0292, DP3-0320, DP3-0355, DP3-0362E, DP3-0379, DP3-0388, DP3-0392, DP3-0393E, DP3-0405, DP3-0434
 smoking: DP3-0242, DP3-0393E
 
 Clinical Sheet Demographics Summary Report
@@ -43,6 +44,16 @@ Feature                   | Category             | Count      | %
 ---------------------------------------------------------------------------
 infant_sex                | m                    | 188        | 54.3%     
 infant_sex                | f                    | 157        | 45.4%     
-infant_sex                | na                   | 1          | 0.3%      
+infant_sex                | nan                  | 1          | 0.3%      
+race                      | white                | 292        | 84.4%     
+race                      | african american     | 38         | 11.0%     
+race                      | nan                  | 9          | 2.6%      
+race                      | asian                | 4          | 1.2%      
+race                      | black                | 2          | 0.6%      
+race                      | korean               | 1          | 0.3%      
+ethnicity                 | not hispanic or latino | 282        | 81.5%     
+ethnicity                 | non hispanic         | 32         | 9.2%      
+ethnicity                 | nan                  | 25         | 7.2%      
+ethnicity                 | hispanic or latino   | 7          | 2.0%      
 smoking_encoded           | 0                    | 325        | 93.9%     
 smoking_encoded           | 1                    | 21         | 6.1%      

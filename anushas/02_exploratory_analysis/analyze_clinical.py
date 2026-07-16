@@ -34,6 +34,8 @@ def summarize_missing_info(sheet):
         elif feature == "smoking" and "smoking_is_missing" in local_sheet.columns:
             local_sheet["smoking_is_missing"] = pd.to_numeric(local_sheet["smoking_is_missing"], errors="coerce")
             mask = local_sheet["smoking_is_missing"] == 1
+        elif feature == "maternal_age":
+            mask = local_sheet[feature].isnull() | (local_sheet[feature] == 0)
         else:
             mask = local_sheet[feature].isnull()
 
@@ -139,7 +141,8 @@ def print_log(missing_report, missing_ids, race_table, total_patients, cont_summ
 
         f.write("Patient missingness summary report:\n")
         f.write('(Note that there are truly 5 missing values for the feature "prepregnancy_bmi_self_or_record".\n')
-        f.write("However, median imputation has been performed on this feature, so 0 missing values are currently displayed.)\n")
+        f.write("However, median imputation has been performed on this feature, so 0 missing values are displayed\n")
+        f.write("to accurately reflect the current status of the dataset.)\n")
         f.write(missing_report.to_string(index = False))
         f.write("\n\n")
 

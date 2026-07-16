@@ -56,10 +56,8 @@ def unmask_missing_data(df):
     ]
     
     for col in df.columns:
-        if df[col].dtype == "object":
-            pattern = r'^\s*(' + '|'.join(missing_placeholders) + r')\s*$'
-            df[col] = df[col].replace(pattern, np.nan, regex=True)
-            
+        df[col] = df[col].replace(missing_placeholders, np.nan)
+        
     return df
 
 
@@ -235,7 +233,7 @@ def one_hot_encode_demographics(sheet):
         col_series = final_df.pop(col)
         final_df.insert(loc = insert_idx, column = col, value = col_series)
 
-    final_df = final_df.drop(columns = ["race", "ethnicity"], errors = "ignore")
+    # final_df = final_df.drop(columns = ["race", "ethnicity"], errors = "ignore")
 
     return final_df
 
