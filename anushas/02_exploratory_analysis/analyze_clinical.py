@@ -63,8 +63,6 @@ def get_race_counts(sheet):
 
     lines = []
 
-    lines.append(f"## Race & Ethnicity Intersections")
-    lines.append("-" * 75)
     lines.append(f"{'Demographic Group Subtype':<50} | {'Count':<6} | {'Percentage':<8}")
     lines.append("-" * 75)
 
@@ -137,24 +135,24 @@ def print_log(missing_report, missing_ids, race_table, total_patients, cont_summ
     log_path = "02_exploratory_analysis/outputs/clinical_data_analysis.txt"
 
     with open(log_path, "w") as f:
-        f.write("Following are various statistics about the clinical dataset.\n\n")
+        f.write("Clinical Sheet Demographics Summary Report\n")
+        f.write(f"Total Patient Records Analyzed: {total_patients}\n\n\n")
 
         f.write("Patient missingness summary report:\n")
         f.write('(Note that there are truly 5 missing values for the feature "prepregnancy_bmi_self_or_record".\n')
         f.write("However, median imputation has been performed on this feature, so 0 missing values are displayed\n")
         f.write("to accurately reflect the current status of the dataset.)\n")
         f.write(missing_report.to_string(index = False))
-        f.write("\n\n")
+        f.write("\n\n\n")
 
         f.write("Patient IDs of patients with missing data per feature:\n")
         for feature, ids in missing_ids.items():
             f.write(f"{feature}: {', '.join(map(str, ids)) if ids else 'None'}\n")
-        f.write("\n")
-
-        f.write("Clinical Sheet Demographics Summary Report\n")
-        f.write(f"Total Patient Records Analyzed: {total_patients}")
         f.write("\n\n")
+
+        f.write("Counts for race/ethnicity intersections:\n")
         f.write("\n".join(race_table))
+        f.write("\n")
 
         f.write("Summary statistics for clinical demographic features:\n")
         f.write("\n--- Continuous Features (Median, IQR) ---\n")

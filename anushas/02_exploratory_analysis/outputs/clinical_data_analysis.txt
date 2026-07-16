@@ -1,4 +1,6 @@
-Following are various statistics about the clinical dataset.
+Clinical Sheet Demographics Summary Report
+Total Patient Records Analyzed: 346
+
 
 Patient missingness summary report:
 (Note that there are truly 5 missing values for the feature "prepregnancy_bmi_self_or_record".
@@ -12,6 +14,7 @@ prepregnancy_bmi_self_or_record                     0           0.00%
                       ethnicity                    25           7.23%
                         smoking                     2           0.58%
 
+
 Patient IDs of patients with missing data per feature:
 maternal_age: DP3-0057, DP3-0111, DP3-0143, DP3-0188, DP3-0242, DP3-0387, DP3-0393E
 infant_sex: DP3-0393E
@@ -20,17 +23,15 @@ race: DP3-0072, DP3-0128, DP3-0202, DP3-0217, DP3-0242, DP3-0256, DP3-0334, DP3-
 ethnicity: DP3-0024, DP3-0041E, DP3-0057, DP3-0070, DP3-0118E, DP3-0120, DP3-0125, DP3-0127, DP3-0128, DP3-0196E, DP3-0217, DP3-0222, DP3-0242, DP3-0256, DP3-0264, DP3-0292, DP3-0320, DP3-0355, DP3-0362E, DP3-0379, DP3-0388, DP3-0392, DP3-0393E, DP3-0405, DP3-0434
 smoking: DP3-0242, DP3-0393E
 
-Clinical Sheet Demographics Summary Report
-Total Patient Records Analyzed: 346
 
-## Race & Ethnicity Intersections
----------------------------------------------------------------------------
+Counts for race/ethnicity intersections:
 Demographic Group Subtype                          | Count  | Percentage
 ---------------------------------------------------------------------------
 Asian / Non-Hispanic                               | 5      |    1.4%
 Black / Non-Hispanic                               | 40     |   11.6%
 White / Hispanic                                   | 6      |    1.7%
 White / Non-Hispanic                               | 286    |   82.7%
+
 
 Summary statistics for clinical demographic features:
 

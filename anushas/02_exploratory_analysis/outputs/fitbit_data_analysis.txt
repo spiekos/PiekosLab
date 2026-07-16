@@ -1,9 +1,12 @@
 Following are various statistics about the Fitbit dataset. 
 Note that this data has been filtered to only include datapoints during pregnancy.
 
+
 Total number of patients: 0
 
+
 Total number of missing values: 1073875
+
 
 Number of missing days per patient:
        id  missing_days
@@ -350,6 +353,7 @@ DP3-0433E             0
 DP3-0435E             1
  DP3-0436             0
 
+
 Maximum consecutive number of days missing per feature per patient:
        id  activities_summary_steps  activities_summary_totaldistances  activities_summary_veryactiveminutes  sleep_summary_total_minutes_asleep  activities_-_goals_-_activeminutes  activities_-_goals_-_caloriesout  activities_-_goals_-_distance  activities_-_goals_-_steps  activities_-_summary_-_activescore  activities_-_summary_-_activitycalories  activities_-_summary_-_caloriesbmr  activities_-_summary_-_caloriesout  activities_-_summary_-_totaldistances  activities_-_summary_-_fairlyactiveminutes  activities_-_summary_-_lightlyactiveminutes  activities_-_summary_-_marginalcalories  activities_-_summary_-_sedentaryminutes  activities_-_summary_-_steps  activities_-_summary_-_veryactiveminutes  heart_rate_-_resting_heart_rate  heart_rate_-_zone:_out_of_range_-_caloriesout  heart_rate_-_zone:_out_of_range_-_min  heart_rate_-_zone:_out_of_range_-_max  heart_rate_-_zone:_out_of_range_-_minutes  heart_rate_-_zone:_fat_burn_-_caloriesout  heart_rate_-_zone:_fat_burn_-_min  heart_rate_-_zone:_fat_burn_-_max  heart_rate_-_zone:_fat_burn_-_minutes  heart_rate_-_zone:_cardio_-_caloriesout  heart_rate_-_zone:_cardio_-_min  heart_rate_-_zone:_cardio_-_max  heart_rate_-_zone:_cardio_-_minutes  heart_rate_-_zone:_peak_-_caloriesout  heart_rate_-_zone:_peak_-_min  heart_rate_-_zone:_peak_-_max  heart_rate_-_zone:_peak_-_minutes  sleep_-_summary_-_stages_-_deep  sleep_-_summary_-_stages_-_light  sleep_-_summary_-_stages_-_rem  sleep_-_summary_-_stages_-_wake  sleep_-_summary_-_total_minutes_asleep  sleep_-_summary_-_total_sleep_records  sleep_-_summary_-_total_time_in_bed
  DP3-0001                        84                                 84                                    84                                  84                                  84                                84                             84                          84                                  84                                       84                                  84                                  84                                     84                                          84                                           84                                       84                                       84                            84                                        84                               84                                             84                                     84                                     84                                         84                                         84                                 84                                 84                                     84                                       84                               84                               84                                   84                                     84                             84                             84                                 84                               84                                84                              84                               84                                      84                                     84                                   84
@@ -695,7 +699,9 @@ DP3-0433E                         1                                  1          
 DP3-0435E                         1                                  1                                     1                                 193                                   6                                 6                              6                           6                                   1                                        1                                   1                                   1                                      1                                           1                                            1                                        1                                        1                             1                                         1                                2                                              2                                      2                                      2                                          2                                          2                                  2                                  2                                      2                                        2                                2                                2                                    2                                      2                              2                              2                                  2                              193                               193                             193                              193                                     193                                    193                                  193
  DP3-0436                         0                                  0                                     0                                   1                                   0                                 0                              0                           0                                   0                                        0                                   0                                   0                                      0                                           0                                            0                                        0                                        0                             0                                         0                                1                                              1                                      1                                      1                                          1                                          1                                  1                                  1                                      1                                        1                                1                                1                                    1                                      1                              1                              1                                  1                                1                                 1                               1                                1                                       1                                      1                                    1
 
+
 Total number of unique dates recorded across all patients: 1278
+
 
 Summary statistics by metric:
                                       Feature       Median         IQR
@@ -745,12 +751,14 @@ heart_rate_-_zone:_out_of_range_-_caloriesout  2053.477980  555.949553
               gestational_age_by_reported_lmp    11.000000    3.200000
                                  gest_age_del    39.142857    1.714286
 
+
 Number of unique patients per timeframe:
                             Timeframe  Patient Count
                       First Trimester            193
                Early Second Trimester            215
 Late Second and Early Third Trimester            193
                  Late Third Trimester            163
+
 
 Which patients contributed valid data for at least 80% of their pregnancy, per feature:
 patient_id  activities_summary_steps  activities_summary_totaldistances  activities_summary_veryactiveminutes  sleep_summary_total_minutes_asleep  activities_-_goals_-_activeminutes  activities_-_goals_-_caloriesout  activities_-_goals_-_distance  activities_-_goals_-_steps  activities_-_summary_-_activescore  activities_-_summary_-_activitycalories  activities_-_summary_-_caloriesbmr  activities_-_summary_-_caloriesout  activities_-_summary_-_totaldistances  activities_-_summary_-_fairlyactiveminutes  activities_-_summary_-_lightlyactiveminutes  activities_-_summary_-_marginalcalories  activities_-_summary_-_sedentaryminutes  activities_-_summary_-_steps  activities_-_summary_-_veryactiveminutes  heart_rate_-_resting_heart_rate  heart_rate_-_zone:_out_of_range_-_caloriesout  heart_rate_-_zone:_out_of_range_-_min  heart_rate_-_zone:_out_of_range_-_max  heart_rate_-_zone:_out_of_range_-_minutes  heart_rate_-_zone:_fat_burn_-_caloriesout  heart_rate_-_zone:_fat_burn_-_min  heart_rate_-_zone:_fat_burn_-_max  heart_rate_-_zone:_fat_burn_-_minutes  heart_rate_-_zone:_cardio_-_caloriesout  heart_rate_-_zone:_cardio_-_min  heart_rate_-_zone:_cardio_-_max  heart_rate_-_zone:_cardio_-_minutes  heart_rate_-_zone:_peak_-_caloriesout  heart_rate_-_zone:_peak_-_min  heart_rate_-_zone:_peak_-_max  heart_rate_-_zone:_peak_-_minutes  sleep_-_summary_-_stages_-_deep  sleep_-_summary_-_stages_-_light  sleep_-_summary_-_stages_-_rem  sleep_-_summary_-_stages_-_wake  sleep_-_summary_-_total_minutes_asleep  sleep_-_summary_-_total_sleep_records  sleep_-_summary_-_total_time_in_bed
@@ -1097,6 +1105,7 @@ patient_id  activities_summary_steps  activities_summary_totaldistances  activit
  DP3-0435E                      True                               True                                  True                               False                                True                              True                           True                        True                                True                                     True                                True                                True                                   True                                        True                                         True                                     True                                     True                          True                                      True                             True                                           True                                   True                                   True                                       True                                       True                               True                               True                                   True                                     True                             True                             True                                 True                                   True                           True                           True                               True                            False                             False                           False                            False                                   False                                  False                                False
   DP3-0436                      True                               True                                  True                               False                                True                              True                           True                        True                                True                                     True                                True                                True                                   True                                        True                                         True                                     True                                     True                          True                                      True                            False                                          False                                  False                                  False                                      False                                      False                              False                              False                                  False                                    False                            False                            False                                False                                  False                          False                          False                              False                            False                             False                           False                            False                                   False                                  False                                False
 
+
 Number of the 43 metrics for which each patient achieved >= 80% data density:
 Patient ID  Compliant Metrics Count
   DP3-0250                       43
@@ -1442,6 +1451,7 @@ Patient ID  Compliant Metrics Count
   DP3-0143                        0
   DP3-0001                        0
 
+
 Number of the 0 patients that achieved >= 80% data density, per metric:
                                 Fitbit Metric  Patients With >= 80% Density
                      activities_summary_steps                           208
@@ -1487,4 +1497,5 @@ heart_rate_-_zone:_out_of_range_-_caloriesout                           171
              sleep_-_summary_-_stages_-_light                           133
                sleep_-_summary_-_stages_-_rem                           133
               sleep_-_summary_-_stages_-_wake                           133
+
 

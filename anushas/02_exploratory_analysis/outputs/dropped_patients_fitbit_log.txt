@@ -2,6 +2,7 @@ This file contains a table consisting of the number of patients whose data was n
 per metric. Patients had their data nulled out for a certain metric if they had more than 7 consecutive
 days of data missing for that metric.
 
+
 Metric                                        | Patients Excluded
 activities_summary_steps                      | 132
 activities_summary_totaldistances             | 132

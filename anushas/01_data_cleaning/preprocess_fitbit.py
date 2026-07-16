@@ -149,7 +149,7 @@ def print_log(exclusion_counts):
     with open(log_path, "w") as f:
         f.write("This file contains a table consisting of the number of patients whose data was nulled out, organized\n")
         f.write("per metric. Patients had their data nulled out for a certain metric if they had more than 7 consecutive\n")
-        f.write("days of data missing for that metric.\n\n")
+        f.write("days of data missing for that metric.\n\n\n")
 
         f.write(f"{'Metric':<45} | {'Patients Excluded'}\n")
         for metric, count in exclusion_counts.items():

@@ -5,6 +5,7 @@ retroplacental hemorrhage, vascular thrombosis, villous stromal vascular karyorr
 stem vessel obliteration/fibromuscular sclerosis, vascular ectasia, fetal inflammatory response stage/grade/location, diffuse villous edema,
 and placental hypoplasia.
 
+
 gestational_age_at_delivery: 4492.8
 placental_infarction: 2
 distal_villous_hypoplasia_focal/diffuse: 14

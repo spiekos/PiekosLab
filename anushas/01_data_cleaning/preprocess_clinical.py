@@ -83,14 +83,12 @@ def add_missingness_indicators(sheet):
     sheet_copy.insert(loc = target_eth_index, column = "eth_is_missing", value = eth_missing_values)
 
     # add missingness indicators for smoking
-    missing_placeholders = ["nan", "na", "n/a", "unknown", "declined", "missing"]
-    smoking_series = sheet["smoking"].astype(str)
-    missing_smoking_mask = smoking_series.isin(missing_placeholders) | sheet["smoking"].isnull()
+    smoking_missing_values = sheet_copy["smoking"].isnull().astype(int)
 
     # insert the "smoking_is_missing" column immediately after the "smoking" column
     smoking_index = sheet_copy.columns.get_loc("smoking")
     target_smoking_index = smoking_index + 1
-    sheet_copy.insert(loc = target_smoking_index, column = "smoking_is_missing", value = missing_smoking_mask)
+    sheet_copy.insert(loc = target_smoking_index, column = "smoking_is_missing", value = smoking_missing_values)
 
     return sheet_copy
 

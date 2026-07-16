@@ -158,7 +158,7 @@ def print_totals(sheet):
         f.write("Note that the following columns were dropped from the dataset because these features were not present in any patient:\n")
         f.write("retroplacental hemorrhage, vascular thrombosis, villous stromal vascular karyorrhexis, vascular intramural fibrin deposition,\n")
         f.write("stem vessel obliteration/fibromuscular sclerosis, vascular ectasia, fetal inflammatory response stage/grade/location, diffuse villous edema,\n")
-        f.write("and placental hypoplasia.\n\n")
+        f.write("and placental hypoplasia.\n\n\n")
 
         for col in numeric_cols:
             total = sheet[col].sum()

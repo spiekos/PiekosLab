@@ -212,44 +212,44 @@ def print_log(total_patients, total_missing, per_patient, max_con_missing, uniqu
 
     with open(log_path, "w") as f:
         f.write("Following are various statistics about the Fitbit dataset. \n")
-        f.write("Note that this data has been filtered to only include datapoints during pregnancy.\n\n")
+        f.write("Note that this data has been filtered to only include datapoints during pregnancy.\n\n\n")
 
         f.write(f"Total number of patients: {total_patients}")
-        f.write("\n\n")
+        f.write("\n\n\n")
 
         f.write(f"Total number of missing values: {total_missing}")
-        f.write("\n\n")
+        f.write("\n\n\n")
 
         f.write("Number of missing days per patient:\n")
         f.write(per_patient.to_string(index = False))
-        f.write("\n\n")
+        f.write("\n\n\n")
 
         f.write("Maximum consecutive number of days missing per feature per patient:\n")
         f.write(max_con_missing.to_string(index = False))
-        f.write("\n\n")
+        f.write("\n\n\n")
 
         f.write(f"Total number of unique dates recorded across all patients: {unique_dates}")
-        f.write("\n\n")
+        f.write("\n\n\n")
 
         f.write("Summary statistics by metric:\n")
         f.write(summary_stats.to_string(index = False))
-        f.write("\n\n")
+        f.write("\n\n\n")
 
         f.write("Number of unique patients per timeframe:\n")
         f.write(patients_per_timeframe.to_string(index = False))
-        f.write("\n\n")
+        f.write("\n\n\n")
 
         f.write("Which patients contributed valid data for at least 80% of their pregnancy, per feature:\n")
         f.write(metric_matrix.to_string(index = False))
-        f.write("\n\n")
+        f.write("\n\n\n")
 
         f.write(f"Number of the {num_metrics} metrics for which each patient achieved >= 80% data density:\n")
         f.write(pt_summary.to_string(index = False))
-        f.write("\n\n")
+        f.write("\n\n\n")
 
         f.write(f"Number of the {total_patients} patients that achieved >= 80% data density, per metric:\n")
         f.write(metric_summary.to_string(index = False))
-        f.write("\n\n")
+        f.write("\n\n\n")
 
 
 def main():
