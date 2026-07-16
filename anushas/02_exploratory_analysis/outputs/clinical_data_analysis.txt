@@ -41,20 +41,17 @@ maternal_age                             | 32.00                | 7.00
 prepregnancy_bmi_self_or_record          | 27.70                | 10.48               
 
 --- Categorical/Binary Features (Count, %) ---
-Feature                   | Category             | Count      | %         
+Feature                   | Category                  | Count      | %         
 ---------------------------------------------------------------------------
-infant_sex                | m                    | 188        | 54.3%     
-infant_sex                | f                    | 157        | 45.4%     
-infant_sex                | nan                  | 1          | 0.3%      
-race                      | white                | 292        | 84.4%     
-race                      | african american     | 38         | 11.0%     
-race                      | nan                  | 9          | 2.6%      
-race                      | asian                | 4          | 1.2%      
-race                      | black                | 2          | 0.6%      
-race                      | korean               | 1          | 0.3%      
-ethnicity                 | not hispanic or latino | 282        | 81.5%     
-ethnicity                 | non hispanic         | 32         | 9.2%      
-ethnicity                 | nan                  | 25         | 7.2%      
-ethnicity                 | hispanic or latino   | 7          | 2.0%      
-smoking_encoded           | 0                    | 325        | 93.9%     
-smoking_encoded           | 1                    | 21         | 6.1%      
+infant_sex                | m                         | 188        | 54.3%     
+infant_sex                | f                         | 157        | 45.4%     
+infant_sex                | nan                       | 1          | 0.3%      
+race                      | white                     | 292        | 84.4%     
+race                      | black                     | 40         | 11.6%     
+race                      | nan                       | 9          | 2.6%      
+race                      | asian                     | 5          | 1.4%      
+ethnicity                 | not hispanic or latino    | 314        | 90.8%     
+ethnicity                 | nan                       | 25         | 7.2%      
+ethnicity                 | hispanic or latino        | 7          | 2.0%      
+smoking_encoded           | 0                         | 325        | 93.9%     
+smoking_encoded           | 1                         | 21         | 6.1%      

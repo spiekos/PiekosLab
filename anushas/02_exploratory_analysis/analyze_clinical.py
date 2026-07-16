@@ -101,6 +101,17 @@ def calc_demographic_stats(df):
     categorical_stats = []
     total_n = len(df)
 
+    race_mapping = {
+        "african american": "black",
+        "korean": "asian"
+    }
+    ethnicity_mapping = {
+        "non hispanic": "not hispanic or latino"
+    }
+
+    df["race"] = df["race"].replace(race_mapping)
+    df["ethnicity"] = df["ethnicity"].replace(ethnicity_mapping)
+
     # continuous features: calculate median, IQR
     for col in continuous_features:
         if col in df.columns:
@@ -161,10 +172,10 @@ def print_log(missing_report, missing_ids, race_table, total_patients, cont_summ
             f.write(f"{row['Feature']:<40} | {row['Median']:<20} | {row['IQR']:<20}\n")
 
         f.write("\n--- Categorical/Binary Features (Count, %) ---\n")
-        f.write(f"{'Feature':<25} | {'Category':<20} | {'Count':<10} | {'%':<10}\n")
+        f.write(f"{'Feature':<25} | {'Category':<25} | {'Count':<10} | {'%':<10}\n")
         f.write("-" * 75 + "\n")
         for _, row in cat_summary_table.iterrows():
-            f.write(f"{row['Feature']:<25} | {str(row['Category']):<20} | {row['Count']:<10} | {row['%']:<10}\n")
+            f.write(f"{row['Feature']:<25} | {str(row['Category']):<25} | {row['Count']:<10} | {row['%']:<10}\n")
 
 
 def main():
