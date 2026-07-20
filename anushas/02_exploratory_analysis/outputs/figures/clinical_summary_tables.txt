@@ -1,0 +1,36 @@
+Table 1: Demographic Characteristics
+------------------------------------------------------------
+Variable / Category                           Statistic
+------------------------------------------------------------
+Presence Of Risk Factor                       
+    0                                         218 (63.0%)
+    1                                         128 (37.0%)
+Maternal Age                                  32.0 (7.0)
+Pregravid BMI                                 27.7 (10.5)
+Smoking                                       
+    0                                         325 (93.9%)
+    1                                         21 (6.1%)
+
+
+Outcomes Table
+------------------------------------------------------------
+Variable / Category                           Statistic
+------------------------------------------------------------
+Mode Of Delivery                              
+    1                                         29 (50.0%)
+    2                                         27 (46.6%)
+    0                                         2 (3.4%)
+Gest Hypertension                             
+    No                                        38 (65.5%)
+    Yes                                       20 (34.5%)
+Preeclampsia                                  
+    No                                        40 (69.0%)
+    Yes                                       18 (31.0%)
+Spontaneous Preterm Birth                     
+    0                                         46 (79.3%)
+    1                                         12 (20.7%)
+Gest Age Del                                  37.5 (3.1)
+Birth Weight                                  2995.0 (1075.0)
+Fetal Sex                                     
+    M                                         38 (65.5%)
+    F                                         20 (34.5%)

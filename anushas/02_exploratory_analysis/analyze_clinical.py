@@ -4,8 +4,11 @@ import numpy as np
 
 # load and return the clinical dataset
 def load_sheet():
-    sheet = pd.read_csv("01_data_cleaning/processed_data/processed_clinical_data.csv")
-    return sheet
+    clinical_sheet = pd.read_csv("01_data_cleaning/processed_data/processed_clinical_data.csv")
+    master_clinical = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - clinical data.csv")
+    placental_sheet = pd.read_csv("01_data_cleaning/processed_data/processed_placental_data.csv")
+    master_main = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - Sheet1.csv")
+    return clinical_sheet, master_clinical, placental_sheet, master_main
 
 
 # returns a diagnostic summary of data missingness across all patients for the following information:
@@ -142,6 +145,183 @@ def calc_demographic_stats(df):
     return pd.DataFrame(continuous_stats), pd.DataFrame(categorical_stats)
 
 
+# generates a table ("Table 1") that introduces our cohort by providing statistics for various demographic features
+# categorical variables: count (%). continuous variables: median (IQR).
+def generate_table_one(clinical_sheet, master_clinical, master_main):
+    df = master_clinical.merge(
+        master_main, left_on="ID", right_on="ID", how="inner"
+    )
+    df = df.merge(
+        clinical_sheet, left_on="ID", right_on="id", how="inner"
+    )
+
+    # map exact columns to standard feature names
+    mapping = {
+        "PARA_PRE_TERM": "preterm birth history",
+        "HOSP_INSURANCE_GRPING": "insurance",
+        "ADI_NATIONAL_RANK": "adi ranking",
+        "risk factor y/n": "presence of risk factor",
+        "race": "race",
+        "ethnicity": "ethnicity",
+        "maternal_age": "maternal age",
+        "prepregnancy_bmi_self_or_record": "pregravid bmi",
+        "smoking_encoded": "smoking",
+        "parity": "parity",
+        "gravida": "gravida",
+        "diabetes": "diabetes",
+        "chtn": "hypertension"
+    }
+    df = df.rename(columns=mapping)
+
+    table1_vars = [
+        "preterm birth history", "insurance", "adi ranking", "presence of risk factor", "race", "ethnicity", "maternal age", "pregravid bmi",
+        "smoking", "parity", "gravida", "diabetes", "hypertension"
+    ]
+
+    return build_summary(df, table1_vars)
+
+
+# generates a table that introduces our cohort by providing statistics for various pregnancy outcome features
+# categorical variables: count (%). continuous variables: median (IQR).
+def generate_outcomes_table(clinical_sheet, placental_sheet):
+    df = clinical_sheet.merge(placental_sheet, on="id", how="inner")
+
+    # map exact columns to standard feature names
+    mapping = {
+        "route_of_delivery_1-vag,_2-cs": "mode of delivery",
+        "gest_age_del": "gest age del",
+        "birthweight": "birth weight",
+        "apgar_1": "APGAR 1",
+        "apgar_5": "APGAR 5",
+        "nicu_days": "NICU days",
+        "infant_sex": "fetal sex",
+        "O_GDM": "gest diabetes",
+        "spontaneous_preterm_birth": "spontaneous preterm birth"
+    }
+    df = df.rename(columns=mapping)
+
+    # parse gestational hypertension and preeclampsia from "group" and "subgroup" columns
+    group_cols = [c for c in ["group", "subgroup"] if c in df.columns]
+    if group_cols:
+        # combine the text in the "group" and "subgroup" columns for easy parsing
+        combined_text = df[group_cols].astype(str).agg(" ".join, axis=1)
+
+        # gestational hypertension: "hdp" or anything containing "ghtn" (case-insensitive)
+        df["gest hypertension"] = combined_text.str.contains(
+            r"hdp|ghtn", case=False, regex=True, na=False
+        )
+
+        # preeclampsia: anything containing "pe" (case-insensitive)
+        df["preeclampsia"] = combined_text.str.contains(
+            r"pe", case=False, regex=True, na=False
+        )
+
+    outcomes_vars = [
+        "mode of delivery",
+        "gest hypertension",
+        "gest diabetes",
+        "preeclampsia",
+        "spontaneous preterm birth",
+        "gest age del",
+        "birth weight",
+        "apgar 1",
+        "apgar 5",
+        "nicu days",
+        "fetal sex",
+    ]
+
+    return build_summary(df, outcomes_vars)
+
+
+# helper function to calculate counts (%) for categorical variables and median (IQR) for continuous variables
+def build_summary(df, variables):
+    summary_rows = []
+
+    for var in variables:
+        if var in df.columns:
+            if df[var].dtype == bool:
+                df[var] = df[var].map({True: "Yes", False: "No"})
+
+            is_categorical = (
+                df[var].dtype == object
+                or df[var].dtype == bool
+                or df[var].nunique() < 10
+            )
+
+            # capitalize the variable name
+            formatted_var_name = str(var).replace("_", " ").title()
+            if formatted_var_name.lower() == "pregravid bmi":
+                formatted_var_name = "Pregravid BMI"
+
+            if is_categorical:
+                summary_rows.append(
+                    {"Variable / Category": formatted_var_name, "Statistic": ""}
+                )
+                counts = df[var].value_counts(dropna=False)
+                percents = (
+                    df[var].value_counts(normalize=True, dropna=False) * 100
+                )
+
+                for cat, count in counts.items():
+                    pct = percents[cat]
+                    formatted_cat = str(cat).capitalize()
+
+                    summary_rows.append(
+                        {
+                            "Variable / Category": f"    {formatted_cat}",
+                            "Statistic": f"{count} ({pct:.1f}%)",
+                        }
+                    )
+
+            else:
+                valid_data = pd.to_numeric(df[var], errors="coerce").dropna()
+                if not valid_data.empty:
+                    median = valid_data.median()
+                    q25 = valid_data.quantile(0.25)
+                    q75 = valid_data.quantile(0.75)
+                    iqr = q75 - q25
+
+                    summary_rows.append(
+                        {
+                            "Variable / Category": formatted_var_name,
+                            "Statistic": f"{median:.1f} ({iqr:.1f})",
+                        }
+                    )
+
+    return pd.DataFrame(summary_rows)
+
+
+# writes table 1 and outcomes tables to a single text file
+def export_formatted_tables_to_file(
+    table1_df,
+    outcomes_df,
+    output_filename="02_exploratory_analysis/outputs/figures/clinical_summary_tables.txt"
+):
+    def format_df_to_string(df):
+        lines = []
+        header_col1 = "Variable / Category".ljust(45)
+        header_col2 = "Statistic"
+        lines.append(f"{header_col1} {header_col2}")
+        lines.append("-" * 60)
+
+        for _, row in df.iterrows():
+            col1_val = str(row["Variable / Category"]).ljust(45)
+            col2_val = str(row["Statistic"])
+            lines.append(f"{col1_val} {col2_val}")
+        return "\n".join(lines)
+
+    with open(output_filename, "w") as f:
+        f.write("Table 1: Demographic Characteristics\n")
+        f.write("-" * 60 + "\n")
+        f.write(format_df_to_string(table1_df))
+
+        f.write("\n\n\n")
+
+        f.write("Outcomes Table\n")
+        f.write("-" * 60 + "\n")
+        f.write(format_df_to_string(outcomes_df))
+
+
 def print_log(missing_report, missing_ids, race_table, total_patients, cont_summary_table, cat_summary_table):
     log_path = "02_exploratory_analysis/outputs/clinical_data_analysis.txt"
 
@@ -179,11 +359,15 @@ def print_log(missing_report, missing_ids, race_table, total_patients, cont_summ
 
 
 def main():
-    clinical_sheet = load_sheet()
+    clinical_sheet, master_clinical, placental_sheet, master_main = load_sheet()
 
     missing_report, missing_ids = summarize_missing_info(clinical_sheet)
     race_table, total_patients = get_race_counts(clinical_sheet)
     cont_summary_table, cat_summary_table = calc_demographic_stats(clinical_sheet)
+
+    table_1 = generate_table_one(clinical_sheet, master_clinical, master_main)
+    outcomes_table = generate_outcomes_table(clinical_sheet, placental_sheet)
+    export_formatted_tables_to_file(table_1, outcomes_table)
 
     print_log(missing_report, missing_ids, race_table, total_patients, cont_summary_table, cat_summary_table)
 
