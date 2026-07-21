@@ -84,12 +84,13 @@ def delete_patients(sheet):
 
 # delete the following unnecessary columns: "slide a", "slide b", "slide membrane roll", "not in file", "mr"
 # delete all empty columns, i.e. columns representing histopathology that is not present in any patient
+# delete the "placental_infarction" column because its variance is too low (0: 117, 1: 2)
 def delete_columns(sheet):
     sheet = sheet.drop(columns = [
         "slide_a", "slide_b", "slide_membrane_roll", "not_in_file", "mr",
         "retroplacental_hemorrhage", "vascular_thrombosis", "villous_stromal_vascular_karyorrhexis", "vascular_intramural_fibrin_deposition", 
         "stem_vessel_obliteration/fibromuscular_sclerosis", "vascular_ectasia", "fetal_inflammatory_response_stage/grade/location", "diffuse_villous_edema", 
-        "placental_hypoplasia"
+        "placental_hypoplasia", "placental_infarction"
 ])
     return sheet
 
@@ -108,7 +109,7 @@ def encode(sheet):
     # encode yes/no to 1/0
     yes_no_mapping = {"yes": 1}
     yes_no_columns = [
-        "placental_infarction", "distal_villous_hypoplasia_focal/diffuse", "accelerated_villous_maturation", "increased_syncytial_knots", 
+        "distal_villous_hypoplasia_focal/diffuse", "accelerated_villous_maturation", "increased_syncytial_knots", 
         "delayed_villous_maturation", "increased_perivillous_fibrin_deposition", "chorangiosis"
     ]
     sheet[yes_no_columns] = sheet[yes_no_columns].apply(lambda x: x.map(yes_no_mapping))

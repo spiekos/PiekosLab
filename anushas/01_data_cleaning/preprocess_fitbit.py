@@ -12,12 +12,24 @@ def load_sheets():
 
 # standardizes all values to lowercase (except the values in the "id" column)
 # replaces spaces with underscores
+# replaces hyphens with underscores for column names of Fitbit metrics
 def standardize_sheet(df):
     if df is not None and not df.empty:
         if df.index.max() > 0:
             df = df.iloc[1:].copy()
 
         df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_", regex=False)
+
+        # replace hyphens with underscores only for column names of Fitbit metrics
+        target_prefixes = ("activities", "sleep", "heart_rate", "heart rate")
+        df.columns = [
+            (
+                col.replace("_-_", "_")
+                if col.startswith(target_prefixes)
+                else col
+            )
+            for col in df.columns
+        ]
 
         ids = ["record id", "record_id", "record.id"]
 
@@ -51,13 +63,19 @@ def merge_sheets(sheet1, sheet2):
     # merge both sheets
     merged = pd.merge(sheet1, sheet2, on = ["record_id", "date"], how = "inner")
 
-    # combine the two gestational age columns
-    merged['gestational_age_by_reported_lmp'] = merged['gestational_age_by_reported_lmp_x'].combine_first(merged['gestational_age_by_reported_lmp_y'])
-    merged = merged.drop(columns=['gestational_age_by_reported_lmp_x', 'gestational_age_by_reported_lmp_y'])
+    # merge all columns ending in _x and _y
+    # identify all base column names that ended up with _x and _y
+    x_cols = [c for c in merged.columns if c.endswith("_x")]
 
-    # combine the two event name columns
-    merged['event_name'] = merged['event_name_x'].combine_first(merged['event_name_y'])
-    merged = merged.drop(columns=['event_name_x', 'event_name_y'])
+    for x_col in x_cols:
+        base_name = x_col[:-2]  # remove '_x'
+        y_col = f"{base_name}_y"
+
+        if y_col in merged.columns:
+            # fill missing values in _x using _y
+            merged[base_name] = merged[x_col].fillna(merged[y_col])
+            # drop the original suffix columns
+            merged.drop(columns=[x_col, y_col], inplace=True)
 
     return merged
 

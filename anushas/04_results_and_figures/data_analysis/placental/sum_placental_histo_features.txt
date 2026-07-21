@@ -7,7 +7,6 @@ and placental hypoplasia.
 
 
 gestational_age_at_delivery: 4492.8
-placental_infarction: 2
 distal_villous_hypoplasia_focal/diffuse: 14
 accelerated_villous_maturation: 48
 increased_syncytial_knots: 46
