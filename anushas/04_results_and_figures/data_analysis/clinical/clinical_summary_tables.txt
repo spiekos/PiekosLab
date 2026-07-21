@@ -2,56 +2,32 @@ Table 1: Demographic Characteristics
 ------------------------------------------------------------
 Variable / Category                           Statistic
 ------------------------------------------------------------
-Para Pre Term                                 
+Preterm Birth History                         
     0.0                                       306 (70.2%)
     1.0                                       63 (14.4%)
     2.0                                       12 (2.8%)
     3.0                                       3 (0.7%)
     Nan                                       52 (11.9%)
-Hosp Insurance Grping                         
+Insurance                                     
     Commercial                                268 (61.5%)
     Medicaid                                  115 (26.4%)
     Medicare                                  6 (1.4%)
     Self pay/ other                           4 (0.9%)
     Nan                                       43 (9.9%)
-Adi National Rank                             67.0 (33.0)
-Risk Factor Y/N                               
-    0                                         246 (56.4%)
-    1                                         140 (32.1%)
-    Sab                                       27 (6.2%)
-    Excluded                                  7 (1.6%)
-    Na                                        1 (0.2%)
-    Withraw                                   15 (3.4%)
-Race                                          
-    American indian/alaska native             1 (0.2%)
-    Asian                                     5 (1.1%)
-    Black                                     57 (13.1%)
-    Declined                                  7 (1.6%)
-    Na                                        40 (9.2%)
-    White                                     326 (74.8%)
+ADI Ranking                                   67.0 (33.0)
+Risk Factor                                   140 (32.1%)
 Ethnicity                                     
     Declined                                  20 (4.6%)
     Hispanic/latino                           8 (1.8%)
     Na                                        42 (9.6%)
     Not hispanic/latino                       366 (83.9%)
 Maternal Age                                  32.0 (7.0)
-Prepregnancy Bmi Self Or Record               27.7 (10.5)
-Smoking Encoded                               
-    No                                        325 (74.5%)
-    Yes                                       21 (4.8%)
-    Nan                                       90 (20.6%)
+Prepregnancy BMI                              27.7 (10.5)
+Smoking Status                                21 (4.8%)
 Parity                                        2.0 (1.0)
 Gravida                                       2.0 (2.0)
-Diabetes                                      
-    0                                         343 (78.7%)
-    1                                         38 (8.7%)
-    2                                         9 (2.1%)
-    3                                         8 (1.8%)
-    Na                                        38 (8.7%)
-Chtn                                          
-    0                                         337 (77.3%)
-    1                                         61 (14.0%)
-    Na                                        38 (8.7%)
+Diabetes                                      38 (8.7%)
+Chronic Hypertension                          61 (14.0%)
 
 
 Outcomes Table
@@ -64,31 +40,15 @@ Route Of Delivery 1-Vag, 2-Cs
     2                                         121 (35.0%)
     Chart                                     1 (0.3%)
     Nan                                       2 (0.6%)
-Gest Hypertension                             
-    No                                        346 (100.0%)
-O Gdm                                         
-    Nan                                       346 (100.0%)
-Preeclampsia                                  
-    No                                        346 (100.0%)
-Spontaneous Preterm Birth                     
-    No                                        46 (13.3%)
-    Yes                                       12 (3.5%)
-    Nan                                       288 (83.2%)
+Gest Hypertension                             67 (19.4%)
+Gestational Diabetes                          33 (9.5%)
+Preeclampsia                                  46 (13.3%)
+Spontaneous Preterm Birth                     12 (3.5%)
 Gest Age Del                                  39.0 (2.0)
 Birthweight                                   3285.0 (710.0)
-Apgar 1                                       8.0 (1.0)
-Apgar 5                                       
-    0.0                                       1 (0.3%)
-    3.0                                       2 (0.6%)
-    4.0                                       1 (0.3%)
-    5.0                                       4 (1.2%)
-    6.0                                       7 (2.0%)
-    7.0                                       8 (2.3%)
-    8.0                                       49 (14.2%)
-    9.0                                       269 (77.7%)
-    10.0                                      2 (0.6%)
-    Nan                                       3 (0.9%)
-Nicu Days                                     0.0 (0.0)
+APGAR 1                                       8.0 (1.0)
+APGAR 5                                       9.0 (0.0)
+NICU Days                                     0.0 (0.0)
 Infant Sex                                    
     F                                         157 (45.4%)
     M                                         188 (54.3%)
