@@ -2,12 +2,42 @@ import pandas as pd
 import numpy as np
 
 
-# load and return the clinical dataset
+# load, clean, and return the datasets
 def load_sheet():
     clinical_sheet = pd.read_csv("01_data_cleaning/processed_data/processed_clinical_data.csv")
-    master_clinical = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - clinical data.csv")
+    
+    # read the first two rows to handle the split header layout
+    raw_header_1 = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - clinical data.csv", nrows=1, header=None).values[0]
+    raw_header_2 = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - clinical data.csv", skiprows=1, nrows=1, header=None).values[0]
+    
+    # combine them: use row 2 headers for columns where row 1 is blank/unnamed or where the secondary block starts
+    combined_headers = []
+    for h1, h2 in zip(raw_header_1, raw_header_2):
+        h1_str = str(h1).strip()
+        h2_str = str(h2).strip()
+        
+        if h2_str and h2_str.lower() != "nan" and ("unnamed" in h1_str.lower() or h1_str == ""):
+            combined_headers.append(h2_str)
+        elif h1_str and h1_str.lower() != "nan":
+            combined_headers.append(h1_str)
+        else:
+            combined_headers.append(h2_str if h2_str and h2_str.lower() != "nan" else h1_str)
+
+    # load the actual data skipping the header rows
+    master_clinical = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - clinical data.csv", skiprows=2, header=None)
+    master_clinical.columns = [str(c).strip() for c in combined_headers[:len(master_clinical.columns)]]
+
     placental_sheet = pd.read_csv("01_data_cleaning/processed_data/processed_placental_data.csv")
     master_main = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - Sheet1.csv")
+    
+    # normalize ID column and lowercase all headers across all sheets
+    for df in [clinical_sheet, master_clinical, placental_sheet, master_main]:
+        if df is not None:
+            for col in df.columns:
+                if str(col).strip().lower() == "id":
+                    df.rename(columns={col: "id"}, inplace=True)
+            df.columns = [str(c).strip().lower() for c in df.columns]
+                    
     return clinical_sheet, master_clinical, placental_sheet, master_main
 
 
@@ -145,89 +175,229 @@ def calc_demographic_stats(df):
     return pd.DataFrame(continuous_stats), pd.DataFrame(categorical_stats)
 
 
+# combines _x and _y duplicate columns resulting from merges into single columns
+def coalesce_merged_columns(df):
+    df = df.copy()
+    x_cols = [c for c in df.columns if c.endswith("_x")]
+
+    for x_col in x_cols:
+        base_name = x_col[:-2]
+        y_col = f"{base_name}_y"
+
+        if y_col in df.columns:
+            # combine _x and _y
+            combined = df[x_col].fillna(df[y_col])
+
+            # fix mixed types: try converting back to numeric first
+            numeric_combined = pd.to_numeric(combined, errors="coerce")
+            df[base_name] = numeric_combined
+
+            df.drop(columns=[x_col, y_col], inplace=True)
+        else:
+            df.rename(columns={x_col: base_name}, inplace=True)
+
+    # clean up any remaining _y columns
+    y_cols = [c for c in df.columns if c.endswith("_y")]
+    for y_col in y_cols:
+        base_name = y_col[:-2]
+        if base_name not in df.columns:
+            df.rename(columns={y_col: base_name}, inplace=True)
+        else:
+            df.drop(columns=[y_col], inplace=True)
+
+    return df
+
+
+def standardize_race_ethnicity(df):
+    if "race" in df.columns:
+        def map_race(val):
+            if pd.isna(val):
+                return "Na"
+            v = str(val).strip().lower()
+            if v in ["africian american", "black"]:
+                return "Black"
+            elif v == "white":
+                return "White"
+            elif v in ["asian", "korean"]:
+                return "Asian"
+            elif v in ["american indian or alaska native", "american indian/alaska native"]:
+                return "American Indian/Alaska Native"
+            elif v == "declined":
+                return "Declined"
+            elif v in ["unknown", "na", "nan"]:
+                return "Na"
+            return "Na"  # Fallback for any unexpected entries
+        
+        df["race"] = df["race"].apply(map_race)
+
+    if "ethnicity" in df.columns:
+        def map_ethnicity(val):
+            if pd.isna(val):
+                return "Na"
+            v = str(val).strip().lower()
+            if v in ["hispanic or latino", "hispanic"]:
+                return "Hispanic/Latino"
+            elif v in ["not hispanic or latino", "non hispanic"]:
+                return "Not Hispanic/Latino"
+            elif v == "declined":
+                return "Declined"
+            elif v in ["unspecified", "unknown", "na", "nan"]:
+                return "Na"
+            return "Na"  # Fallback for any unexpected entries
+            
+        df["ethnicity"] = df["ethnicity"].apply(map_ethnicity)
+        
+    return df
+
+
 # generates a table ("Table 1") that introduces our cohort by providing statistics for various demographic features
 # categorical variables: count (%). continuous variables: median (IQR).
 def generate_table_one(clinical_sheet, master_clinical, master_main):
-    df = master_clinical.merge(
-        master_main, left_on="ID", right_on="ID", how="inner"
-    )
-    df = df.merge(
-        clinical_sheet, left_on="ID", right_on="id", how="inner"
-    )
+    mc = master_clinical.copy()
+    print("MC COLUMNS:\n", mc.columns)
+    print("para_pre_term" in mc.columns)
+    mm = master_main.copy()
+    cs = clinical_sheet.copy()
 
-    # map exact columns to standard feature names
-    mapping = {
-        "PARA_PRE_TERM": "preterm birth history",
-        "HOSP_INSURANCE_GRPING": "insurance",
-        "ADI_NATIONAL_RANK": "adi ranking",
-        "risk factor y/n": "presence of risk factor",
-        "race": "race",
-        "ethnicity": "ethnicity",
-        "maternal_age": "maternal age",
-        "prepregnancy_bmi_self_or_record": "pregravid bmi",
-        "smoking_encoded": "smoking",
-        "parity": "parity",
-        "gravida": "gravida",
-        "diabetes": "diabetes",
-        "chtn": "hypertension"
-    }
-    df = df.rename(columns=mapping)
+    # drop duplicate columns from mm and cs that already exist in mc 
+    # (except 'id') to prevent any column collision suffixes from happening
+    mm = mm[[c for c in mm.columns if c == "id" or c not in mc.columns]]
+    cs = cs[[c for c in cs.columns if c == "id" or c not in mc.columns and c not in mm.columns]]
+
+    df = mc.merge(mm, on="id", how="left")
+    df = df.merge(cs, on="id", how="left")
+
+    df = coalesce_merged_columns(df)
+    df = standardize_race_ethnicity(df)
 
     table1_vars = [
-        "preterm birth history", "insurance", "adi ranking", "presence of risk factor", "race", "ethnicity", "maternal age", "pregravid bmi",
-        "smoking", "parity", "gravida", "diabetes", "hypertension"
+        "para_pre_term",
+        "hosp_insurance_grping",
+        "adi_national_rank",
+        "risk factor y/n",
+        "race",
+        "ethnicity",
+        "maternal_age",
+        "prepregnancy_bmi_self_or_record",
+        "smoking_encoded",
+        "parity",
+        "gravida",
+        "diabetes",
+        "chtn"
     ]
+    
+
+
+
+    print("DataFrame columns after merge in generate_table_one:")
+    print(df.columns.tolist())
+    for var in table1_vars:
+        if var not in df.columns:
+            print(f"MISSING IN DF: {var}")
+        else:
+            print(f"FOUND IN DF: {var} (Non-null count: {df[var].notna().sum()}/{len(df)})")
+    print(df.columns)
+
+
+
 
     return build_summary(df, table1_vars)
 
 
 # generates a table that introduces our cohort by providing statistics for various pregnancy outcome features
 # categorical variables: count (%). continuous variables: median (IQR).
-def generate_outcomes_table(clinical_sheet, placental_sheet):
-    df = clinical_sheet.merge(placental_sheet, on="id", how="inner")
+def generate_outcomes_table(clinical_sheet, master_clinical, placental_sheet):
+    df = clinical_sheet.merge(master_clinical, on="id", how="left")
+    df = df.merge(placental_sheet, on="id", how="left")
 
-    # map exact columns to standard feature names
-    mapping = {
-        "route_of_delivery_1-vag,_2-cs": "mode of delivery",
-        "gest_age_del": "gest age del",
-        "birthweight": "birth weight",
-        "apgar_1": "APGAR 1",
-        "apgar_5": "APGAR 5",
-        "nicu_days": "NICU days",
-        "infant_sex": "fetal sex",
-        "O_GDM": "gest diabetes",
-        "spontaneous_preterm_birth": "spontaneous preterm birth"
-    }
-    df = df.rename(columns=mapping)
+    df = coalesce_merged_columns(df)
+
+    # pull "O_GDM" column from master_clinical
+    gdm_cols = [c for c in ["id", "o_gdm", "O_GDM"] if c in master_clinical.columns]
+    if len(gdm_cols) >= 1:
+        # make sure 'id' is in gdm_cols to merge on
+        if "id" not in gdm_cols:
+            gdm_cols.insert(0, "id")
+        
+        # drop it from df first if it's already there to avoid duplicate collision suffixes
+        clean_gdm = master_clinical[gdm_cols].drop_duplicates(subset=["id"])
+        if "o_gdm" in df.columns:
+            df = df.drop(columns=["o_gdm"])
+        if "O_GDM" in df.columns:
+            df = df.drop(columns=["O_GDM"])
+            
+        df = df.merge(clean_gdm, on="id", how="left")
+
+    # force rename or map gestational outcomes if they exist under alternative names
+    print("DF COLUMNS: ", df.columns.tolist())
+    col_mappings = {}
+    for col in df.columns:
+        col_lower = str(col).strip().lower()
+        if "gdm" in col_lower or "gestational_diabetes" in col_lower or col_lower == "o_gdm":
+            col_mappings[col] = "gest_diabetes"
+        elif "hpt" in col_lower or "hypertension" in col_lower or "ghtn" in col_lower or col_lower == "o_ghtn":
+            col_mappings[col] = "gest_hypertension"
+            
+    df = df.rename(columns=col_mappings)
 
     # parse gestational hypertension and preeclampsia from "group" and "subgroup" columns
     group_cols = [c for c in ["group", "subgroup"] if c in df.columns]
     if group_cols:
         # combine the text in the "group" and "subgroup" columns for easy parsing
-        combined_text = df[group_cols].astype(str).agg(" ".join, axis=1)
-
-        # gestational hypertension: "hdp" or anything containing "ghtn" (case-insensitive)
-        df["gest hypertension"] = combined_text.str.contains(
-            r"hdp|ghtn", case=False, regex=True, na=False
+        combined_text = df[group_cols].apply(
+            lambda row: " ".join([str(val) for val in row if pd.notna(val) and val != ""]),
+            axis=1,
         )
+        # gestational hypertension: "hdp" or anything containing "ghtn" (case-insensitive)
+        df["gest hypertension"] = combined_text.str.contains(r"hdp|ghtn|gestational.*hypertension", case=False, regex=True, na=False)
 
         # preeclampsia: anything containing "pe" (case-insensitive)
-        df["preeclampsia"] = combined_text.str.contains(
-            r"pe", case=False, regex=True, na=False
-        )
+        df["preeclampsia"] = combined_text.str.contains(r"pe\b|preeclampsia", case=False, regex=True, na=False)
+    else:
+        # fallback if group/subgroup columns are missing
+        if "preeclampsia" not in df.columns:
+            df["preeclampsia"] = False
+        if "gest_hypertension" not in df.columns:
+            df["gest_hypertension"] = False
+
+    # ensure outcomes columns are explicitly present in df before summary
+    if "gest_hypertension" not in df.columns and "gest hypertension" in df.columns:
+        df["gest_hypertension"] = df["gest hypertension"]
+
+    # Robustly convert o_gdm to numeric, treating anything non-1 as 0 or missing
+    if "o_gdm" in df.columns:
+        df["o_gdm"] = pd.to_numeric(df["o_gdm"], errors="coerce")
+        # Map explicitly: 1 becomes "Yes", 0 becomes "No", and NaNs remain NaN (or missing)
+        df["o_gdm"] = df["o_gdm"].map({1.0: "Yes", 0.0: "No", 1: "Yes", 0: "No"})
+    else:
+        # search for any alternative gdm column if o_gdm wasn't merged properly
+        gdm_match = [c for c in df.columns if "gdm" in c.lower()]
+        if gdm_match:
+            df["o_gdm"] = df[gdm_match[0]]
+        else:
+            df["o_gdm"] = np.nan
+
+    if "o_gdm" in df.columns:
+        print("--- O_GDM UNIQUE VALUES ---")
+        print(df["o_gdm"].value_counts(dropna=False))
+
+    # convert outcome columns to clean yes/no strings
+    for col in ["gest_hypertension", "preeclampsia", "o_gdm"]:
+        if col in df.columns:
+            df[col] = df[col].map({True: "Yes", False: "No", 1: "Yes", 0: "No", 1.0: "Yes", 0.0: "No", "1": "Yes", "0": "No"})
 
     outcomes_vars = [
-        "mode of delivery",
-        "gest hypertension",
-        "gest diabetes",
+        "route_of_delivery_1-vag,_2-cs",
+        "gest_hypertension",
+        "o_gdm",
         "preeclampsia",
-        "spontaneous preterm birth",
-        "gest age del",
-        "birth weight",
-        "apgar 1",
-        "apgar 5",
-        "nicu days",
-        "fetal sex",
+        "spontaneous_preterm_birth",
+        "gest_age_del",
+        "birthweight",
+        "apgar_1",
+        "apgar_5",
+        "nicu_days",
+        "infant_sex"
     ]
 
     return build_summary(df, outcomes_vars)
@@ -239,6 +409,15 @@ def build_summary(df, variables):
 
     for var in variables:
         if var in df.columns:
+            # map binary 0/1 indicator columns to yes/no
+            if set(df[var].dropna().unique()).issubset({0, 1, 0.0, 1.0, "0", "1"}):
+                df[var] = df[var].map({1: "Yes", 0: "No", 1.0: "Yes", 0.0: "No", "1": "Yes", "0": "No"})
+
+            # format display name
+            formatted_var_name = str(var).replace("_", " ").title()
+            if formatted_var_name.lower() == "pregravid bmi":
+                formatted_var_name = "Pregravid BMI"
+            
             if df[var].dtype == bool:
                 df[var] = df[var].map({True: "Yes", False: "No"})
 
@@ -248,16 +427,11 @@ def build_summary(df, variables):
                 or df[var].nunique() < 10
             )
 
-            # capitalize the variable name
-            formatted_var_name = str(var).replace("_", " ").title()
-            if formatted_var_name.lower() == "pregravid bmi":
-                formatted_var_name = "Pregravid BMI"
-
             if is_categorical:
                 summary_rows.append(
                     {"Variable / Category": formatted_var_name, "Statistic": ""}
                 )
-                counts = df[var].value_counts(dropna=False)
+                counts = df[var].value_counts(dropna=False).sort_index()
                 percents = (
                     df[var].value_counts(normalize=True, dropna=False) * 100
                 )
@@ -361,12 +535,141 @@ def print_log(missing_report, missing_ids, race_table, total_patients, cont_summ
 def main():
     clinical_sheet, master_clinical, placental_sheet, master_main = load_sheet()
 
+
+
+    print("--- ACTUAL MASTER_CLINICAL COLUMNS ---")
+    print(master_clinical.columns.tolist())
+
+
     missing_report, missing_ids = summarize_missing_info(clinical_sheet)
     race_table, total_patients = get_race_counts(clinical_sheet)
     cont_summary_table, cat_summary_table = calc_demographic_stats(clinical_sheet)
+    
+
+
+
+
+
+
+
+
+
+    import difflib
+
+    # 1. Define target variables we are looking for
+    targets = {
+        "Table 1": [
+            "para_pre_term",
+            "hosp_insurance_grping",
+            "adi_national_rank",
+            "risk_factor_y/n",
+            "race",
+            "ethnicity",
+            "maternal_age",
+            "prepregnancy_bmi_self_or_record",
+            "smoking_encoded",
+            "parity",
+            "gravida",
+            "diabetes",
+            "chtn",
+        ],
+        "Outcomes Table": [
+            "route_of_delivery_1-vag,_2-cs",
+            "gest_hypertension",
+            "o_gdm",
+            "preeclampsia",
+            "spontaneous_preterm_birth",
+            "gest_age_del",
+            "birthweight",
+            "apgar_1",
+            "apgar_5",
+            "nicu_days",
+            "infant_sex",
+            "group",
+            "subgroup",
+        ],
+    }
+
+    # 2. Gather available sheets
+    sheets = {
+        "master_clinical": master_clinical,
+        "master_main": master_main,
+        "clinical_sheet": clinical_sheet,
+        "placental_sheet": placental_sheet,
+    }
+
+
+    def find_column_matches(sheet_dict, target_dict):
+        print("=" * 70)
+        print("COLUMN DIAGNOSTIC AUDIT")
+        print("=" * 70)
+
+        for table_name, target_vars in target_dict.items():
+            print(f"\n--- Searching for {table_name} Variables ---")
+
+            for target in target_vars:
+                found_locations = []
+                similar_suggestions = []
+
+                for sheet_name, df in sheet_dict.items():
+                    if df is None or df.empty:
+                        continue
+
+                    # Standardize column headers temporarily for matching
+                    clean_cols = [
+                        str(c).strip().lower().replace(" ", "_") for c in df.columns
+                    ]
+                    col_map = dict(zip(clean_cols, df.columns))
+
+                    # Direct match check
+                    clean_target = target.strip().lower().replace(" ", "_")
+                    if clean_target in col_map:
+                        found_locations.append(
+                            f"'{col_map[clean_target]}' in [{sheet_name}]"
+                        )
+
+                    # Fuzzy match search for alternative candidates
+                    matches = difflib.get_close_matches(
+                        clean_target, clean_cols, n=3, cutoff=0.4
+                    )
+                    for m in matches:
+                        actual_col = col_map[m]
+                        if actual_col not in similar_suggestions:
+                            similar_suggestions.append(
+                                f"'{actual_col}' in [{sheet_name}]"
+                            )
+
+                if found_locations:
+                    print(f"✅ FOUND '{target}':")
+                    for loc in found_locations:
+                        print(f"    - {loc}")
+                else:
+                    print(f"❌ MISSING '{target}'")
+                    if similar_suggestions:
+                        print(f"   💡 Potential alternatives found:")
+                        for sug in similar_suggestions:
+                            print(f"       -> {sug}")
+                    else:
+                        print(
+                            f"       -> No close column name matches in any input sheet."
+                        )
+
+
+    # Run diagnostic
+    find_column_matches(sheets, targets)
+
+
+
+
+
+
+
+
+
+
 
     table_1 = generate_table_one(clinical_sheet, master_clinical, master_main)
-    outcomes_table = generate_outcomes_table(clinical_sheet, placental_sheet)
+    outcomes_table = generate_outcomes_table(clinical_sheet, master_clinical, placental_sheet)
     export_formatted_tables_to_file(table_1, outcomes_table)
 
     print_log(missing_report, missing_ids, race_table, total_patients, cont_summary_table, cat_summary_table)
