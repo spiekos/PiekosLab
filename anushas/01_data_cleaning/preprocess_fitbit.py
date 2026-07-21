@@ -145,7 +145,7 @@ def drop_patients(sheet):
 # print to a log file explaining why you dropped each patient from the dataset
 # i.e. creates a table containing each patient that was dropped and the maximum consecutive number of days their data was missing
 def print_log(exclusion_counts):
-    log_path = "02_exploratory_analysis/outputs/dropped_patients_fitbit_log.txt"
+    log_path = "04_results_and_figures/data_analysis/fitbit/dropped_patients_fitbit_log.txt"
     with open(log_path, "w") as f:
         f.write("This file contains a table consisting of the number of patients whose data was nulled out, organized\n")
         f.write("per metric. Patients had their data nulled out for a certain metric if they had more than 7 consecutive\n")

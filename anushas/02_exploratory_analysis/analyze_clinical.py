@@ -295,7 +295,7 @@ def build_summary(df, variables):
 def export_formatted_tables_to_file(
     table1_df,
     outcomes_df,
-    output_filename="02_exploratory_analysis/outputs/figures/clinical_summary_tables.txt"
+    output_filename="04_results_and_figures/data_analysis/clinical/clinical_summary_tables.txt"
 ):
     def format_df_to_string(df):
         lines = []
@@ -323,7 +323,7 @@ def export_formatted_tables_to_file(
 
 
 def print_log(missing_report, missing_ids, race_table, total_patients, cont_summary_table, cat_summary_table):
-    log_path = "02_exploratory_analysis/outputs/clinical_data_analysis.txt"
+    log_path = "04_results_and_figures/data_analysis/clinical/clinical_data_analysis.txt"
 
     with open(log_path, "w") as f:
         f.write("Clinical Sheet Demographics Summary Report\n")

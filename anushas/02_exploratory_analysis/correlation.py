@@ -174,7 +174,7 @@ def run_test_3_demographics_collinearity(df):
     )
     plt.title("Baseline Demographics Correlation Matrix (Spearman $\\rho$)", fontsize=14, pad=15)
     plt.tight_layout()
-    plt.savefig("02_exploratory_analysis/outputs/figures/demographics_correlation_heatmap.png", dpi=300)
+    plt.savefig("04_results_and_figures/correlations/demographics_correlation_heatmap.png", dpi=300)
     plt.close()
 
     # process Variance Inflation Factors (VIF)
@@ -190,7 +190,7 @@ def run_test_3_demographics_collinearity(df):
             vif_records.append({"Variable": col, "VIF": vif_val})
 
         vif_df = pd.DataFrame(vif_records).sort_values(by="VIF", ascending=False)
-        with open("02_exploratory_analysis/outputs/test3_demographics_vif.txt", "w") as vif_file:
+        with open("04_results_and_figures/correlations/test3_demographics_vif.txt", "w") as vif_file:
             vif_file.write(vif_df.to_markdown(index=False))
     else:
         print(f"VIF Warning: Too many missing values across columns (only {len(vif_df_clean)} complete rows). Skipping VIF calculation to avoid biased scores.")
@@ -206,10 +206,10 @@ def print_log(df_assets, fdr_threshold, prefix=""):
         return
 
     # Add a unique file prefix (e.g., 'test1_' or 'test2_') so they do not overwrite each other
-    pos_log_path = f"02_exploratory_analysis/outputs/{prefix}positively_associated_vars.txt"
-    neg_log_path = f"02_exploratory_analysis/outputs/{prefix}negatively_associated_vars.txt"
-    full_table_log_path = f"02_exploratory_analysis/outputs/{prefix}full_correlation_table.txt"
-    filtered_table_log_path = f"02_exploratory_analysis/outputs/{prefix}filtered_correlation_table.txt"
+    pos_log_path = f"04_results_and_figures/correlations/{prefix}positively_associated_vars.txt"
+    neg_log_path = f"04_results_and_figures/correlations/{prefix}negatively_associated_vars.txt"
+    full_table_log_path = f"04_results_and_figures/correlations/{prefix}full_correlation_table.txt"
+    filtered_table_log_path = f"04_results_and_figures/correlations/{prefix}filtered_correlation_table.txt"
 
     # write into the positively associated file
     with open(pos_log_path, "w") as pos_file:
@@ -281,7 +281,7 @@ def main():
     print_log(test2_assets, fdr_threshold = 0.05, prefix = "fitbit_")
 
     test3_results = run_test_3_demographics_collinearity(clinical_df)
-    test3_results.to_csv("02_exploratory_analysis/outputs/demographics_correlation_matrix.csv")
+    test3_results.to_csv("04_results_and_figures/correlations/demographics_correlation_matrix.csv")
 
 
 if __name__ == "__main__":

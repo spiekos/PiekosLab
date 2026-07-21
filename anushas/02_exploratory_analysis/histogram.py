@@ -47,7 +47,7 @@ def prepare_pregnancy_counts(df):
 # plotting function
 # takes both dataframes (all datapoints, pregnancy only) and plots the two histograms
 def make_histograms_pdf(all_data, pregnancy_data):
-    output_filename = "02_exploratory_analysis/outputs/figures/pregnancy_plots_report.pdf"
+    output_filename = "04_results_and_figures/data_analysis/clinical/pregnancy_plots_report.pdf"
 
     with PdfPages(output_filename) as pdf:
     

@@ -184,7 +184,7 @@ def add_sptb_column(placental_sheet, clinical_sheet):
 
 # print the total of each appropriate column (excluding text columns and gestational age) into a log file
 def print_totals(sheet):
-    log_path = "02_exploratory_analysis/outputs/sum_placental_histo_features.txt"
+    log_path = "04_results_and_figures/data_analysis/placental/sum_placental_histo_features.txt"
     numeric_cols = sheet.select_dtypes(include = "number").columns
     numeric_cols = numeric_cols.tolist()
 

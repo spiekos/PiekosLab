@@ -208,7 +208,7 @@ def get_metric_representation_matrices(sheet, feature_cols):
 # print all calculated data into a log file
 def print_log(total_patients, total_missing, per_patient, max_con_missing, unique_dates, summary_stats, 
               patients_per_timeframe, metric_matrix, pt_summary, metric_summary, num_metrics):
-    log_path = "02_exploratory_analysis/outputs/fitbit_data_analysis.txt"
+    log_path = "04_results_and_figures/data_analysis/fitbit/fitbit_data_analysis.txt"
 
     with open(log_path, "w") as f:
         f.write("Following are various statistics about the Fitbit dataset. \n")
