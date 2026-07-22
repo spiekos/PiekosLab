@@ -1,0 +1,35 @@
+{
+  "model_params": {
+    "LogisticRegression": {
+      "C": 0.0010359916440554247
+    },
+    "RandomForest": {
+      "n_estimators": 218,
+      "max_depth": 5,
+      "min_samples_split": 18,
+      "min_samples_leaf": 7,
+      "max_features": "log2"
+    },
+    "XGBoost": {
+      "n_estimators": 305,
+      "max_depth": 4,
+      "learning_rate": 0.01975101862420168,
+      "subsample": 0.7699373554192694,
+      "colsample_bytree": 0.9982409522597624,
+      "min_child_weight": 3,
+      "gamma": 3.027337870032213,
+      "reg_alpha": 0.31315068436619414,
+      "reg_lambda": 0.012739742843460937
+    },
+    "SVM": {
+      "C": 0.667236717046421,
+      "gamma": "scale"
+    }
+  },
+  "val_pr_auc": {
+    "LogisticRegression": 0.48894230769230773,
+    "RandomForest": 0.7967719780219781,
+    "XGBoost": 0.8895833333333334,
+    "SVM": 0.6630223942723943
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "tissue": "epds",
+  "timepoint": "D",
+  "data_path": "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/survey/model_ready/epds/normalized_sliced_by_suffix/epds_plasma_formatted_suffix_D.csv",
+  "outcome": "Complication",
+  "complications_pooled": [
+    "HDP",
+    "FGR",
+    "sPTB"
+  ],
+  "n_train": 179,
+  "n_val": 38,
+  "n_test": 39,
+  "class_dist_train": {
+    "control": 140,
+    "complication": 39
+  },
+  "class_dist_val": {
+    "control": 30,
+    "complication": 8
+  },
+  "class_dist_test": {
+    "control": 30,
+    "complication": 9
+  },
+  "n_features_pretlasso": 11,
+  "n_features_postlasso": 11,
+  "best_model_val": "SVM",
+  "best_val_pr_auc": 0.6400297619047619,
+  "test_metrics": {
+    "LogisticRegression": {
+      "pr_auc": 0.49696805252360804,
+      "roc_auc": 0.6277777777777778,
+      "accuracy": 0.6153846153846154,
+      "precision": 0.2857142857142857,
+      "recall": 0.4444444444444444,
+      "f1": 0.34782608695652173
+    },
+    "RandomForest": {
+      "pr_auc": 0.36158752825419493,
+      "roc_auc": 0.6055555555555555,
+      "accuracy": 0.717948717948718,
+      "precision": 0.4,
+      "recall": 0.4444444444444444,
+      "f1": 0.42105263157894735
+    },
+    "XGBoost": {
+      "pr_auc": 0.4043337562945406,
+      "roc_auc": 0.6222222222222222,
+      "accuracy": 0.6923076923076923,
+      "precision": 0.38461538461538464,
+      "recall": 0.5555555555555556,
+      "f1": 0.45454545454545453
+    },
+    "SVM": {
+      "pr_auc": 0.3808641975308642,
+      "roc_auc": 0.6240740740740741,
+      "accuracy": 0.717948717948718,
+      "precision": 0.4166666666666667,
+      "recall": 0.5555555555555556,
+      "f1": 0.47619047619047616
+    }
+  }
+}

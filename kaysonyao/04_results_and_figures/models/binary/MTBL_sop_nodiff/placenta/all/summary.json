@@ -1,0 +1,84 @@
+{
+  "tissue": "placenta",
+  "timepoint": "all",
+  "data_path": "/sessions/zealous-sleepy-curie/mnt/kaysonyao/data/cleaned/sop_omics_pipeline_v2/MTBL_placenta/MTBL_placenta_cleaned_with_metadata.csv",
+  "outcome": "Complication",
+  "complications_pooled": [
+    "HDP",
+    "FGR",
+    "sPTB"
+  ],
+  "n_train": 78,
+  "n_val": 17,
+  "n_test": 17,
+  "class_dist_train": {
+    "control": 37,
+    "complication": 41
+  },
+  "class_dist_val": {
+    "control": 8,
+    "complication": 9
+  },
+  "class_dist_test": {
+    "control": 8,
+    "complication": 9
+  },
+  "n_features_pretlasso": 644,
+  "n_features_postlasso": 644,
+  "best_model_val": "SVM",
+  "best_val_pr_auc": 0.9361111111111111,
+  "test_metrics": {
+    "LogisticRegression": {
+      "pr_auc": 0.6100074308407641,
+      "pr_auc_ci_low": 0.329156454248366,
+      "pr_auc_ci_high": 0.9212640056022409,
+      "roc_auc": 0.5555555555555556,
+      "roc_auc_ci_low": 0.2571428571428571,
+      "roc_auc_ci_high": 0.8461805555555555,
+      "accuracy": 0.5294117647058824,
+      "precision": 0.5714285714285714,
+      "recall": 0.4444444444444444,
+      "f1": 0.5,
+      "n_test": 17
+    },
+    "RandomForest": {
+      "pr_auc": 0.7838582713582714,
+      "pr_auc_ci_low": 0.5094660364145659,
+      "pr_auc_ci_high": 0.9819017857142857,
+      "roc_auc": 0.7222222222222222,
+      "roc_auc_ci_low": 0.44285714285714284,
+      "roc_auc_ci_high": 0.9667424242424242,
+      "accuracy": 0.7647058823529411,
+      "precision": 0.8571428571428571,
+      "recall": 0.6666666666666666,
+      "f1": 0.75,
+      "n_test": 17
+    },
+    "XGBoost": {
+      "pr_auc": 0.7618437118437118,
+      "pr_auc_ci_low": 0.47978354978354976,
+      "pr_auc_ci_high": 0.9742219387755102,
+      "roc_auc": 0.7361111111111112,
+      "roc_auc_ci_low": 0.44277056277056276,
+      "roc_auc_ci_high": 0.9545454545454546,
+      "accuracy": 0.6470588235294118,
+      "precision": 0.6666666666666666,
+      "recall": 0.6666666666666666,
+      "f1": 0.6666666666666666,
+      "n_test": 17
+    },
+    "SVM": {
+      "pr_auc": 0.5584275292608626,
+      "pr_auc_ci_low": 0.32007386363636364,
+      "pr_auc_ci_high": 0.9344733391608393,
+      "roc_auc": 0.5555555555555556,
+      "roc_auc_ci_low": 0.24285714285714285,
+      "roc_auc_ci_high": 0.8750946969696969,
+      "accuracy": 0.5294117647058824,
+      "precision": 0.5555555555555556,
+      "recall": 0.5555555555555556,
+      "f1": 0.5555555555555556,
+      "n_test": 17
+    }
+  }
+}

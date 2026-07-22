@@ -1,0 +1,347 @@
+id,status,omics_set#,group,subgroup,maternal_age,height_(cm),weight_(kg),delivery_bmi,prepregnancy_weight_self_or_record,prepregnancy_bmi_self_or_record,race,race_is_missing,race_white,race_black,race_asian,hispanic/latino,ethnicity,eth_is_missing,smoking,smoking_encoded,smoking_is_missing,gravida,parity,diabetes,chtn,labor_onset,"route_of_delivery_1-vag,_2-cs",gest_age_del,birthweight,infant_sex,apgar_1,apgar_5,nicu_days,unnamed:_26
+DP3-0001,delivered,0,control,control,30,163,74,27.9,67.6,25.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,2,0,0,spontaneous,1,39.9,3390,m,8,9,0,no
+DP3-0002,delivered,0,control,control,37,168,80.3,28.5,68.5,24.3,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,0,?,1,39.3,3150,m,9,9,0,no
+DP3-0003,delivered,0,control,control,38,173,89.5,29.9,79.4,26.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,5,2,0,0,spontaneous,1,37.6,3400,f,9,9,0,no
+DP3-0004,delivered,0,hdp,ghtn,29,160,121.4,47.4,112.9,44.1,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,4,2,0,0,?,2,37.0,3520,m,8,9,2,<14
+DP3-0005,delivered,1,fgr,fgr <5,33,160,106,41.4,99.8,39.0,white,0,1,0,0,0,not hispanic or latino,0,yes,1,0,2,1,0,0,?,2,36.9,2090,f,8,8,0,no
+DP3-0006,delivered,1,control,control,31,160,85,33.2,67.0,26.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,spontaneous,1,40.0,3670,f,9,9,0,no
+DP3-0008,delivered,2,control,control,23,163,67,25.2,61.2,23.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,spontaneous,1,39.0,2980,m,9,8,0,no
+DP3-0009,delivered,2,hdp,ghtn,36,163,83,31.2,71.7,27.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,?,2,37.0,3320,m,8,8,5,<14
+DP3-0012,delivered,0,control,control,36,173,96.7,32.3,80.8,27.0,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,3,0,1,0,?,2,38.3,4070,m,8,9,0,no
+DP3-0013,delivered,0,control,control,30,161.3,122,46.9,105.1,40.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,1,induced,2,37.3,3230,m,8,8,0,<14
+DP3-0015,delivered,0,control,control,32,155,77,32.0,73.0,30.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,0,0,0,spontaneous,1,38.9,4180,m,8,9,0,no
+DP3-0017,delivered,0,control,control,25,160,91.6,35.8,73.9,28.9,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,4,0,0,0,spontaneous,1,39.1,3230,f,9,9,0,no
+DP3-0018,delivered,1,control,control,34,168,127.3,45.1,120.2,42.6,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,1,induced (does not include prom,1,38.3,3260,f,9,9,0,no
+DP3-0019,delivered,0,control,control,25,168,83.3,29.5,,21.4,white,0,1,0,0,0,non hispanic,0,never,0,0,1,0,0,0,1,0,39.4,3880,m,3,,2.46,no
+DP3-0020,delivered,0,control,control,24,168,100.2,35.5,93.4,33.1,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,2,0,0,induced (does not include prom,1,38.4,3030,m,7,9,0,<14
+DP3-0021,delivered,0,control,control,29,162.6,63.4,24.0,,19.9,white,0,1,0,0,0,non hispanic,0,never,0,0,5,2,0,0,0,0,38.1,2980,m,9,9,2.08,no
+DP3-0022,delivered,0,control,control,37,163,89,33.5,73.8,27.8,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,3,0,0,0,induced (does not include prom,1,39.1,4310,m,9,9,0,no
+DP3-0024,delivered,1,sptb,sptb,34,163,74.3,28.0,,21.1,white,0,1,0,0,0,,1,quit,0,0,1,2,0,0,0,0,36.4,2940,m,7,9,1.63,<20
+DP3-0025,delivered,1,hdp,lo severe pe,31,172,96.7,32.7,86.2,29.1,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,1,0,0,spontaneous,1,39.6,3825,f,9,9,0,<20
+DP3-0027,delivered,2,control,control,34,165,97.6,35.8,86.3,31.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,0,0,0,induced (does not include prom,1,39.1,3680,m,9,9,0,no
+DP3-0028,delivered,1,control,control,31,163,84.6,31.8,67.1,25.3,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,5,4,0,0,?,2,38.1,2940,m,5,7,0,no
+DP3-0029E,delivered,1,control,control,36,152,104,45.0,104.3,45.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,5,1,0,1,induced (does not include prom,1,37.0,2350,f,9,9,0,<20
+DP3-0030,delivered,0,control,control,30,152,86,37.2,70.3,30.4,african american,0,0,1,0,0,not hispanic or latino,0,quit,0,0,1,3,0,0,spontaneous,2,40.3,3000,f,3,8,0,no
+DP3-0032,delivered,0,control,control,35,157,79.1,32.1,58.6,23.8,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,0,0,0,induced (does not include prom,1,39.3,3590,f,8,9,0,no
+DP3-0033E,delivered,0,control,control,35,157,98,39.8,97.1,39.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,5,0,0,1,spontaneous,1,39.7,3810,m,9,9,0,<14
+DP3-0034,delivered,1,control,control,38,177.8,102.7,32.5,,26.9,white,0,1,0,0,0,non hispanic,0,quit,0,0,1,0,0,0,1,0,40.7,3300,f,8,9,1.5,<14
+DP3-0036,delivered,2,hdp,pp ghtn,26,173,103,34.4,84.8,28.3,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,1,2,0,0,spontaneous,1,40.0,3840,f,9,9,0,no
+DP3-0037,delivered,1,control,control,41,173,107.7,36.0,102.1,34.1,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,6,1,0,0,induced (does not include prom,1,39.3,3830,m,8,9,0,no
+DP3-0038,delivered,1,sptb,sptb,31,163,73,27.5,,23.4,white,0,1,0,0,0,non hispanic,0,never,0,0,1,0,0,0,0,0,36.0,2600,m,8,9,7.83,no
+DP3-0039E,delivered,0,control,control,30,165,62,22.8,56.2,20.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,2,0,0,spontaneous,1,37.6,2850,m,8,9,0,>28
+DP3-0040,delivered,0,control,control,33,168,99.4,35.2,80.5,28.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,0,0,0,induced (does not include prom,1,41.9,4390,f,9,9,0,no
+DP3-0041E,delivered,0,control,control,26,165,79,29.0,59.0,21.7,white,0,1,0,0,0,,1,never,0,0,2,0,0,0,induced (does not include prom,1,39.3,3900,m,9,9,0,no
+DP3-0042,delivered,0,control,control,32,168,96.4,34.2,74.8,26.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,0,induced (does not include prom,1,40.3,3660,m,9,9,0,>28
+DP3-0043,delivered,0,control,control,32,165,79.8,29.3,59.4,21.8,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,3,0,0,0,spontaneous,1,39.4,3080,m,9,9,0,no
+DP3-0044,delivered,0,control,control,26,152,111,48.0,98.4,42.6,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,1,2,0,1,induced (does not include prom,2,39.3,3520,m,2,9,0,no
+DP3-0045,delivered,1,hdp,fgr <5+eo mild pe,28,165,72.6,26.7,60.2,22.1,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,?,2,28.9,735,m,7,8,0,<28
+DP3-0046,delivered,0,control,control,30,160,90,35.2,71.9,28.1,african american,0,0,1,0,0,not hispanic or latino,0,quit,0,0,2,0,0,0,spontaneous,1,39.7,3600,f,8,9,0,no
+DP3-0048,delivered,1,hdp,pp hellp,27,180,83.1,25.6,67.1,20.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,0,spontaneous,1,39.6,3570,f,8,9,0,<14
+DP3-0049E,delivered,1,fgr,fgr <3,33,149,66,29.7,57.2,25.8,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,0,0,0,?,2,36.4,1850,m,7,8,0,<28
+DP3-0050,delivered,0,control,control,29,160,75.3,29.4,63.7,24.9,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,2,0,0,spontaneous,1,39.0,3490,m,8,9,0,no
+DP3-0051,delivered,0,control,control,34,160,70,27.3,,21.7,white,0,1,0,0,0,non hispanic,0,never,0,0,1,0,0,0,0,1,40.1,2920,f,9,9,2.54,no
+DP3-0052E,delivered,0,control,control,25,157,91,36.9,75.3,30.5,african american,0,0,1,0,0,not hispanic or latino,0,quit,0,0,2,3,0,0,induced (does not include prom,1,39.1,3390,m,9,9,0,no
+DP3-0053,delivered,0,control,control,25,165,90,33.1,,25.0,white,0,1,0,0,0,non hispanic,0,never,0,0,1,1,0,0,1,0,41.6,3370,f,6,9,1.5,no
+DP3-0054,delivered,0,control,control,23,165,98,36.0,83.9,30.8,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,0,spontaneous,2,39.3,2980,m,8,9,0,no
+DP3-0055E,delivered,0,control,control,32,160,101,39.5,97.5,38.1,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,0,0,0,spontaneous,1,39.9,3480,f,9,9,0,no
+DP3-0056,delivered,1,hdp,lo severe sipe,34,173,93,31.1,78.0,26.1,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,1,2,1,?,2,36.7,4060,m,2,7,0,no
+DP3-0057,delivered,1,control,control,0,165.1,75.1,27.6,64.4,23.6,white,0,1,0,0,0,,1,quit,0,0,1,0,,,induced,chart,37.0,2590,m,7,8,0,no
+DP3-0060E,delivered,0,control,control,26,163,85,32.0,76.2,28.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,?,2,39.0,3210,m,9,9,0,no
+DP3-0062,delivered,2,control,control,38,157,80,32.5,68.3,27.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,0,0,0,?,2,39.0,3440,f,8,9,0,<20
+DP3-0064,delivered,0,control,control,38,160,66,25.8,54.7,21.4,asian,0,0,0,1,0,not hispanic or latino,0,never,0,0,4,0,0,0,spontaneous,1,39.0,3310,f,9,9,0,no
+DP3-0065,delivered,0,control,control,34,162,72.1,27.5,65.2,24.9,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,2,1,1,0,spontaneous,1,39.9,3040,f,7,9,0,no
+DP3-0066,delivered,0,control,control,37,165,104,38.2,91.6,33.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,0,0,0,induced (does not include prom,1,40.9,3990,f,9,9,0,no
+DP3-0068,delivered,2,fgr,lo fgr <5,37,160,104,40.6,100.7,39.3,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,1,0,0,0,prom,1,38.6,2530,m,9,9,0,no
+DP3-0069E,delivered,0,control,control,35,175,91,29.7,78.9,25.8,white,0,1,0,0,0,not hispanic or latino,0,yes,1,0,2,2,0,0,spontaneous,1,40.6,3260,m,9,9,0,no
+DP3-0070,delivered,2,control,control,27,165,88.3,32.4,60.3,22.2,white,0,1,0,0,0,,1,never,0,0,1,2,0,0,induced (does not include prom,1,39.6,3560,f,9,9,0,no
+DP3-0071,delivered,1,hdp,lo severe pe,37,163,87.8,33.0,85.5,32.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,?,2,38.9,3360,f,9,9,0,<20
+DP3-0072,delivered,1,fgr,fgr <3,31,167,88.6,31.8,66.2,23.7,,1,0,0,0,0,not hispanic or latino,0,quit,0,0,1,1,0,0,spontaneous,1,39.1,2290,m,9,9,0,no
+DP3-0073E,delivered,0,control,control,35,155,72.7,30.3,61.9,25.8,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,?,2,36.0,3530,m,9,9,0,no
+DP3-0074,delivered,0,control,control,34,173,72,24.1,61.2,20.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,spontaneous,2,39.3,3620,f,8,9,0,no
+DP3-0075,delivered,2,control,control,38,176,80,25.8,64.4,20.8,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,0,0,0,induced (does not include prom,1,37.0,3030,f,9,9,0,<14
+DP3-0076E,delivered,0,hdp,lo mild pe,38,170,113,39.1,98.9,34.2,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,3,1,0,0,spontaneous,1,37.0,3880,f,7,8,0,no
+DP3-0077,delivered,0,control,control,48,178,73,23.0,,27.7,black,0,0,1,0,0,non hispanic,0,never,0,0,2,1,0,0,0,0,38.1,3800,m,9,9,2.58,<14
+DP3-0080,delivered,1,hdp,eo severe pe,34,150,61.6,27.4,,20.8,white,0,1,0,0,0,non hispanic,0,never,0,0,2,0,0,0,0,1,33.6,3000,m,5,6,22.38,no
+DP3-0082,delivered,0,control,control,33,168,85.2,30.2,71.4,25.3,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,3,0,0,induced (does not include prom,1,41.1,4450,m,7,8,0,no
+DP3-0083E,delivered,0,control,control,27,160,66,25.8,54.0,21.1,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,spontaneous,1,39.4,3715,m,9,9,0,no
+DP3-0084,delivered,0,control,control,24,168,81,28.7,65.4,23.2,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,2,1,0,0,spontaneous,1,40.6,3480,f,8,9,0,<28
+DP3-0085,delivered,0,control,control,37,175.3,141.5,46.0,124.2,40.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,2,1,1,?,2,38.3,3680,m,9,9,0,<14
+DP3-0086E,delivered,0,control,control,38,160,90,35.2,81.6,31.9,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,3,0,0,induced (does not include prom,1,39.0,3310,m,8,9,0,<28
+DP3-0087,delivered,0,control,control,36,149.9,67.8,30.2,55.8,24.8,white,0,1,0,0,1,hispanic or latino,0,quit,0,0,1,0,0,0,induced (does not include prom,1,39.6,3220,m,9,9,0,<20
+DP3-0088E,delivered,0,control,control,27,168,115.9,41.1,98.1,34.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,4,0,0,1,induced (does not include prom,1,39.1,3320,f,8,9,0,<14
+DP3-0091E,delivered,1,hdp,lo mild pe,31,150,104,46.2,98.8,43.9,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,0,0,0,induced (does not include prom,2,37.3,2920,m,8,9,0,>28
+DP3-0092,delivered,1,hdp,lo severe sipe,35,168,102.2,36.2,,27.7,white,0,1,0,0,0,non hispanic,0,never,0,0,5,0,1,1,1,0,37.1,3220,m,7,8,2.21,no
+DP3-0093,delivered,2,control,control,31,152,62.9,27.2,49.4,21.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,2,0,0,?,2,39.4,3400,f,9,9,0,no
+DP3-0094,delivered,1,control,control,28,165,110.6,40.6,116.3,42.7,white,0,1,0,0,0,not hispanic or latino,0,yes,1,0,4,2,0,0,?,2,40.0,4120,f,8,9,0,no
+DP3-0097,delivered,0,control,control,27,165,82.3,30.2,64.3,23.6,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,0,prom,1,40.3,3270,f,9,9,0,no
+DP3-0100E,delivered,0,control,control,31,167,79,28.3,64.3,24.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,2,0,0,induced (does not include prom,1,40.4,3580,m,8,9,0,no
+DP3-0101,delivered,1,sptb,sptb,35,157.5,70,28.2,60.5,24.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,0,0,0,spontaneous,2,35.3,2340,f,9,9,0,no
+DP3-0102,delivered,0,control,control,28,160,149,58.2,142.4,55.6,african american,0,0,1,0,0,not hispanic or latino,0,quit,0,0,4,4,0,0,spontaneous,1,39.9,4480,m,9,9,0,no
+DP3-0104,delivered,0,control,control,35,168,69,24.4,61.3,21.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,spontaneous,1,37.9,3130,m,9,9,0,no
+DP3-0105,delivered,1,control,control,28,157,72.5,29.4,56.7,23.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,induced (does not include prom,1,41.3,4040,m,7,9,0,no
+DP3-0107,delivered,1,hdp,ghtn,28,154.9,120.4,50.2,105.2,43.9,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,2,0,0,induced (does not include prom,2,39.3,3110,f,8,9,0,<20
+DP3-0108,delivered,0,control,control,23,157,57.2,23.2,49.6,20.1,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,4,1,0,0,prom,1,38.1,2950,f,9,9,0,no
+DP3-0109,delivered,0,control,control,30,160,80.9,31.6,68.9,26.9,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,4,1,1,0,induced (does not include prom,1,39.0,2840,f,9,9,0,no
+DP3-0111,delivered,1,control,control,0,167.6,96.4,34.3,87.1,31.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,spontaneous,1,39.1,2910,m,8,8,0,no
+DP3-0112,delivered,1,control,control,24,163,76.9,28.9,54.0,20.3,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,3,1,0,0,induced (does not include prom,1,40.9,3530,m,9,9,0,no
+DP3-0113,delivered,2,control,control,32,172.7,63.3,21.2,,19.0,white,0,1,0,0,0,non hispanic,0,never,0,0,1,0,0,0,0,0,41.6,3340,m,8,9,1.67,<14
+DP3-0116,delivered,2,control,control,35,163,107,40.3,101.2,38.3,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,spontaneous,2,40.3,4060,f,9,9,0,no
+DP3-0117,delivered,0,control,control,28,160,73.3,28.6,59.4,23.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,4,0,0,0,spontaneous,1,40.4,3350,f,9,9,0,no
+DP3-0118E,delivered,0,hdp,ghtn,32,165,116,42.6,99.1,36.4,white,0,1,0,0,0,,1,never,0,0,1,2,0,0,induced (does not include prom,2,37.4,3360,f,8,8,0,<20
+DP3-0119E,delivered,0,control,control,22,165,95,34.9,87.5,32.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,4,0,0,0,induced (does not include prom,1,39.3,4070,m,9,9,0,no
+DP3-0120,delivered,1,control,control,37,164,83,30.9,70.8,26.3,white,0,1,0,0,0,,1,quit,0,0,2,2,0,0,?,2,39.0,3390,f,9,10,0,no
+DP3-0121,delivered,1,control,control,31,162,102,38.9,,34.6,white,0,1,0,0,0,non hispanic,0,never,0,0,4,1,0,0,1,0,39.5,3910,m,3,7,2,<14
+DP3-0123,delivered,0,control,control,32,157,62.8,25.5,49.5,20.1,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,0,0,0,induced (does not include prom,1,40.6,3125,f,9,9,0,<20
+DP3-0124,delivered,1,hdp,lo severe sipe,39,160,98.9,38.6,76.2,29.8,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,2,0,0,1,induced (does not include prom,2,37.4,2920,f,7,8,0,<20
+DP3-0125,delivered,0,control,control,27,158.8,73.8,29.3,57.2,22.7,asian,0,0,0,1,0,,1,never,0,0,2,0,0,0,spontaneous,1,39.0,3370,m,8,9,0,no
+DP3-0126,delivered,1,control,control,32,170,82,28.4,76.2,26.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,spontaneous,1,38.7,3230,m,9,9,0,no
+DP3-0127,delivered,0,control,control,20,162.6,56.2,21.3,47.6,18.0,asian,0,0,0,1,0,,1,never,0,0,2,0,0,0,spontaneous,1,39.9,3465,m,9,9,0,no
+DP3-0128,delivered,0,control,control,26,160,77,30.1,52.6,20.6,,1,0,0,0,0,,1,never,0,0,1,0,0,0,induced (does not include prom,2,41.3,3470,m,8,9,0,<28
+DP3-0129,delivered,1,control,control,31,169,103.4,36.2,94.9,33.2,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,2,4,0,0,spontaneous,1,40.0,4030,f,8,9,0,<14
+DP3-0130E,delivered,1,control,control,31,154.9,90,37.5,75.7,31.6,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,3,2,0,0,induced (does not include prom,1,40.1,2920,f,9,9,0,no
+DP3-0133,delivered,0,control,control,30,168,89.9,31.9,70.8,25.1,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,2,0,0,induced (does not include prom,1,41.1,3940,f,9,9,0,no
+DP3-0134E,delivered,0,control,control,31,165,96,35.3,86.0,31.6,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,2,0,0,induced (does not include prom,1,39.7,3520,f,9,9,0,no
+DP3-0135E,delivered,0,hdp,ghtn,34,175,84,27.4,67.9,22.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,spontaneous,1,39.7,3460,f,9,9,0,no
+DP3-0136E,delivered,1,hdp,lo mild pe,34,163,73,27.5,59.0,22.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,0,spontaneous,2,38.4,3480,f,8,9,0,no
+DP3-0137E,delivered,0,control,control,40,168,71,25.2,60.5,21.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,0,0,0,spontaneous,1,38.7,2930,m,7,9,0,no
+DP3-0140E,delivered,1,sptb,sptb,32,163,88.9,33.5,77.5,29.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,2,0,0,spontaneous,1,35.6,2660,f,9,9,0,no
+DP3-0142,delivered,2,control,control,31,154.9,84,35.0,64.9,27.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,1,spontaneous,1,37.7,2870,m,9,9,0,<14
+DP3-0143,delivered,0,control,control,0,170,87,30.1,77.1,24.6,black,0,0,1,0,0,non hispanic,0,never,0,0,7,0,0,0,1,2,36.6,2450,f,8,9,2.08,<14
+DP3-0144,delivered,0,control,control,32,,,,,27.7,white,0,1,0,0,0,non hispanic,0,never,0,0,1,1,0,0,1,0,37.9,2580,f,8,9,2.17,no
+DP3-0151E,delivered,0,control,control,30,163,128,48.2,120.8,45.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,4,0,1,?,2,39.7,3310,f,8,9,0,<14
+DP3-0152,delivered,2,control,control,31,173,76.6,25.6,,23.1,white,0,1,0,0,0,non hispanic,0,never,0,0,2,0,0,0,0,0,40.0,3200,f,7,9,1.25,no
+DP3-0155E,delivered,2,fgr,fgr <5,21,157,103,41.8,89.6,36.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,3,0,0,spontaneous,1,40.0,2850,m,8,9,0,no
+DP3-0156,delivered,2,hdp,ghtn,30,175.3,85.3,27.8,70.4,22.9,white,0,1,0,0,1,hispanic or latino,0,never,0,0,3,0,0,0,induced (does not include prom,1,39.3,3260,f,8,9,0,<20
+DP3-0157,delivered,0,control,control,35,155,66,27.5,59.4,24.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,1,0,0,spontaneous,1,38.4,3040,m,9,9,0,no
+DP3-0158,delivered,2,hdp,lo mild pe,22,175,99,32.3,80.3,26.2,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,1,0,0,0,induced (does not include prom,1,37.3,3320,f,9,9,0,no
+DP3-0160,delivered,0,hdp,ghtn,31,163,65.9,24.8,54.9,20.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,2,0,0,induced (does not include prom,1,39.1,3210,f,9,9,0,no
+DP3-0161,delivered,2,fgr,lo fgr <5,30,165,83.8,30.8,75.7,27.8,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,0,0,0,induced (does not include prom,1,38.0,2590,m,9,9,0,<14
+DP3-0162,delivered,0,hdp,ghtn,35,152,71.7,31.0,50.4,21.8,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,3,0,0,induced (does not include prom,2,37.3,2910,m,8,9,0,<20
+DP3-0163E,delivered,2,hdp,eo severe sipe (aedf),33,160,64,25.0,57.2,22.4,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,3,1,0,1,?,2,29.4,945,m,1,3,0,no
+DP3-0164,delivered,0,control,control,35,168,73.2,25.9,62.1,22.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,0,0,0,spontaneous,1,38.7,3090,f,7,9,0,no
+DP3-0165E,delivered,2,hdp,lo mild pe,38,160,113,44.1,100.2,39.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,5,0,0,0,induced (does not include prom,1,40.3,4300,f,8,9,0,no
+DP3-0166,delivered,2,control,control,35,175,95.4,31.2,,26.0,white,0,1,0,0,0,non hispanic,0,never,0,0,2,1,0,0,0,0,39.7,3830,f,9,9,2.71,no
+DP3-0167E,delivered,0,control,control,34,168,101,35.8,86.7,30.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,4,0,0,0,?,2,39.0,3700,m,9,9,0,no
+DP3-0168,delivered,0,control,control,36,168,104,36.8,101.2,35.8,white,0,1,0,0,1,hispanic or latino,0,never,0,0,4,2,1,0,induced (does not include prom,1,39.9,3520,m,9,9,0,<20
+DP3-0169,delivered,2,control,control,30,158,63,25.2,56.2,22.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,0,spontaneous,1,39.3,3500,m,9,9,0,<20
+DP3-0170E,delivered,0,control,control,27,150,116,51.6,104.5,46.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,0,0,0,?,2,39.3,3640,f,8,8,0,no
+DP3-0171,delivered,0,hdp,ghtn,36,162.6,105.1,39.8,,37.8,white,0,1,0,0,0,non hispanic,0,quit,0,0,2,0,0,0,0,1,40.6,4030,f,3,7,2.25,<28
+DP3-0172,delivered,0,control,control,24,150,68,30.2,53.5,23.8,white,0,1,0,0,0,not hispanic or latino,0,yes,1,0,8,1,0,0,spontaneous,1,39.1,3830,m,7,9,0,no
+DP3-0173E,delivered,0,control,control,32,173,99,33.1,81.6,27.3,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,1,3,0,0,induced (does not include prom,1,39.1,3290,f,9,9,0,no
+DP3-0174,delivered,0,hdp,ghtn,34,155,113,47.0,93.9,39.1,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,0,0,0,induced (does not include prom,1,37.6,2480,m,9,9,0,no
+DP3-0175,delivered,2,control,control,32,167.6,160,57.0,130.2,46.3,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,2,0,0,0,induced (does not include prom,1,42.0,4160,m,9,9,0,no
+DP3-0177,delivered,2,control,control,32,177,86.4,27.6,68.0,21.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,0,spontaneous,2,39.1,2960,m,9,9,0,no
+DP3-0179,delivered,2,control,control,33,168,78.4,27.8,61.2,21.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,4,0,0,0,induced (does not include prom,1,39.6,3680,m,9,9,0,<20
+DP3-0181,delivered,2,control,control,24,163,89.7,33.8,73.9,27.8,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,2,0,0,0,?,2,39.0,3000,m,6,9,0,<20
+DP3-0182E,delivered,2,fgr,fgr <3+chtn,32,168,82,29.1,69.2,24.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,1,0,1,induced (does not include prom,1,37.1,2310,m,8,9,0,<14
+DP3-0184E,delivered,2,fgr,fgr <5,35,155,58,24.1,70.9,29.5,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,5,1,0,0,?,2,38.3,2480,f,8,9,0,no
+DP3-0185,delivered,2,control,control,37,157,66.8,27.1,54.9,22.3,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,4,0,0,0,spontaneous,1,40.0,2970,f,8,9,0,no
+DP3-0186,delivered,0,fgr,fgr <3,40,160,81.6,31.9,69.1,27.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,1,0,0,induced (does not include prom,1,39.3,2730,m,9,9,0,<14
+DP3-0187,delivered,0,control,control,31,157.5,95.2,38.4,88.0,35.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,?,2,40.1,3980,m,8,9,0,no
+DP3-0188,delivered,0,control,control,0,168,91.3,32.3,77.3,27.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,2,0,0,?,2,39.4,3080,f,8,8,0,no
+DP3-0189,delivered,0,control,control,35,160,105,41.0,78.9,30.8,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,induced (does not include prom,2,39.3,3290,f,9,8,0,<20
+DP3-0190,delivered,0,control,control,32,176,130,42.0,124.5,40.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,4,4,0,0,induced (does not include prom,1,39.1,3790,f,8,9,0,no
+DP3-0192,delivered,0,control,control,30,160,70.7,27.6,56.7,22.1,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,spontaneous,1,39.0,3250,f,9,9,0,no
+DP3-0193,delivered,0,control,control,29,162.6,105.9,40.1,85.3,32.3,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,prom,1,38.0,3500,m,8,9,0,<28
+DP3-0195,delivered,0,control,control,38,155,67.4,28.1,56.2,23.4,white,0,1,0,0,1,hispanic or latino,0,never,0,0,3,1,0,0,?,2,39.7,3500,f,9,9,0,<20
+DP3-0196E,delivered,0,control,control,41,165,82,30.1,77.1,28.3,white,0,1,0,0,0,,1,never,0,0,3,0,1,0,?,2,38.3,2590,f,1,3,0,<14
+DP3-0197,delivered,2,hdp,eo severe pe,36,165.1,80.1,29.4,,23.6,korean,0,0,0,1,0,non hispanic,0,never,0,0,1,1,0,0,1,0,34.1,2070,m,1,5,7.38,no
+DP3-0199,delivered,0,control,control,37,170,123.1,42.6,108.0,37.4,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,2,0,3,0,induced (does not include prom,2,37.4,4270,m,8,9,0,<20
+DP3-0200,delivered,2,control,control,33,170,76.4,26.4,65.6,22.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,2,0,0,spontaneous,1,39.4,3320,m,9,9,0,<20
+DP3-0201E,delivered,2,hdp,lo severe pe,26,173,153.6,51.3,143.6,48.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,?,2,38.4,2930,f,8,9,0,no
+DP3-0202,delivered,2,control,control,30,167.6,83.9,29.9,61.8,22.0,,1,0,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,0,spontaneous,1,38.1,3520,m,9,9,0,no
+DP3-0203,delivered,0,control,control,38,164.5,68,25.1,55.3,20.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,spontaneous,1,38.4,2740,m,8,9,0,no
+DP3-0204,delivered,2,control,control,30,160,74.7,29.2,64.0,25.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,?,1,39.1,2830,m,9,9,0,no
+DP3-0205E,delivered,0,control,control,39,163,91,34.3,,29.6,white,0,1,0,0,0,non hispanic,0,never,0,0,3,1,0,0,0,1,39.0,4310,f,9,9,2.21,<14
+DP3-0206E,delivered,0,fgr,fgr <3,32,165,82,30.1,74.1,27.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,0,?,2,39.0,2640,m,8,9,0,no
+DP3-0207,delivered,2,hdp,lo severe pe,30,160,89.3,34.9,78.5,30.7,white,0,1,0,0,0,not hispanic or latino,0,yes,1,0,5,0,0,0,induced (does not include prom,2,37.0,2990,f,8,9,0,no
+DP3-0208,delivered,0,control,control,36,155,62,25.8,47.6,19.8,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,2,1,0,0,spontaneous,1,39.7,2920,f,9,9,0,no
+DP3-0209E,delivered,0,control,control,21,163,94,35.4,86.2,32.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,1,0,spontaneous,1,39.6,3620,f,8,9,0,no
+DP3-0210,delivered,0,control,control,33,152,94.4,40.9,88.9,38.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,9,1,1,1,?,1,36.4,3070,f,7,9,0,<20
+DP3-0212,delivered,0,control,control,34,173,102,34.1,80.2,26.8,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,5,1,0,1,?,2,39.1,4150,m,8,8,0,<14
+DP3-0213,delivered,0,control,control,37,164,75.8,28.2,59.5,22.1,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,3,0,0,spontaneous,2,41.7,4210,m,9,9,0,<28
+DP3-0214,delivered,2,sptb,sptb,32,160,61.8,24.1,52.6,20.6,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,1,0,spontaneous,1,31.6,1550,f,4,8,0,no
+DP3-0216,delivered,2,hdp,lo severe sipe,31,167.6,144,51.3,,50.7,white,0,1,0,0,0,non hispanic,0,quit,0,0,7,3,1,1,0,1,37.7,3680,m,4,6,2.67,no
+DP3-0217,delivered,3,control,control,29,165,115.5,42.4,97.2,35.7,,1,0,0,0,0,,1,never,0,0,2,2,0,0,?,1,39.3,4050,m,8,9,0,<14
+DP3-0219,delivered,0,control,control,33,170,76,26.3,68.5,23.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,1,0,spontaneous,1,38.9,2820,f,7,9,0,<20
+DP3-0220,delivered,0,control,control,26,163,89.2,33.6,65.8,24.8,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,3,2,0,0,spontaneous,1,39.3,3110,m,8,9,0,no
+DP3-0221,delivered,0,control,control,36,160,83.7,32.7,68.5,26.8,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,2,0,0,induced (does not include prom,1,39.1,2810,f,9,9,0,<14
+DP3-0222,delivered,0,control,control,32,170,144.1,49.9,133.4,46.1,white,0,1,0,0,0,,1,quit,0,0,4,0,0,1,?,2,37.9,3980,m,3,9,0,no
+DP3-0223,delivered,0,control,control,33,158,80.9,32.4,68.9,27.6,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,0,0,0,induced (does not include prom,2,39.4,3470,m,7,8,0,<14
+DP3-0224,delivered,0,control,control,45,168,74.1,26.3,61.2,21.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,4,0,0,induced (does not include prom,1,39.4,3220,f,7,7,0,no
+DP3-0225,delivered,0,control,control,30,165,79,29.0,68.8,25.3,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,0,spontaneous,1,40.9,3990,m,9,9,0,no
+DP3-0226,delivered,0,control,control,37,170.2,83.4,28.8,69.6,24.0,white,0,1,0,0,1,hispanic or latino,0,never,0,0,5,1,0,0,?,2,39.6,3070,f,9,9,0,no
+DP3-0227,delivered,0,control,control,33,163,71.1,26.8,62.5,23.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,spontaneous,2,37.1,2930,m,9,9,0,<14
+DP3-0229E,delivered,0,control,control,39,156,75,30.8,64.0,26.3,white,0,1,0,0,1,hispanic or latino,0,quit,0,0,4,1,0,0,spontaneous,1,39.6,4010,f,8,9,0,no
+DP3-0230,delivered,0,control,control,30,165,115,42.2,102.0,37.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,0,0,0,induced (does not include prom,1,39.6,3470,m,8,9,0,no
+DP3-0231,delivered,0,control,control,27,170,104.8,36.3,97.5,33.7,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,8,1,0,0,prom,1,37.7,3390,m,9,9,0,no
+DP3-0232E,delivered,0,control,control,35,154.9,73,30.4,63.6,26.5,asian,0,0,0,1,0,not hispanic or latino,0,never,0,0,1,5,0,0,induced (does not include prom,2,40.4,3370,f,8,9,0,<14
+DP3-0233E,delivered,2,hdp,lo severe sipe,41,170,104,36.0,85.7,29.7,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,4,1,2,1,induced (does not include prom,2,36.4,2730,m,8,9,0,<14
+DP3-0234,delivered,0,sptb,sptb,33,173,135.2,45.2,140.5,47.0,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,2,3,0,0,spontaneous,2,23.0,675,m,4,8,0,<14
+DP3-0235,delivered,2,fgr,fgr <5,30,165,67.5,24.8,51.3,18.9,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,3,0,0,spontaneous,1,39.6,2580,f,5,9,0,no
+DP3-0237,delivered,0,control,control,29,159,77,30.5,56.7,22.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,2,0,0,spontaneous,1,38.6,3330,m,8,8,0,<20
+DP3-0238,delivered,0,hdp,ghtn,26,168,78,27.6,60.6,21.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,3,0,0,induced (does not include prom,1,39.7,3240,f,7,9,0,no
+DP3-0239,delivered,0,control,control,29,170,109.1,37.8,95.8,33.1,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,?,2,41.0,3500,f,8,9,0,no
+DP3-0240,delivered,3,sptb,sptb,33,152,76.7,33.2,82.9,35.9,white,0,1,0,0,0,not hispanic or latino,0,yes,1,0,3,0,3,0,spontaneous,2,33.9,1670,f,4,6,0,<14
+DP3-0241,delivered,0,control,control,38,156,65.7,27.0,54.6,22.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,?,2,38.4,2650,f,9,9,0,<20
+DP3-0242,delivered,0,control,control,0,,,,,27.7,,1,0,0,0,0,,1,,0,1,2,1,,,,,39.4,3261,f,,,,<20
+DP3-0243,delivered,0,control,control,34,165,94.3,34.6,84.8,31.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,?,2,40.6,3900,f,8,9,0,<20
+DP3-0244,delivered,3,control,control,31,152,70.7,30.6,55.3,24.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,spontaneous,1,41.4,3710,m,9,9,0,<20
+DP3-0245,delivered,0,control,control,33,168,101.4,35.9,86.6,30.7,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,2,6,0,0,spontaneous,1,37.9,3610,m,6,8,0,no
+DP3-0246,delivered,0,hdp,pp severe sipe,30,170,153.6,53.1,135.2,46.8,white,0,1,0,0,0,not hispanic or latino,0,yes,1,0,1,0,0,1,?,1,39.1,3630,f,8,9,0,>28
+DP3-0247,delivered,3,fgr,fgr <5,36,175.26,75.9,24.7,56.7,18.5,african american,0,0,1,0,0,not hispanic or latino,0,yes,1,0,4,2,0,0,spontaneous,1,38.7,2420,f,8,9,0,<14
+DP3-0248E,delivered,2,hdp,lo mild pe,30,168,118,41.8,99.4,35.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,induced (does not include prom,2,38.3,2540,f,7,9,0,no
+DP3-0250,delivered,0,control,control,39,157,66,26.8,,24.7,white,0,1,0,0,0,non hispanic,0,quit,0,0,5,0,0,0,1,0,39.1,3510,m,8,9,,no
+DP3-0251,delivered,0,control,control,35,150,62.4,27.7,50.3,22.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,0,0,0,?,1,40.6,2990,m,9,9,0,no
+DP3-0253,delivered,0,control,control,29,161,97.1,37.5,83.0,32.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,0,prom,1,39.3,3510,m,8,8,0,<14
+DP3-0254,delivered,3,control,control,38,168,83,29.4,66.2,23.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,0,0,0,induced (does not include prom,1,40.0,3570,m,9,9,0,<14
+DP3-0255,delivered,0,control,control,36,157,59.4,24.1,54.8,22.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,1,1,0,?,2,39.4,3030,m,8,9,0,no
+DP3-0256,delivered,3,control,control,31,167,95.7,34.3,81.6,29.3,,1,0,0,0,0,,1,never,0,0,1,0,0,0,spontaneous,2,40.0,3285,m,1,9,0,no
+DP3-0257,delivered,0,control,control,31,157,101.8,41.3,89.9,36.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,0,?,2,38.6,3450,f,6,8,0,<14
+DP3-0258E,delivered,3,fgr,lo fgr <5,32,160,60.1,23.5,49.9,19.5,white,0,1,0,0,0,not hispanic or latino,0,yes,1,0,5,5,1,0,spontaneous,1,37.1,2420,m,9,9,0,no
+DP3-0259,delivered,3,fgr,fgr <3,27,165,94.6,34.7,77.1,28.3,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,0,spontaneous,2,36.0,1380,f,9,9,0,no
+DP3-0260,delivered,0,hdp,ghtn,37,160,104.9,41.0,86.3,33.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,0,0,0,spontaneous,1,38.9,3410,m,6,9,0,no
+DP3-0261E,delivered,0,control,control,27,170,146,50.5,141.1,48.8,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,0,0,1,?,1,38.1,3060,f,8,9,0,<14
+DP3-0262,delivered,0,control,control,31,159,84.4,33.4,59.9,23.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,induced (does not include prom,2,39.9,3610,m,7,9,0,no
+DP3-0263E,delivered,3,hdp,lo severe pe,26,168,108,38.3,90.6,32.1,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,induced (does not include prom,1,36.3,2770,m,7,8,0,no
+DP3-0264,delivered,0,control,control,43,170,78.8,27.3,61.7,21.4,white,0,1,0,0,0,,1,never,0,0,2,1,0,0,?,2,39.6,3100,m,9,9,0,<20
+DP3-0265,delivered,2,sptb,sptb,25,163,68.9,25.9,64.9,24.4,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,3,1,0,0,spontaneous,1,28.0,1115,m,5,8,0,no
+DP3-0266,delivered,3,hdp,lo mild pe,30,165,93.1,34.2,84.8,31.2,african american,0,0,1,0,0,not hispanic or latino,0,yes,1,0,9,4,0,0,induced (does not include prom,1,38.1,2980,f,8,9,0,<14
+DP3-0267,delivered,0,hdp,ghtn,40,150,86,38.2,78.5,34.9,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,0,0,0,induced (does not include prom,1,37.9,3040,f,8,9,0,<14
+DP3-0271,delivered,0,control,control,36,170.2,94.6,32.7,91.2,31.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,3,0,1,?,2,39.0,3040,m,8,9,0,<14
+DP3-0272,delivered,3,control,control,28,163,78,29.4,68.0,25.6,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,3,0,0,induced (does not include prom,1,39.1,3200,m,9,9,0,no
+DP3-0273,delivered,3,control,control,32,175,117,38.2,102.8,33.6,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,4,0,0,0,spontaneous,1,37.0,3090,m,8,9,0,no
+DP3-0274,delivered,0,hdp,lo severe pe,34,160,69.6,27.2,54.4,21.3,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,1,0,0,?,2,35.4,2220,f,5,5,0,<14
+DP3-0275,delivered,0,control,control,29,170,97.1,33.6,83.9,29.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,4,1,0,0,prom,1,39.9,3700,f,8,9,0,no
+DP3-0276,delivered,0,control,control,37,160,80.2,31.3,75.3,29.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,1,0,?,2,39.3,3000,m,9,9,0,no
+DP3-0277,delivered,3,control,control,34,157,84,34.1,80.7,32.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,2,0,0,induced (does not include prom,1,39.3,3560,m,8,9,0,<20
+DP3-0278,delivered,0,control,control,36,156,84.5,34.7,68.5,28.1,african american,0,0,1,0,0,not hispanic or latino,0,quit,0,0,5,3,0,0,spontaneous,1,40.1,3310,f,9,9,0,<14
+DP3-0279,delivered,3,control,control,40,164,89.9,33.4,75.3,28.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,1,0,0,induced (does not include prom,1,40.1,4050,m,7,9,0,no
+DP3-0280,delivered,0,control,control,31,163,91.9,34.6,91.6,34.5,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,2,0,0,0,spontaneous,1,40.1,3950,m,9,9,0,no
+DP3-0281E,delivered,3,sptb,sptb,23,169,112,39.2,108.4,38.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,1,spontaneous,2,35.7,3030,m,3,6,0,<14
+DP3-0282,delivered,0,control,control,35,160,94.1,36.8,89.8,35.1,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,1,1,0,induced (does not include prom,1,39.1,3950,m,8,8,0,<14
+DP3-0283,delivered,0,control,control,23,163,87.6,33.0,79.4,29.9,african american,0,0,1,0,0,not hispanic or latino,0,quit,0,0,2,0,0,0,spontaneous,1,37.6,2840,f,9,9,0,no
+DP3-0284,delivered,3,control,control,41,167,85,30.5,72.1,25.9,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,5,0,1,0,?,1,37.1,3090,m,9,9,0,no
+DP3-0285,delivered,0,control,control,38,172,99.9,33.8,87.1,29.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,0,0,0,?,2,40.4,3470,f,3,8,0,<14
+DP3-0287,delivered,3,control,control,20,160,78,30.5,54.4,21.3,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,4,0,0,induced (does not include prom,1,39.6,3010,m,9,9,0,no
+DP3-0290,delivered,0,control,control,33,157,97,39.4,74.2,30.1,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,5,0,0,0,?,2,37.0,2880,f,9,9,0,no
+DP3-0292,delivered,3,control,control,38,155,94.1,39.2,87.5,36.4,african american,0,0,1,0,0,,1,quit,0,0,3,0,0,0,induced (does not include prom,1,37.3,3060,f,9,9,0,<14
+DP3-0293,delivered,0,control,control,25,160,92,35.9,64.4,25.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,?,1,39.7,2850,f,9,9,0,no
+DP3-0294,delivered,0,control,control,37,165.1,83.2,30.5,68.5,25.1,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,spontaneous,1,40.4,3590,m,1,9,0,<14
+DP3-0295,delivered,0,control,control,33,172.4,81,27.3,61.7,20.8,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,10,0,0,0,?,2,39.4,3280,f,3,8,0,<14
+DP3-0296,delivered,3,control,control,29,168,134.1,47.5,129.0,45.7,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,1,2,0,0,?,2,37.9,2700,m,3,6,0,no
+DP3-0297,delivered,0,control,control,34,163,80,30.1,70.3,26.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,0,?,2,37.6,3020,f,2,7,0,no
+DP3-0298E,delivered,0,hdp,pp severe sipe,38,163,106,39.9,98.4,37.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,1,induced (does not include prom,2,39.0,3510,f,8,9,0,<20
+DP3-0299E,delivered,3,fgr,fgr <5,23,167,121,43.4,113.6,40.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,1,0,induced (does not include prom,1,39.1,4070,f,8,9,0,no
+DP3-0300,delivered,3,control,control,33,160,112.1,43.8,88.0,34.4,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,3,1,2,0,?,2,37.3,3920,f,9,9,0,<14
+DP3-0301,delivered,3,hdp,eo fgr <5 + eo severe pe,20,157,80.5,32.7,66.9,27.1,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,1,0,1,0,?,2,33.4,1430,m,6,9,0,<14
+DP3-0302,delivered,0,control,control,35,165,93,34.2,88.5,32.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,2,0,0,induced (does not include prom,1,39.9,3210,f,9,9,0,<14
+DP3-0303E,delivered,0,control,control,40,157,81,32.9,62.1,25.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,9,3,0,1,?,2,38.6,3540,f,7,8,0,<14
+DP3-0304,delivered,3,sptb,sptb,28,152,68.2,29.5,,26.7,white,0,1,0,0,0,non hispanic,0,never,0,0,1,1,0,0,0,0,34.0,1780,f,8,9,16.5,no
+DP3-0305,delivered,3,hdp,fgr <3 + lo severe pe,19,165,66.2,24.3,54.4,20.0,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,1,0,0,0,?,1,38.7,2510,m,9,9,0,no
+DP3-0306,delivered,0,control,control,35,178,120.4,38.0,110.7,34.9,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,induced (does not include prom,1,41.3,3530,m,9,9,0,no
+DP3-0308,delivered,0,control,control,38,170,120.4,41.7,104.8,36.3,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,1,induced (does not include prom,1,40.0,3750,f,9,9,0,<14
+DP3-0309,delivered,0,control,control,43,170,80.6,27.9,74.4,25.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,0,0,0,induced (does not include prom,1,40.1,4080,m,6,8,0,no
+DP3-0310,delivered,0,control,control,37,167.6,100.4,35.7,89.4,31.8,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,1,0,?,2,37.0,3160,m,8,9,0,<14
+DP3-0311,delivered,3,hdp,eo mild sipe,35,168,107,37.9,93.9,33.3,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,0,2,1,spontaneous,2,34.3,3250,m,9,9,0,no
+DP3-0312,delivered,0,control,control,31,170.2,111.1,38.4,107.0,37.0,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,2,0,1,1,induced (does not include prom,1,39.1,2950,f,8,9,0,no
+DP3-0313,delivered,3,control,control,29,168,89.6,31.7,71.2,25.2,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,1,2,0,0,induced (does not include prom,2,40.1,3280,m,2,8,0,<20
+DP3-0314,delivered,0,control,control,36,175,63,20.6,53.6,17.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,4,1,0,0,?,1,39.7,3000,f,9,9,0,no
+DP3-0315,delivered,0,control,control,37,185,134,39.2,119.3,34.9,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,6,0,0,1,?,1,38.1,3109,f,9,9,0,<14
+DP3-0316,delivered,0,control,control,30,170,87,30.1,65.6,22.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,2,0,0,induced (does not include prom,1,39.1,4170,f,2,8,0,<20
+DP3-0318,delivered,0,control,control,43,157,76.3,31.0,67.6,27.4,white,0,1,0,0,0,not hispanic or latino,0,yes,1,0,10,2,0,0,?,2,39.7,3430,f,8,9,0,no
+DP3-0319,delivered,0,control,control,33,175.3,95.5,31.1,87.8,28.6,african american,0,0,1,0,0,not hispanic or latino,0,quit,0,0,5,1,0,0,spontaneous,1,40.7,2960,f,8,9,0,no
+DP3-0320,delivered,0,control,control,37,157,70.5,28.6,56.2,22.8,white,0,1,0,0,0,,1,never,0,0,6,2,0,0,spontaneous,1,38.6,2860,f,9,9,0,no
+DP3-0323,delivered,3,fgr,fgr <3+chtn,28,148,78,35.6,67.0,30.6,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,0,1,1,?,2,39.0,2280,f,8,9,0,<20
+DP3-0324,delivered,0,control,control,33,163,85.1,32.0,,28.5,white,0,1,0,0,0,non hispanic,0,never,0,0,1,3,1,0,0,1,,3540,m,9,9,2.75,no
+DP3-0325E,delivered,0,control,control,38,147.3,85,39.2,71.9,33.2,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,2,8,1,1,?,2,38.1,3195,f,8,9,0,<20
+DP3-0326,delivered,0,control,control,32,160,78.5,30.7,67.8,26.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,0,0,0,spontaneous,1,38.3,3130,m,9,9,0,no
+DP3-0327,delivered,3,sptb,sptb,32,170,85,29.4,75.7,26.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,spontaneous,1,35.9,3040,m,9,9,0,no
+DP3-0328,delivered,0,control,control,31,155,96,40.0,73.4,30.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,4,1,2,1,?,2,36.6,3630,m,7,8,0,<28
+DP3-0330,delivered,3,sptb,sptb,34,168,92.1,32.6,74.0,26.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,prom,2,36.7,2790,m,8,9,0,<14
+DP3-0332,delivered,0,control,control,39,157.5,75,30.2,,26.1,white,0,1,0,0,0,non hispanic,0,yes,1,0,11,1,0,0,0,0,38.1,3080,m,9,9,2.08,no
+DP3-0333,delivered,3,hdp,lo severe pe,28,168,78,27.6,65.1,23.1,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,2,3,0,0,induced (does not include prom,1,36.1,2400,m,3,5,0,<14
+DP3-0334,delivered,3,sptb,sptb,26,165,137.4,50.5,104.0,38.2,,1,0,0,0,0,not hispanic or latino,0,never,0,0,3,0,0,0,spontaneous,1,30.6,1375,m,9,9,0,<14
+DP3-0335,delivered,0,control,control,33,163,115.9,43.6,89.2,33.6,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,2,5,1,0,induced (does not include prom,1,39.1,3080,f,9,9,0,no
+DP3-0336,delivered,0,hdp,lo mild pe,33,162.6,69.7,26.4,61.7,23.3,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,spontaneous,1,39.1,3560,m,8,9,0,no
+DP3-0338,delivered,0,control,control,26,165.1,72.1,26.5,58.1,21.3,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,spontaneous,1,39.7,3730,f,9,9,0,no
+DP3-0339,delivered,0,sptb,sptb,37,158,77,30.8,73.9,29.6,african american,0,0,1,0,0,not hispanic or latino,0,yes,1,0,10,1,0,0,prom,2,25.6,610,f,4,8,0,<14
+DP3-0340,delivered,0,control,control,31,168,92.5,32.8,78.9,28.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,0,0,0,spontaneous,1,40.1,3820,m,9,9,0,no
+DP3-0342,delivered,3,hdp,eo severe pe,31,163,109.2,41.1,98.0,36.9,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,4,0,0,induced (does not include prom,1,34.1,2290,f,8,9,0,no
+DP3-0343,delivered,3,sptb,fgr <5+sptb,22,157,69.7,28.3,65.3,26.5,african american,0,0,1,0,0,not hispanic or latino,0,quit,0,0,2,0,0,0,prom,1,36.9,2090,f,8,9,0,<14
+DP3-0344,delivered,0,control,control,29,163,81.5,30.7,67.1,25.3,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,3,0,0,spontaneous,1,37.0,2890,m,9,9,0,no
+DP3-0346,delivered,3,control,control,29,165.1,80.6,29.6,65.3,24.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,spontaneous,1,40.4,3940,f,9,9,0,<14
+DP3-0347,delivered,0,control,control,36,170,85,29.4,68.0,23.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,spontaneous,1,39.4,3370,f,9,9,0,no
+DP3-0348,delivered,0,control,control,36,157.5,65.9,26.6,52.6,21.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,0,0,0,spontaneous,1,39.9,3300,f,9,9,0,<14
+DP3-0350E,delivered,0,control,control,31,172,114,38.5,94.8,32.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,6,3,3,0,?,2,38.1,4200,m,8,9,0,<20
+DP3-0351,delivered,0,control,control,34,155,58,24.1,46.7,19.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,0,0,0,spontaneous,1,39.6,3310,m,9,9,0,<20
+DP3-0352,delivered,3,fgr,fgr <5+chtn,30,173,122.4,40.9,102.1,34.1,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,5,1,0,1,?,2,38.7,2600,m,6,8,0,<14
+DP3-0353,delivered,3,control,control,27,165,90.8,33.4,83.0,30.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,0,spontaneous,1,41.4,3500,m,9,9,0,no
+DP3-0354,delivered,0,control,control,36,167.6,68.9,24.5,59.4,21.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,2,0,0,spontaneous,1,39.1,3280,m,8,9,0,no
+DP3-0355,delivered,0,control,control,29,162,147.9,56.4,136.1,51.9,african american,0,0,1,0,0,,1,never,0,0,3,2,0,1,?,2,39.4,3510,f,9,9,0,<20
+DP3-0356E,delivered,3,hdp,lo mild pe,30,168,102,36.1,95.3,33.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,0,1,0,?,2,37.0,2760,m,8,9,0,<20
+DP3-0357,delivered,0,control,control,36,165,145.5,53.4,132.9,48.8,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,3,0,1,1,?,2,37.1,3050,m,9,9,0,<14
+DP3-0358E,delivered,3,hdp,lo severe pe,40,172.7,136.5,45.8,113.9,38.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,3,0,?,2,35.0,3320,m,7,8,0,<14
+DP3-0359,delivered,0,control,control,26,168,85.4,30.3,64.4,22.8,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,6,1,0,0,induced (does not include prom,1,39.1,4110,f,9,9,0,<14
+DP3-0360E,delivered,0,control,control,24,165,98,36.0,94.3,34.6,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,5,0,0,0,spontaneous,1,39.3,3650,f,9,9,0,<20
+DP3-0361,delivered,3,fgr,lo fgr <3,34,173,105.6,35.3,79.4,26.5,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,2,5,0,0,prom,1,38.0,2450,m,9,9,0,no
+DP3-0362E,delivered,0,control,control,36,168,86,30.5,76.4,27.1,white,0,1,0,0,0,,1,never,0,0,1,0,2,0,?,2,39.0,3665,m,7,9,0,no
+DP3-0363,delivered,0,control,control,33,175,107.7,35.2,93.9,30.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,1,0,1,?,2,39.4,3670,f,9,9,0,<14
+DP3-0364,delivered,3,hdp,lo mild pe,32,171,70,23.9,66.7,22.8,white,0,1,0,0,0,not hispanic or latino,0,yes,1,0,2,1,0,0,induced (does not include prom,1,40.4,3480,m,9,9,0,no
+DP3-0366,delivered,0,control,control,36,180,159.5,49.2,147.4,45.5,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,3,1,1,1,?,1,38.1,3280,m,8,9,0,<14
+DP3-0368,delivered,0,control,control,32,165,83.5,30.7,74.4,27.3,,1,0,0,0,1,hispanic or latino,0,never,0,0,1,1,0,0,spontaneous,1,39.7,3670,f,8,9,0,<14
+DP3-0369,delivered,0,control,control,31,168,79,28.0,65.0,23.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,0,0,0,induced (does not include prom,1,37.1,2850,m,9,9,0,no
+DP3-0371E,delivered,3,hdp,ghtn,35,160,130,50.8,120.2,47.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,3,0,0,?,2,38.0,3805,f,9,9,0,<14
+DP3-0372,delivered,0,control,control,37,162,72.3,27.5,65.2,24.9,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,?,2,39.0,2880,m,9,9,0,<14
+DP3-0373,delivered,0,control,control,30,160,111.4,43.5,110.0,43.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,2,1,0,?,2,37.6,3900,m,4,4,0,<20
+DP3-0374,delivered,3,fgr,fgr <5,36,176,72.3,23.3,61.7,19.9,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,prom,1,38.0,2510,f,9,9,0,<14
+DP3-0375E,delivered,3,hdp,eo severe sipe,40,157,90,36.5,82.1,33.3,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,5,3,0,1,induced (does not include prom,2,31.1,1710,m,8,8,0,<14
+DP3-0376E,delivered,0,control,control,20,158,70,28.0,75.3,30.2,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,4,2,0,0,induced (does not include prom,1,37.0,2440,f,9,9,0,no
+DP3-0377E,delivered,0,control,control,33,157,122,49.5,106.6,43.2,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,5,4,0,0,?,2,38.7,3315,f,9,9,0,no
+DP3-0378E,delivered,3,fgr,fgr <3,32,157,98,39.8,87.5,35.5,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,2,2,0,0,?,2,39.9,2610,m,8,8,0,<14
+DP3-0379,delivered,3,sptb,sptb,24,160,103,40.2,109.3,42.7,white,0,1,0,0,0,,1,yes,1,0,3,3,0,0,spontaneous,1,36.0,2410,m,9,9,0,<14
+DP3-0381,delivered,3,control,control,36,157,87.5,35.5,69.9,28.3,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,induced (does not include prom,2,39.9,3680,m,6,5,0,<14
+DP3-0385,delivered,0,hdp,lo  (37+1) mild sipe + dm2,33,163,124.8,47.0,115.2,43.4,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,4,1,3,1,?,2,37.1,3360,m,8,8,0,<14
+DP3-0386,delivered,0,hdp,eo severe sipe,37,174.6,158,51.8,144.8,47.5,african american,0,0,1,0,0,not hispanic or latino,0,yes,1,0,1,1,3,1,?,2,33.9,2440,m,6,8,0,<14
+DP3-0387,delivered,3,control,control,0,167.6,104,37.0,94.8,33.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,2,0,1,?,2,39.0,3980,f,8,8,0,<14
+DP3-0388,delivered,3,control,control,28,165.1,205,75.2,185.5,68.1,white,0,1,0,0,0,,1,yes,1,0,2,2,0,1,?,2,39.1,4530,f,7,9,0,no
+DP3-0389,delivered,3,hdp,lo severe pe,34,157,70,28.4,58.1,23.6,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,?,2,35.4,1940,f,8,9,0,no
+DP3-0390,delivered,0,control,control,38,170,85,29.4,71.7,24.8,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,2,2,0,0,induced (does not include prom,1,41.0,3980,m,8,9,0,no
+DP3-0392,delivered,3,hdp,lo mild pe,36,163,79.6,30.0,64.9,24.4,white,0,1,0,0,0,,1,quit,0,0,2,2,0,0,induced (does not include prom,1,37.0,2870,m,9,9,0,<14
+DP3-0393E,delivered,0,control,control,0,,,,,27.7,,1,0,0,0,0,,1,,0,1,7,,,,,,38.0,,,,,,no
+DP3-0394,delivered,0,control,control,36,178,101.7,32.1,93.9,29.6,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,0,induced (does not include prom,1,41.1,3840,m,8,9,0,<20
+DP3-0396,delivered,0,hdp,ghtn,26,165.1,68.9,25.3,,24.1,white,0,1,0,0,0,non hispanic,0,never,0,0,2,2,0,0,0,0,37.0,2830,m,8,9,2.33,no
+DP3-0397,delivered,0,control,control,31,170,81.4,28.2,71.7,24.8,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,1,0,0,induced (does not include prom,1,38.9,3490,m,8,9,0,no
+DP3-0398E,delivered,3,hdp,lo severe pe,33,165,95,34.9,97.0,35.6,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,2,2,0,0,?,2,39.1,3690,f,8,8,0,<14
+DP3-0399,delivered,3,fgr,fgr <3,27,165,104.2,38.3,91.6,33.6,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,3,2,1,0,induced (does not include prom,1,35.1,1710,f,5,6,0,no
+DP3-0400E,delivered,0,control,control,30,165,74,27.2,65.3,24.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,2,0,0,?,2,39.0,3180,f,9,9,0,<28
+DP3-0404,delivered,3,hdp,lo mild sipe,32,167,114.4,41.0,,36.6,white,0,1,0,0,0,non hispanic,0,never,0,0,1,1,3,1,1,0,37.1,3710,f,5,7,2.13,<14
+DP3-0405,delivered,0,hdp,lo mild sipe,39,193,183.4,49.2,187.3,50.3,white,0,1,0,0,0,,1,never,0,0,5,4,1,1,induced (does not include prom,1,39.4,3530,f,9,9,0,<14
+DP3-0406E,delivered,0,control,control,35,165,102,37.5,94.6,34.8,white,0,1,0,0,0,not hispanic or latino,0,yes,1,0,5,2,0,0,spontaneous,1,39.7,3070,f,8,9,0,no
+DP3-0407,delivered,0,control,control,37,167,99.4,35.6,85.3,30.6,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,8,4,0,0,?,1,37.7,2770,f,9,9,0,no
+DP3-0408,delivered,0,control,control,44,157,97.1,39.4,93.0,37.7,african american,0,0,1,0,0,not hispanic or latino,0,yes,1,0,9,5,0,0,?,1,38.3,3470,m,8,9,0,<14
+DP3-0409,delivered,3,hdp,eo severe pe,30,161,98.8,38.1,91.2,35.2,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,2,2,2,0,?,2,33.6,2450,m,8,9,0,<14
+DP3-0410E,delivered,0,control,control,27,160,95,37.1,,30.7,white,0,1,0,0,0,non hispanic,0,never,0,0,2,2,0,0,1,0,,3140,m,8,8,1.08,<20
+DP3-0412E,delivered,0,control,control,33,160,87,34.0,,30.1,white,0,1,0,0,0,non hispanic,0,never,0,0,2,2,0,1,1,0,,3300,m,7,8,2,<14
+DP3-0413E,delivered,0,control,control,31,160,64,25.0,,21.0,white,0,1,0,0,0,non hispanic,0,never,0,0,6,4,0,0,1,0,,3540,f,8,9,1.17,no
+DP3-0414E,delivered,0,control,control,33,168,104,36.8,,35.2,white,0,1,0,0,0,non hispanic,0,quit,0,0,1,1,0,1,1,0,,3970,f,8,9,2.33,<14
+DP3-0415E,delivered,0,control,control,23,173,130,43.4,113.1,37.8,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,2,0,0,?,2,39.0,4530,m,9,9,0,no
+DP3-0416,delivered,3,control,control,36,167.6,74,26.3,61.7,22.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,?,2,37.6,3160,m,9,10,0,<14
+DP3-0417E,delivered,0,control,control,27,178,120,37.9,,33.4,white,0,1,0,0,0,non hispanic,0,quit,0,0,3,3,0,0,0,0,,3700,m,8,9,2.08,<20
+DP3-0418,delivered,0,control,control,39,170,84.6,29.3,75.0,26.0,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,8,3,0,0,?,1,39.3,4030,m,1,7,0,<14
+DP3-0419,delivered,3,hdp,lo severe sipe,31,170,139.1,48.1,116.8,40.4,white,0,1,0,0,0,not hispanic or latino,0,quit,0,0,1,1,1,1,spontaneous,1,36.3,3120,m,8,9,0,<14
+DP3-0420,delivered,3,fgr,fgr <3,42,160,72.9,28.5,65.8,25.7,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,?,2,40.0,2770,m,1,6,0,no
+DP3-0422E,delivered,0,control,iufd,24,155,104,43.3,,35.1,white,0,1,0,0,0,non hispanic,0,never,0,0,4,2,1,0,0,1,36.1,4460,m,0,0,,no
+DP3-0423E,delivered,3,hdp,lo mild sipe,21,170,107,37.0,101.1,35.0,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,1,?,2,38.1,3655,m,8,9,0,<14
+DP3-0424,delivered,0,control,control,34,152,68.1,29.5,56.2,24.3,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,2,0,0,spontaneous,2,38.4,3660,m,9,9,0,no
+DP3-0425,delivered,0,hdp,lo mild sipe,37,178.1,133.9,42.2,125.2,39.5,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,1,induced (does not include prom,2,39.4,3770,m,3,8,0,<14
+DP3-0426,delivered,0,control,control,40,149.9,94.5,42.1,95.3,42.4,african american,0,0,1,0,0,not hispanic or latino,0,never,0,0,13,6,0,0,?,1,39.0,3090,m,9,9,0,<14
+DP3-0427E,delivered,0,hdp,lo severe sipe,28,165,132,48.5,117.4,43.1,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,1,0,1,induced (does not include prom,2,39.1,3300,m,7,8,0,<14
+DP3-0428,delivered,0,hdp,ghtn,29,170.2,94.8,32.7,93.0,32.1,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,2,1,0,induced (does not include prom,1,38.0,2985,f,9,9,0,<14
+DP3-0429,delivered,0,control,control,36,160,73,28.5,60.8,23.7,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,2,0,1,induced (does not include prom,1,37.4,2550,f,9,9,0,<14
+DP3-0431,delivered,0,hdp,ghtn,35,175.1,79.5,25.9,62.1,20.3,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,2,2,0,0,spontaneous,1,39.6,3040,f,9,9,0,no
+DP3-0432E,delivered,0,control,control,27,165,80.3,29.5,64.9,23.8,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,6,2,0,0,induced (does not include prom,2,39.3,4185,m,8,9,0,<14
+DP3-0433E,delivered,0,control,control,35,147,70.8,32.8,,28.9,white,0,1,0,0,0,non hispanic,0,never,0,0,4,4,0,0,0,1,,2770,m,9,9,2.25,<14
+DP3-0434,delivered,0,control,control,39,176,95.7,30.9,95.3,30.8,white,0,1,0,0,0,,1,yes,1,0,3,2,0,0,induced (does not include prom,1,39.0,2720,f,9,9,0,<14
+DP3-0435E,delivered,0,hdp,ghtn,30,163,122,45.9,102.1,38.4,white,0,1,0,0,0,not hispanic or latino,0,never,0,0,1,1,0,0,induced (does not include prom,1,40.3,3635,f,8,9,0,<14
+DP3-0436,delivered,3,sptb,sptb+ghtn,24,172,115.8,39.1,111.0,37.5,african american,0,0,1,0,0,not hispanic or latino,0,yes,1,0,3,1,0,0,prom,2,29.4,1375,m,8,8,0,<14

@@ -1,0 +1,106 @@
+2026-05-11 01:22:24,290 [INFO] ======================================================================
+2026-05-11 01:22:24,290 [INFO] Intraomics Differential Analysis Log
+2026-05-11 01:22:24,290 [INFO] Date/time    : 2026-05-11 01:22:24
+2026-05-11 01:22:24,290 [INFO] Python       : 3.12.12
+2026-05-11 01:22:24,290 [INFO] scipy        : 1.17.0
+2026-05-11 01:22:24,290 [INFO] statsmodels  : 0.14.6
+2026-05-11 01:22:24,290 [INFO] pandas       : 3.0.0
+2026-05-11 01:22:24,290 [INFO] numpy        : 2.4.2
+2026-05-11 01:22:24,290 [INFO] ----------------------------------------------------------------------
+2026-05-11 01:22:24,290 [INFO] Parameters:
+2026-05-11 01:22:24,290 [INFO]   MIN_N             = 5  (min non-missing observations per group)
+2026-05-11 01:22:24,290 [INFO]   FDR_THRESHOLD     = 0.05
+2026-05-11 01:22:24,290 [INFO]   LOG2_FC_THRESHOLD = 0.5850  (log2(1.5); both CS and longitudinal)
+2026-05-11 01:22:24,290 [INFO]   FDR method        = Benjamini-Hochberg
+2026-05-11 01:22:24,290 [INFO]   CS test           = Mann-Whitney U (two-sided)
+2026-05-11 01:22:24,290 [INFO]   Long test         = Wilcoxon signed-rank (two-sided, zero_method='wilcox')
+2026-05-11 01:22:24,290 [INFO] ======================================================================
+2026-05-11 01:22:24,290 [INFO] === Differential analysis: MTBL_sop ===
+2026-05-11 01:22:24,313 [INFO] Sample counts per group × timepoint:
+sample_type placenta
+timepoint          —
+Group               
+Control           53
+FGR               15
+HDP               32
+sPTB              12
+2026-05-11 01:22:24,313 [INFO] Sample count report saved: /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/sample_counts_per_group_timepoint.csv
+2026-05-11 01:22:24,339 [INFO] Cross-sectional [placenta]: 112 samples x 644 analytes
+2026-05-11 01:22:24,339 [INFO] Cross-sectional: Control vs 1 complication group(s) → 1 comparison(s)
+2026-05-11 01:22:24,551 [INFO]   Control_vs_Complication → 644 tested, 0 excluded (n < 5), 1 significant (q < 0.05)
+2026-05-11 01:22:24,590 [INFO] MetaboAnalyst export [Control_vs_Complication]: 644 total features written (format 2; 1 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/placenta/metaboanalyst/Control_vs_Complication_metaboanalyst.txt
+2026-05-11 01:22:24,618 [INFO] Cross-sectional [plasma A]: 133 samples x 1127 analytes
+2026-05-11 01:22:24,619 [INFO] Cross-sectional: Control vs 1 complication group(s) → 1 comparison(s)
+2026-05-11 01:22:24,974 [INFO]   Control_vs_Complication → 1127 tested, 0 excluded (n < 5), 27 significant (q < 0.05)
+2026-05-11 01:22:25,058 [INFO] MetaboAnalyst export [Control_vs_Complication]: 1127 total features written (format 2; 27 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/cross_sectional/A/Control_vs_Complication_metaboanalyst.txt
+2026-05-11 01:22:25,087 [INFO] Cross-sectional [plasma B]: 133 samples x 1127 analytes
+2026-05-11 01:22:25,087 [INFO] Cross-sectional: Control vs 1 complication group(s) → 1 comparison(s)
+2026-05-11 01:22:25,440 [INFO]   Control_vs_Complication → 1127 tested, 0 excluded (n < 5), 22 significant (q < 0.05)
+2026-05-11 01:22:25,505 [INFO] MetaboAnalyst export [Control_vs_Complication]: 1127 total features written (format 2; 22 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/cross_sectional/B/Control_vs_Complication_metaboanalyst.txt
+2026-05-11 01:22:25,533 [INFO] Cross-sectional [plasma C]: 128 samples x 1127 analytes
+2026-05-11 01:22:25,533 [INFO] Cross-sectional: Control vs 1 complication group(s) → 1 comparison(s)
+2026-05-11 01:22:25,887 [INFO]   Control_vs_Complication → 1127 tested, 0 excluded (n < 5), 25 significant (q < 0.05)
+2026-05-11 01:22:25,951 [INFO] MetaboAnalyst export [Control_vs_Complication]: 1127 total features written (format 2; 25 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/cross_sectional/C/Control_vs_Complication_metaboanalyst.txt
+2026-05-11 01:22:25,979 [INFO] Cross-sectional [plasma D]: 109 samples x 1127 analytes
+2026-05-11 01:22:25,979 [INFO] Cross-sectional: Control vs 1 complication group(s) → 1 comparison(s)
+2026-05-11 01:22:26,348 [INFO]   Control_vs_Complication → 1127 tested, 0 excluded (n < 5), 25 significant (q < 0.05)
+2026-05-11 01:22:26,416 [INFO] MetaboAnalyst export [Control_vs_Complication]: 1127 total features written (format 2; 25 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/cross_sectional/D/Control_vs_Complication_metaboanalyst.txt
+2026-05-11 01:22:26,458 [INFO] Cross-sectional [plasma E]: 27 samples x 1127 analytes
+2026-05-11 01:22:26,458 [INFO] Cross-sectional: Control vs 1 complication group(s) → 1 comparison(s)
+2026-05-11 01:22:26,821 [INFO]   Control_vs_Complication → 1127 tested, 0 excluded (n < 5), 23 significant (q < 0.05)
+2026-05-11 01:22:26,891 [INFO] MetaboAnalyst export [Control_vs_Complication]: 1127 total features written (format 2; 23 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/cross_sectional/E/Control_vs_Complication_metaboanalyst.txt
+2026-05-11 01:22:27,026 [INFO] Generating cross-sectional boxplots: 50 significant + 0 top by q-value → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots
+2026-05-11 01:22:37,281 [INFO] Boxplots saved → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/cross_sectional_boxplots
+2026-05-11 01:22:37,365 [INFO] Longitudinal [Control]
+2026-05-11 01:22:37,426 [INFO] Longitudinal [Control]: 5 timepoints → 4 adjacent delta comparisons
+2026-05-11 01:22:37,664 [INFO]   B−A → 1127 tested, 0 excluded (n < 5), 28 significant (q < 0.05)
+2026-05-11 01:22:37,902 [INFO]   C−B → 1127 tested, 0 excluded (n < 5), 25 significant (q < 0.05)
+2026-05-11 01:22:38,153 [INFO]   D−C → 1127 tested, 0 excluded (n < 5), 25 significant (q < 0.05)
+2026-05-11 01:22:38,474 [INFO]   E−D → 1127 tested, 0 excluded (n < 5), 10 significant (q < 0.05)
+2026-05-11 01:22:38,474 [INFO] Longitudinal [FGR]
+2026-05-11 01:22:38,526 [INFO] Longitudinal [FGR]: 5 timepoints → 4 adjacent delta comparisons
+2026-05-11 01:22:38,863 [INFO]   B−A → 1127 tested, 0 excluded (n < 5), 39 significant (q < 0.05)
+2026-05-11 01:22:39,200 [INFO]   C−B → 1127 tested, 0 excluded (n < 5), 29 significant (q < 0.05)
+2026-05-11 01:22:39,533 [INFO]   D−C → 1127 tested, 0 excluded (n < 5), 33 significant (q < 0.05)
+2026-05-11 01:22:39,842 [INFO]   E−D → 1127 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
+2026-05-11 01:22:39,842 [INFO] Longitudinal [HDP]
+2026-05-11 01:22:39,873 [INFO] Longitudinal [HDP]: 5 timepoints → 4 adjacent delta comparisons
+2026-05-11 01:22:40,263 [INFO]   B−A → 1127 tested, 0 excluded (n < 5), 34 significant (q < 0.05)
+2026-05-11 01:22:40,644 [INFO]   C−B → 1127 tested, 0 excluded (n < 5), 39 significant (q < 0.05)
+2026-05-11 01:22:41,002 [INFO]   D−C → 1127 tested, 0 excluded (n < 5), 30 significant (q < 0.05)
+2026-05-11 01:22:41,370 [INFO]   E−D → 1127 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
+2026-05-11 01:22:41,371 [INFO] Longitudinal [sPTB]
+2026-05-11 01:22:41,401 [INFO] Longitudinal [sPTB]: 5 timepoints → 4 adjacent delta comparisons
+2026-05-11 01:22:41,729 [INFO]   B−A → 1127 tested, 0 excluded (n < 5), 30 significant (q < 0.05)
+2026-05-11 01:22:42,094 [INFO]   C−B → 1127 tested, 0 excluded (n < 5), 1 significant (q < 0.05)
+2026-05-11 01:22:42,409 [INFO]   D−C → 1127 tested, 0 excluded (n < 5), 0 significant (q < 0.05)
+2026-05-11 01:22:42,410 [WARNING]   E−D [sPTB]: 0 paired subjects — skipping (no result file written).
+2026-05-11 01:22:42,450 [INFO] Longitudinal [Complication pooled]
+2026-05-11 01:22:42,451 [INFO] Longitudinal [Complication]: 5 timepoints → 4 adjacent delta comparisons
+2026-05-11 01:22:42,692 [INFO]   B−A → 1127 tested, 0 excluded (n < 5), 50 significant (q < 0.05)
+2026-05-11 01:22:42,931 [INFO]   C−B → 1127 tested, 0 excluded (n < 5), 46 significant (q < 0.05)
+2026-05-11 01:22:43,167 [INFO]   D−C → 1127 tested, 0 excluded (n < 5), 38 significant (q < 0.05)
+2026-05-11 01:22:43,509 [INFO]   E−D → 1127 tested, 0 excluded (n < 5), 4 significant (q < 0.05)
+2026-05-11 01:22:43,574 [INFO] MetaboAnalyst export [Complication_B_minus_A]: 1127 total features written (format 2; 50 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/longitudinal/Complication_B_minus_A_metaboanalyst.txt
+2026-05-11 01:22:43,640 [INFO] MetaboAnalyst export [Complication_C_minus_B]: 1127 total features written (format 2; 46 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/longitudinal/Complication_C_minus_B_metaboanalyst.txt
+2026-05-11 01:22:43,706 [INFO] MetaboAnalyst export [Complication_D_minus_C]: 1127 total features written (format 2; 38 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/longitudinal/Complication_D_minus_C_metaboanalyst.txt
+2026-05-11 01:22:43,771 [INFO] MetaboAnalyst export [Complication_E_minus_D]: 1127 total features written (format 2; 4 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/longitudinal/Complication_E_minus_D_metaboanalyst.txt
+2026-05-11 01:22:43,836 [INFO] MetaboAnalyst export [Control_B_minus_A]: 1127 total features written (format 2; 28 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/longitudinal/Control_B_minus_A_metaboanalyst.txt
+2026-05-11 01:22:43,902 [INFO] MetaboAnalyst export [Control_C_minus_B]: 1127 total features written (format 2; 25 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/longitudinal/Control_C_minus_B_metaboanalyst.txt
+2026-05-11 01:22:43,967 [INFO] MetaboAnalyst export [Control_D_minus_C]: 1127 total features written (format 2; 25 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/longitudinal/Control_D_minus_C_metaboanalyst.txt
+2026-05-11 01:22:44,034 [INFO] MetaboAnalyst export [Control_E_minus_D]: 1127 total features written (format 2; 10 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/longitudinal/Control_E_minus_D_metaboanalyst.txt
+2026-05-11 01:22:44,101 [INFO] MetaboAnalyst export [FGR_B_minus_A]: 1127 total features written (format 2; 39 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/longitudinal/FGR_B_minus_A_metaboanalyst.txt
+2026-05-11 01:22:44,167 [INFO] MetaboAnalyst export [FGR_C_minus_B]: 1127 total features written (format 2; 29 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/longitudinal/FGR_C_minus_B_metaboanalyst.txt
+2026-05-11 01:22:44,232 [INFO] MetaboAnalyst export [FGR_D_minus_C]: 1127 total features written (format 2; 33 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/longitudinal/FGR_D_minus_C_metaboanalyst.txt
+2026-05-11 01:22:44,297 [INFO] MetaboAnalyst export [FGR_E_minus_D]: 1127 total features written (format 2; 0 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/longitudinal/FGR_E_minus_D_metaboanalyst.txt
+2026-05-11 01:22:44,363 [INFO] MetaboAnalyst export [HDP_B_minus_A]: 1127 total features written (format 2; 34 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/longitudinal/HDP_B_minus_A_metaboanalyst.txt
+2026-05-11 01:22:44,429 [INFO] MetaboAnalyst export [HDP_C_minus_B]: 1127 total features written (format 2; 39 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/longitudinal/HDP_C_minus_B_metaboanalyst.txt
+2026-05-11 01:22:44,494 [INFO] MetaboAnalyst export [HDP_D_minus_C]: 1127 total features written (format 2; 30 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/longitudinal/HDP_D_minus_C_metaboanalyst.txt
+2026-05-11 01:22:44,558 [INFO] MetaboAnalyst export [HDP_E_minus_D]: 1127 total features written (format 2; 0 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/longitudinal/HDP_E_minus_D_metaboanalyst.txt
+2026-05-11 01:22:44,623 [INFO] MetaboAnalyst export [sPTB_B_minus_A]: 1127 total features written (format 2; 30 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/longitudinal/sPTB_B_minus_A_metaboanalyst.txt
+2026-05-11 01:22:44,687 [INFO] MetaboAnalyst export [sPTB_C_minus_B]: 1127 total features written (format 2; 1 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/longitudinal/sPTB_C_minus_B_metaboanalyst.txt
+2026-05-11 01:22:44,753 [INFO] MetaboAnalyst export [sPTB_D_minus_C]: 1127 total features written (format 2; 0 significant) → /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/metaboanalyst/longitudinal/sPTB_D_minus_C_metaboanalyst.txt
+2026-05-11 01:22:44,762 [INFO] Generating longitudinal boxplots for 50 analyte(s) -> /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/longitudinal_boxplots
+2026-05-11 01:22:53,136 [INFO] Longitudinal boxplots saved -> /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop/plasma/longitudinal_boxplots
+2026-05-11 01:22:53,137 [INFO] === MTBL_sop complete. Results in: /Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/04_results_and_figures/differential_analysis/MTBL_sop ===
+2026-05-11 01:22:53,141 [INFO] All done.

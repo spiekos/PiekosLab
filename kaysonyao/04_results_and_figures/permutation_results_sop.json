@@ -1,0 +1,138 @@
+{
+  "MTBL_sop": {
+    "placenta/all": {
+      "model": "SVM",
+      "n_test": 17,
+      "real_pr_auc": 0.5996312329645662,
+      "perm_mean": 0.6018130929890733,
+      "perm_std": 0.10812984027865839,
+      "perm_max": 0.9626543209876544,
+      "p_value": 0.493,
+      "n_perm": 1000,
+      "significant": false
+    },
+    "plasma/A": {
+      "model": "RandomForest",
+      "n_test": 20,
+      "real_pr_auc": 0.9777495232040687,
+      "perm_mean": 0.6074524450344039,
+      "perm_std": 0.10204193613399816,
+      "perm_max": 0.9127886002886003,
+      "p_value": 0.0,
+      "n_perm": 1000,
+      "significant": true
+    },
+    "plasma/B": {
+      "model": "RandomForest",
+      "n_test": 20,
+      "real_pr_auc": 0.9750688705234161,
+      "perm_mean": 0.6052647345153361,
+      "perm_std": 0.09899831382599893,
+      "perm_max": 0.9289849039849041,
+      "p_value": 0.0,
+      "n_perm": 1000,
+      "significant": true
+    },
+    "plasma/C": {
+      "model": "XGBoost",
+      "n_test": 20,
+      "real_pr_auc": 0.9172946037919301,
+      "perm_mean": 0.6152043496290119,
+      "perm_std": 0.10270382974073683,
+      "perm_max": 0.986013986013986,
+      "p_value": 0.002,
+      "n_perm": 1000,
+      "significant": true
+    },
+    "plasma/D": {
+      "model": "XGBoost",
+      "n_test": 17,
+      "real_pr_auc": 0.9861111111111112,
+      "perm_mean": 0.5505978966397165,
+      "perm_std": 0.1177383721245078,
+      "perm_max": 0.8918650793650793,
+      "p_value": 0.0,
+      "n_perm": 1000,
+      "significant": true
+    },
+    "plasma/E": {
+      "model": "LogisticRegression",
+      "n_test": 5,
+      "real_pr_auc": 0.8666666666666667,
+      "perm_mean": 0.7327222222222222,
+      "perm_std": 0.1636078475433797,
+      "perm_max": 1.0,
+      "p_value": 0.312,
+      "n_perm": 1000,
+      "significant": false
+    }
+  },
+  "LIPD_sop": {
+    "placenta/all": {
+      "model": "XGBoost",
+      "n_test": 18,
+      "real_pr_auc": 0.8975308641975309,
+      "perm_mean": 0.5411049532257867,
+      "perm_std": 0.10685237306817107,
+      "perm_max": 0.9722222222222222,
+      "p_value": 0.004,
+      "n_perm": 1000,
+      "significant": true
+    },
+    "plasma/A": {
+      "model": "RandomForest",
+      "n_test": 20,
+      "real_pr_auc": 0.9633264462809918,
+      "perm_mean": 0.6076413044823332,
+      "perm_std": 0.10256611692145093,
+      "perm_max": 0.9777495232040687,
+      "p_value": 0.001,
+      "n_perm": 1000,
+      "significant": true
+    },
+    "plasma/B": {
+      "model": "XGBoost",
+      "n_test": 20,
+      "real_pr_auc": 0.9383116883116883,
+      "perm_mean": 0.5721903303470148,
+      "perm_std": 0.08299230426378072,
+      "perm_max": 0.8507575757575757,
+      "p_value": 0.0,
+      "n_perm": 1000,
+      "significant": true
+    },
+    "plasma/C": {
+      "model": "RandomForest",
+      "n_test": 20,
+      "real_pr_auc": 0.986013986013986,
+      "perm_mean": 0.6105582863761938,
+      "perm_std": 0.10343360281796606,
+      "perm_max": 0.9542355371900826,
+      "p_value": 0.0,
+      "n_perm": 1000,
+      "significant": true
+    },
+    "plasma/D": {
+      "model": "RandomForest",
+      "n_test": 16,
+      "real_pr_auc": 0.9861111111111112,
+      "perm_mean": 0.5829909926878677,
+      "perm_std": 0.113897887717944,
+      "perm_max": 0.9427083333333333,
+      "p_value": 0.0,
+      "n_perm": 1000,
+      "significant": true
+    },
+    "plasma/E": {
+      "model": "RandomForest",
+      "n_test": 5,
+      "real_pr_auc": 1.0,
+      "perm_mean": 0.7308,
+      "perm_std": 0.16132840365899764,
+      "perm_max": 1.0,
+      "p_value": 0.101,
+      "n_perm": 1000,
+      "significant": false
+    }
+  }
+}

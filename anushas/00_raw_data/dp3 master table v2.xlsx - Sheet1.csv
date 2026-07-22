@@ -1,0 +1,437 @@
+ID,status,LMP,end of 1st tri (13+6),end of 2nd tri (27+6),gest age del,,group,subgroup,additional dx,birthweight,infant sex,risk factor y/n,risk factor type,momi data,omics study (n=133),omics set#,plasma omics,plac -80,plac RNAlater,stool micro,vaginal micro,histology,air data (n=169),water data,Fitbit,fitbit paper
+DP3-0001,Delivered,,,,39.9,,Control,Control,none,3390,M,1,Hx HDP,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0002,Delivered,,,,39.3,,Control,Control,none,3150,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0003,Delivered,,,,37.6,,Control,Control,ICP,3400,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0004,Delivered,,,,37.0,,HDP,gHTN,none,3520,M,1,Hx HDP,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0005,Delivered,,,,36.9,,FGR,FGR <5,none,2090,F,0,none,yes,1,1,1,1,1,1,1,1,1,1,1,1
+DP3-0006,Delivered,,,,40.0,,Control,Control,none,3670,F,0,none,yes,1,1,1,1,1,1,1,1,1,1,1,1
+DP3-0007,Loss to follow-up,,,,LTFU,,LTFU,LTFU,none,LTFU,LTFU,0,none,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0008,Delivered,,,,39.0,,Control,Control,none,2980,M,0,none,yes,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0009,Delivered,,,,37.0,,HDP,gHTN,none,3320,M,1,Hx HDP,yes,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0010,Loss to follow-up,,,,LTFU,,LTFU,LTFU,none,3755,M,0,0,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0011,Withdraw,,,,Withdraw,,Withdraw,Withdraw,Withdraw,3920,M,withraw,withraw,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,0
+DP3-0012,Delivered,,,,38.3,,Control,Control,LGA+gdm,4070,M,1,late abortion (16w),yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0013,Delivered,,,,37.3,,Control,Control,chTN,3230,M,1,"cHTN, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0014,Loss to follow-up,,,,41.4,,FGR,FGR <3,gdm,2760,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0015,Delivered,,,,38.9,,Control,Control,LGA,4180,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0016,Loss to follow-up,,,,32.9,,sPTB,sPTB,none,1900,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0017,Delivered,,,,39.1,,Control,Control,none,3230,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0018,Delivered,,,,38.3,,Control,Control,cHTN,3260,F,1,"cHTN, 1st pregnancy",yes,1,1,1,1,1,1,1,1,1,1,1,1
+DP3-0019,Delivered,,,,39.4,,Control,Control,none,3880,M,0,0,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0020,Delivered,,,,38.4,,Control,Control,ICP,3030,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0021,Delivered,,,,38.1,,Control,Control,none,2980,M,0,none,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0022,Delivered,,,,39.1,,Control,Control,LGA,4310,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0023,Loss to follow-up,,,,36.0,,sPTB,sPTB,none,2680,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0024,Delivered,,,,36.4,,sPTB,sptb,none,2940,M,0,none,no,1,1,1,1,1,1,1,1,1,1,1,1
+DP3-0025,Delivered,,,,39.6,,HDP,LO severe PE,none,3825,F,1,Hx HDP,yes,1,1,1,1,1,1,1,1,1,1,1,1
+DP3-0026,Excluded - genetic abnormalities,,,,excluded,,excluded,excluded,excluded,excluded,excluded,excluded,excluded,no,excluded,excluded,excluded,excluded,excluded,excluded,excluded,excluded,0,0,excluded,excluded
+DP3-0027,Delivered,,,,39.1,,Control,Control,none,3680,M,0,none,yes,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0028,Delivered,,,,38.1,,Control,Control,none,2940,M,0,none,yes,1,1,1,1,1,1,1,1,1,1,1,1
+DP3-0029E,Delivered,,,,37.0,,Control,Control,none,2350,F,1,cHTN,yes,1,1,1,1,1,1,1,1,0,1,1,1
+DP3-0030,Delivered,,,,40.3,,Control,Control,none,3000,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0031,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,1,1,0
+DP3-0032,Delivered,,,,39.3,,Control,Control,none,3590,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0033E,Delivered,,,,39.7,,Control,Control,cHTN,3810,M,1,cHTN,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0034,Delivered,,,,40.7,,Control,Control,none,3300,F,0,none,no,1,1,1,1,1,1,1,1,1,1,1,1
+DP3-0035E,Loss to follow-up,,,,39.3,,Control,Control,none,3040,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,0,0
+DP3-0036,Delivered,,,,40.0,,HDP,pp gHTN,none,3840,F,0,"none, 1st pregnancy",yes,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0037,Delivered,,,,39.3,,Control,Control,none,3830,M,0,none,yes,1,1,1,1,1,1,1,1,0,1,1,1
+DP3-0038,Delivered,,,,36.0,,sPTB,sptb,none,2600,M,0,none,no,1,1,1,1,1,1,1,1,0,1,1,1
+DP3-0039E,Delivered,,,,37.6,,Control,Control,none,2850,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0040,Delivered,,,,41.9,,Control,Control,LGA,4390,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0041E,Delivered,,,,39.3,,Control,Control,none,3900,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0042,Delivered,,,,40.3,,Control,Control,none,3660,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0043,Delivered,,,,39.4,,Control,Control,none,3080,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0044,Delivered,,,,39.3,,Control,Control,cHTN,3520,M,1,"cHTN, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0045,Delivered,,,,28.9,,HDP,FGR <5+EO mild PE,none,735,M,0,"none, 1st pregnancy",yes,1,1,1,0,1,1,1,0,0,1,1,1
+DP3-0046,Delivered,,,,39.7,,Control,Control,none,3600,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0047,Withdraw,,,,Withdraw,,Withdraw,Withdraw,Withdraw,3020,M,withraw,withraw,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0048,Delivered,,,,39.6,,HDP,pp HELLP,none,3570,F,0,"none, 1st pregnancy",yes,1,1,1,1,1,1,1,1,0,1,1,1
+DP3-0049E,Delivered,,,,36.4,,FGR,FGR <3,none,1850,M,1,"FGR, stillbirth, 1st pregnancy",yes,1,1,1,1,1,1,1,1,0,1,1,1
+DP3-0050,Delivered,,,,39.0,,Control,Control,none,3490,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0051,Delivered,,,,40.1,,Control,Control,none,2920,F,0,0,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0052E,Delivered,,,,39.1,,Control,Control,none,3390,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0053,Delivered,,,,41.6,,Control,Control,none,3370,F,0,0,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0054,Delivered,,,,39.3,,Control,Control,none,2980,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0055E,Delivered,,,,39.9,,Control,Control,none,3480,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0056,Delivered,,,,36.7,,HDP,LO severe SIPE,none,4060,M,1,"cHTN, DM1, Hx gHTN",yes,1,1,1,1,1,1,1,1,0,1,1,1
+DP3-0057,Delivered,,,,37.0,,Control,Control,none,2590,M,0,"none, 1st pregnancy",no,1,1,1,1,1,1,1,1,1,1,1,1
+DP3-0058,Loss to follow-up,,,,39.0,,HDP,gHTN,none,3080,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0059,Excluded - early fetal hydrops,,,,excluded,,excluded,excluded,excluded,excluded,excluded,excluded,excluded,no,excluded,excluded,excluded,excluded,excluded,excluded,excluded,excluded,0,0,excluded,excluded
+DP3-0060E,Delivered,,,,39.0,,Control,Control,none,3210,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0061E,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,1,0
+DP3-0062,Delivered,,,,39.0,,Control,Control,none,3440,F,0,none,yes,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0063,excluded - t18,,,,excluded,,excluded,excluded,excluded,excluded,excluded,excluded,excluded,no,excluded,excluded,excluded,excluded,excluded,excluded,excluded,excluded,0,0,excluded,excluded
+DP3-0064,Delivered,,,,39.0,,Control,Control,none,3310,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0065,Delivered,,,,39.9,,Control,Control,gdm,3040,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0066,Delivered,,,,40.9,,Control,Control,none,3990,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0067,Loss to follow-up,,,,LTFU,,Control,Control,none,delivered off site,delivered off site,na,na,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0068,Delivered,,,,38.6,,FGR,LO FGR <5,none,2530,M,0,"none, 1st pregnancy",yes,1,2,1,0,0,1,1,0,0,1,1,1
+DP3-0069E,Delivered,,,,40.6,,Control,Control,none,3260,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0070,Delivered,,,,39.6,,Control,Control,none,3560,F,0,"none, 1st pregnancy",yes,1,2,1,1,1,1,1,1,0,1,1,1
+DP3-0071,Delivered,,,,38.9,,HDP,LO severe PE,none,3360,F,1,mild PE,yes,1,1,1,0,0,1,1,0,0,0,1,1
+DP3-0072,Delivered,,,,39.1,,FGR,FGR <3,none,2290,M,0,"none, 1st pregnancy",yes,1,1,1,1,1,1,1,1,0,1,1,1
+DP3-0073E,Delivered,,,,36.0,,Control,Control,placenta previa/accreta,3530,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0074,Delivered,,,,39.3,,Control,Control,none,3620,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0075,Delivered,,,,37.0,,Control,Control,none,3030,F,0,none,yes,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0076E,Delivered,,,,37.0,,HDP,LO mild PE,none,3880,F,1,Hx HDP,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0077,Delivered,,,,38.1,,Control,Control,LGA,3800,M,0,0,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0078E,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,1,1,0
+DP3-0079,Loss to follow-up,,,,39.0,,Control,Control,cHTN,3770,M,1,"Hx HDP, cHTN",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0080,Delivered,,,,33.6,,HDP,EO severe PE,none,3000,M,0,none,no,1,1,1,1,1,1,1,1,0,1,1,1
+DP3-0081,Withdraw,,,,Withdraw,,Withdraw,Withdraw,Withdraw,2860,M,withraw,withraw,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0082,Delivered,,,,41.1,,Control,Control,LGA,4450,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0083E,Delivered,,,,39.4,,Control,Control,none,3715,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0084,Delivered,,,,40.6,,Control,Control,none,3480,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0085,Delivered,,,,38.3,,Control,Control,cHTN+gdm,3680,M,1,"Hx HDP, cHTN",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0086E,Delivered,,,,39.0,,Control,Control,none,3310,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0087,Delivered,,,,39.6,,Control,Control,none,3220,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0088E,Delivered,,,,39.1,,Control,Control,cHTN,3320,F,1,"Hx HDP, cHTN",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0089,Withdraw,,,,Withdraw,,Withdraw,Withdraw,Withdraw,3870,F,withraw,withraw,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0090,Withdraw,,,,Withdraw,,Withdraw,Withdraw,Withdraw,3790,F,withraw,withraw,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0091E,Delivered,,,,37.3,,HDP,LO mild PE,none,2920,M,1,mild PE,yes,1,1,1,1,1,1,1,1,0,1,1,1
+DP3-0092,Delivered,,,,37.1,,HDP,LO severe SIPE,gdm,3220,M,1,chtn,no,1,1,1,1,1,1,1,1,1,0,1,1
+DP3-0093,Delivered,,,,39.4,,Control,Control,none,3400,F,0,none,yes,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0094,Delivered,,,,40.0,,Control,Control,none,4120,F,0,none,yes,1,1,1,1,1,1,1,1,0,1,1,1
+DP3-0095,Loss to follow-up,,,,LTFU,,HDP,mild PE,none,3340,F,1,chtn,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0096,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,0,0
+DP3-0097,Delivered,,,,40.3,,Control,Control,none,3270,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0098,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,0,0
+DP3-0099,Loss to follow-up,,,,39.4,,Control,Control,none,3970,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0100E,Delivered,,,,40.4,,Control,Control,none,3580,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0101,Delivered,,,,35.3,,sPTB,sPTB,none,2340,F,1,sPTB,yes,1,1,1,0,0,1,1,0,1,1,1,1
+DP3-0102,Delivered,,,,39.9,,Control,Control,LGA,4480,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0103,Withdraw,,,,Withdraw,,Withdraw,Withdraw,Withdraw,3220,F,withraw,withraw,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0104,Delivered,,,,37.9,,Control,Control,none,3130,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0105,Delivered,,,,41.3,,Control,Control,none,4040,M,0,"none, 1st pregnancy",yes,1,1,1,1,1,1,1,1,1,1,1,1
+DP3-0106,Loss to follow-up,,,,36.7,,sPTB,sPTB,none,2650,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0107,Delivered,,,,39.3,,HDP,gHTN,none,3110,F,0,"none, 1st pregnancy",yes,1,1,1,1,1,1,1,1,1,1,1,1
+DP3-0108,Delivered,,,,38.1,,Control,Control,ITP,2950,F,1,Hx sPTB,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0109,Delivered,,,,39.0,,Control,Control,gdm,2840,F,1,Hx sPTB,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0110,Withdraw,,,,Withdraw,,Withdraw,Withdraw,Withdraw,Withdraw,Withdraw,withraw,withraw,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,0
+DP3-0111,Delivered,,,,39.1,,Control,Control,none,2910,M,0,none,yes,1,1,1,1,1,1,1,1,1,1,1,1
+DP3-0112,Delivered,,,,40.9,,Control,Control,none,3530,M,0,none,yes,1,1,1,1,1,1,1,1,0,1,1,1
+DP3-0113,Delivered,,,,41.6,,Control,Control,none,3340,M,0,none,no,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0114,Loss to follow-up,,,,39.1,,Control,Control,none,3050,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0115,Loss to follow-up,,,,39.0,,Control,Control,none,3680,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0116,Delivered,,,,40.3,,Control,Control,none,4060,F,0,none,yes,1,2,1,1,1,1,1,1,0,1,1,1
+DP3-0117,Delivered,,,,40.4,,Control,Control,none,3350,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0118E,Delivered,,,,37.4,,HDP,gHTN,none,3360,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0119E,Delivered,,,,39.3,,Control,Control,LGA,4070,M,1,Hx HDP,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0120,Delivered,,,,39.0,,Control,Control,none,3390,F,0,none,yes,1,1,1,1,1,1,1,1,1,1,1,1
+DP3-0121,Delivered,,,,39.5,,Control,Control,none,3910,M,1,gHTN,no,1,1,1,1,1,1,1,1,1,1,1,1
+DP3-0122,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,1,1,1
+DP3-0123,Delivered,,,,40.6,,Control,Control,none,3125,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0124,Delivered,,,,37.4,,HDP,LO severe SIPE,none,2920,F,1,"cHTN, 1st pregnancy",yes,1,1,1,1,1,1,1,1,1,1,1,1
+DP3-0125,Delivered,,,,39.0,,Control,Control,none,3370,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,0,1,1
+DP3-0126,Delivered,,,,38.7,,Control,Control,none,3230,M,0,"none, 1st pregnancy",yes,1,1,1,1,1,1,1,1,1,1,1,1
+DP3-0127,Delivered,,,,39.9,,Control,Control,none,3465,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0128,Delivered,,,,41.3,,Control,Control,none,3470,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0129,Delivered,,,,40.0,,Control,Control,none,4030,F,0,none,yes,1,1,1,1,1,1,1,1,0,1,1,1
+DP3-0130E,Delivered,,,,40.1,,Control,Control,none,2920,F,0,none,yes,1,1,1,1,1,1,1,1,0,1,1,1
+DP3-0131,Loss to follow-up,,,,LTFU,,Control,Control,none,2800,F,0,0,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0132,Withdraw,,,,Withdraw,,Withdraw,Withdraw,Withdraw,3900,M,withraw,withraw,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0133,Delivered,,,,41.1,,Control,Control,none,3940,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0134E,Delivered,,,,39.7,,Control,Control,none,3520,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0135E,Delivered,,,,39.7,,HDP,gHTN,none,3460,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0136E,Delivered,,,,38.4,,HDP,LO mild PE,none,3480,F,0,"none, 1st pregnancy",yes,1,1,1,0,0,1,1,0,0,0,0,0
+DP3-0137E,Delivered,,,,38.7,,Control,Control,none,2930,M,1,"Hx HDP, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0138,Withdraw,,,,Withdraw,,Withdraw,Withdraw,Withdraw,Withdraw,Withdraw,withraw,withraw,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,0
+DP3-0139,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,1,1,0
+DP3-0140E,Delivered,,,,35.6,,sPTB,sPTB,none,2660,F,0,"none, 1st pregnancy",yes,1,1,1,1,1,1,1,1,0,1,1,1
+DP3-0141,Loss to follow-up,,,,38.6,,Control,Control,cHTN,3010,M,1,cHTN,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0142,Delivered,,,,37.7,,Control,Control,none,2870,M,1,"cHTN, 1st pregnancy",yes,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0143,Delivered,,,,36.6,,Control,Control,none,2690,M,0,none,cdw,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0144,Delivered,,,,37.9,,Control,Control,none,2580,F,0,0,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0145,Loss to follow-up,,,,34.7,,HDP,pp severe pe,none,2110,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,0,0
+DP3-0146,Loss to follow-up,,,,40.3,,FGR,FGR <5,none,2690,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0147E,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,1,0
+DP3-0148,Loss to follow-up,,,,LTFU,,Control,Control,dm1,3500,F,1,"Hx HDP, DM1",no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,0
+DP3-0149,Loss to follow-up,,,,37.3,,Control,Control,none,2830,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0150E,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,0,0
+DP3-0151E,Delivered,,,,39.7,,Control,Control,cHTN,3310,F,1,cHTN,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0152,Delivered,,,,40.0,,Control,Control,none,3200,F,0,none,no,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0153,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,0,0
+DP3-0154,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,0,0
+DP3-0155E,Delivered,,,,40.0,,FGR,FGR <5,none,2850,M,0,none,yes,1,2,1,0,0,0,0,0,0,1,1,1
+DP3-0156,Delivered,,,,39.3,,HDP,gHTN,none,3260,F,1,gHTN,yes,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0157,Delivered,,,,38.4,,Control,Control,none,3040,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0158,Delivered,,,,37.3,,HDP,LO mild PE,none,3320,F,0,"none, 1st pregnancy",yes,1,2,1,0,0,1,1,0,1,1,1,1
+DP3-0159E,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,1,0
+DP3-0160,Delivered,,,,39.1,,HDP,gHTN,none,3210,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,0,1,1
+DP3-0161,Delivered,,,,38.0,,FGR,LO FGR <5,none,2590,M,1,mild PE,yes,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0162,Delivered,,,,37.3,,HDP,gHTN,none,2910,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0163E,Delivered,,,,29.4,,HDP,EO severe SIPE (AEDF),none,945,M,1,"eclampsia, SLE, cHTN",yes,1,2,1,1,1,0,0,1,0,0,1,1
+DP3-0164,Delivered,,,,38.7,,Control,Control,none,3090,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0165E,Delivered,,,,40.3,,HDP,LO mild PE,none,4300,F,1,"RPL, 1st pregnancy",yes,1,2,1,1,1,1,1,1,0,1,1,1
+DP3-0166,Delivered,,,,39.7,,Control,Control,none,3830,F,0,none,no,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0167E,Delivered,,,,39.0,,Control,Control,none,3700,M,1,Hx stillbirth,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0168,Delivered,,,,39.9,,Control,Control,gdm,3520,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0169,Delivered,,,,39.3,,Control,Control,none,3500,M,0,"none, 1st pregnancy",yes,1,2,1,1,0,1,1,1,1,1,1,1
+DP3-0170E,Delivered,,,,39.3,,Control,Control,bacterial vaginosis,3640,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0171,Delivered,,,,40.6,,HDP,gHTN,none,4030,F,1,Hx HDP,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0172,Delivered,,,,39.1,,Control,Control,none,3830,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0173E,Delivered,,,,39.1,,Control,Control,none,3290,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0174,Delivered,,,,37.6,,HDP,gHTN,none,2480,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0175,Delivered,,,,42.0,,Control,Control,none,4160,M,0,none,yes,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0176E,Withdraw,,,,Withdraw,,Withdraw,Withdraw,Withdraw,3790,F,withraw,withraw,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0177,Delivered,,,,39.1,,Control,Control,none,2960,M,0,"none, 1st pregnancy",yes,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0178,Loss to follow-up,,,,28.9,,HDP,eclampsia,none,1030,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0179,Delivered,,,,39.6,,Control,Control,none,3680,M,0,none,yes,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0180,Loss to follow-up,,,,38.6,,Control,Control,none,2850,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0181,Delivered,,,,39.0,,Control,Control,none,3000,M,1,gHTN,yes,1,2,1,1,1,1,1,1,1,0,1,1
+DP3-0182E,Delivered,,,,37.1,,FGR,FGR <3+cHTN,none,2310,M,1,"severe PE, cHTN",yes,1,2,1,0,0,1,1,0,0,1,1,1
+DP3-0183,Withdraw,,,,Withdraw,,Withdraw,Withdraw,Withdraw,3430,M,withraw,withraw,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0184E,Delivered,,,,38.3,,FGR,FGR <5,none,2480,F,0,none,yes,1,2,1,1,1,1,1,1,0,1,1,1
+DP3-0185,Delivered,,,,40.0,,Control,Control,none,2970,F,0,none,yes,1,2,1,1,0,1,1,1,1,1,1,1
+DP3-0186,Delivered,,,,39.3,,FGR,FGR <3,none,2730,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0187,Delivered,,,,40.1,,Control,Control,none,3980,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0188,Delivered,,,,39.4,,Control,Control,none,3080,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0189,Delivered,,,,39.3,,Control,Control,none,3290,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0190,Delivered,,,,39.1,,Control,Control,none,3790,F,1,late abortion (19w),yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0191,Loss to follow-up,,,,39.0,,Control,Control,none,3300,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0192,Delivered,,,,39.0,,Control,Control,none,3250,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0193,Delivered,,,,38.0,,Control,Control,none,3500,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0194,Loss to follow-up,,,,39.4,,Control,Control,gest thrombocytopenia,3390,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0195,Delivered,,,,39.7,,Control,Control,none,3500,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0196E,Delivered,,,,38.3,,Control,Control,gdm,2590,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0197,Delivered,,,,34.1,,HDP,EO severe PE,none,2070,M,0,none,no,1,2,1,0,0,1,1,0,1,1,1,1
+DP3-0198,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,0,0
+DP3-0199,Delivered,,,,37.4,,Control,Control,dm2; LGA,4270,M,1,DM2,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0200,Delivered,,,,39.4,,Control,Control,none,3320,M,0,"none, 1st pregnancy",yes,1,2,1,1,1,1,1,1,0,1,1,1
+DP3-0201E,Delivered,,,,38.4,,HDP,LO severe PE,none,2930,F,0,"none, 1st pregnancy",yes,1,2,1,0,0,1,1,0,0,0,1,1
+DP3-0202,Delivered,,,,38.1,,Control,Control,none,3520,M,0,"none, 1st pregnancy",yes,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0203,Delivered,,,,38.4,,Control,Control,none,2740,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,0,1,1
+DP3-0204,Delivered,,,,39.1,,Control,Control,none,2830,M,0,"none, 1st pregnancy",yes,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0205E,Delivered,,,,39.0,,Control,Control,none,4310,F,1,Hx HDP,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0206E,Delivered,,,,39.0,,FGR,FGR <3,none,2640,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0207,Delivered,,,,37.0,,HDP,LO severe PE,none,2990,F,0,none,yes,1,2,1,1,1,1,1,1,0,1,1,1
+DP3-0208,Delivered,,,,39.7,,Control,Control,none,2920,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0209E,Delivered,,,,39.6,,Control,Control,gdm,3620,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0210,Delivered,,,,36.4,,Control,Control,cHTN+gdm,3070,F,1,"Hx HDP, cHTN",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,0,1,1
+DP3-0211,Loss to follow-up,,,,39.3,,Control,Control,none,3350,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0212,Delivered,,,,39.1,,Control,Control,cHTN+LGA,4150,M,1,"Hx HDP, cHTN",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0213,Delivered,,,,41.7,,Control,Control,LGA,4210,M,1,Hx HDP,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0214,Delivered,,,,31.6,,sPTB,sPTB,none,1550,F,0,none,yes,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0215,Loss to follow-up,,,,36.1,,HDP,LO severe PE,none,3020,M,1,Hx HDP,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0216,Delivered,,,,37.7,,HDP,LO severe SIPE,gdm,3680,M,1,chtn,no,1,2,1,1,1,0,0,1,0,1,1,1
+DP3-0217,Delivered,,,,39.3,,Control,Control,none,4050,M,1,Hx HDP,yes,1,3,1,1,1,1,1,0,1,0,1,1
+DP3-0218,Loss to follow-up,,,,41.1,,Control,Control,none,3520,M,1,Hx HDP,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0219,Delivered,,,,38.9,,Control,Control,gdm,2820,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0220,Delivered,,,,39.3,,Control,Control,none,3110,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0221,Delivered,,,,39.1,,Control,Control,none,2810,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0222,Delivered,,,,37.9,,Control,Control,cHTN+LGA,3980,M,1,cHTN,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0223,Delivered,,,,39.4,,Control,Control,none,3470,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0224,Delivered,,,,39.4,,Control,Control,none,3220,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0225,Delivered,,,,40.9,,Control,Control,none,3990,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0226,Delivered,,,,39.6,,Control,Control,none,3070,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0227,Delivered,,,,37.1,,Control,Control,none,2930,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0228,Loss to follow-up,,,,37.4,,Control,Control,none,3410,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,0
+DP3-0229E,Delivered,,,,39.6,,Control,Control,LGA,4010,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0230,Delivered,,,,39.6,,Control,Control,ICP,3470,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0231,Delivered,,,,37.7,,Control,Control,none,3390,M,1,Hx FGR,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0232E,Delivered,,,,40.4,,Control,Control,none,3370,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0233E,Delivered,,,,36.4,,HDP,LO severe SIPE,none,2730,M,1,"severe PE, DM1, cHTN",yes,1,2,1,1,1,1,1,1,0,0,1,1
+DP3-0234,Delivered,,,,23.0,,sPTB,sPTB,none,675,M,1,"Hx sPTB, Hx HDP",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0235,Delivered,,,,39.6,,FGR,FGR <5,none,2580,F,0,"none, 1st pregnancy",yes,1,2,1,0,0,1,1,0,0,0,1,1
+DP3-0236,Loss to follow-up,,,,38.7,,Control,Control,cHTN,3110,F,1,cHTN,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,0
+DP3-0237,Delivered,,,,38.6,,Control,Control,none,3330,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0238,Delivered,,,,39.7,,HDP,gHTN,none,3240,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,0,1,1
+DP3-0239,Delivered,,,,41.0,,Control,Control,none,3500,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0240,Delivered,,,,33.9,,sPTB,sPTB,none,1670,F,1,"Hx sPTB, DM2",yes,1,3,1,1,1,0,0,0,0,1,1,1
+DP3-0241,Delivered,,,,38.4,,Control,Control,none,2650,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0242,Delivered,,,,39.4,,Control,Control,none,3261,F,0,none,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0243,Delivered,,,,40.6,,Control,Control,none,3900,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,0,1,1
+DP3-0244,Delivered,,,,41.4,,Control,Control,none,3710,M,0,none,yes,1,3,1,1,1,1,1,0,0,1,1,1
+DP3-0245,Delivered,,,,37.9,,Control,Control,none,3610,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0246,Delivered,,,,39.1,,HDP,pp severe SIPE,none,3630,F,1,cHTN,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0247,Delivered,,,,38.7,,FGR,FGR <5,none,2420,F,1,Hx HDP,yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0248E,Delivered,,,,38.3,,HDP,LO mild PE,none,2540,F,0,"none, 1st pregnancy",yes,1,2,1,0,0,1,1,0,0,1,1,1
+DP3-0249,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,0,0
+DP3-0250,Delivered,,,,39.1,,Control,Control,susp sjorgen,3510,M,0,none,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0251,Delivered,,,,40.6,,Control,Control,none,2990,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,0,1,1
+DP3-0252,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,1,1,0
+DP3-0253,Delivered,,,,39.3,,Control,Control,none,3510,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0254,Delivered,,,,40.0,,Control,Control,none,3570,M,1,Hx HDP,yes,1,3,1,1,1,1,1,0,0,1,1,1
+DP3-0255,Delivered,,,,39.4,,Control,Control,gdm,3030,M,1,Hx HDP,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0256,Delivered,,,,40.0,,Control,Control,none,3285,M,0,"none, 1st pregnancy",yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0257,Delivered,,,,38.6,,Control,Control,none,3450,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0258E,Delivered,,,,37.1,,FGR,LO FGR <5,gdm,2420,M,0,none,yes,1,3,1,1,1,0,0,0,0,1,1,1
+DP3-0259,Delivered,,,,36.0,,FGR,FGR <3,none,1380,F,0,"none, 1st pregnancy",yes,1,3,1,1,1,1,1,0,0,1,1,1
+DP3-0260,Delivered,,,,38.9,,HDP,gHTN,none,3410,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0261E,Delivered,,,,38.1,,Control,Control,cHTN,3060,F,1,cHTN,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0262,Delivered,,,,39.9,,Control,Control,none,3610,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0263E,Delivered,,,,36.3,,HDP,LO severe PE,none,2770,M,0,"none, 1st pregnancy",yes,1,3,1,1,1,0,0,0,0,0,1,1
+DP3-0264,Delivered,,,,39.6,,Control,Control,none,3100,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0265,Delivered,,,,28.0,,sPTB,sPTB,none,1115,M,0,none,yes,1,2,1,1,1,1,1,1,1,1,1,1
+DP3-0266,Delivered,,,,38.1,,HDP,LO mild PE,none,2980,F,1,Hx sPTB,yes,1,3,1,1,1,0,0,0,0,1,1,1
+DP3-0267,Delivered,,,,37.9,,HDP,gHTN,none,3040,F,1,Hx HDP,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0268,Loss to follow-up,,,,39.7,,HDP,gHTN,none,3100,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0269,Loss to follow-up,,,,37.1,,LTFU,LTFU,none,3780,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0270,Withdraw,,,,Withdraw,,Withdraw,Withdraw,Withdraw,1130,M,withraw,withraw,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0271,Delivered,,,,39.0,,Control,Control,cHTN,3040,M,1,"cHTN, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0272,Delivered,,,,39.1,,Control,Control,none,3200,M,1,Hx HDP,yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0273,Delivered,,,,37.0,,Control,Control,none,3090,M,1,Hx FGR,yes,1,3,1,1,1,1,1,0,0,1,1,1
+DP3-0274,Delivered,,,,35.4,,HDP,LO severe PE,none,2220,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0275,Delivered,,,,39.9,,Control,Control,none,3700,F,0,ICP,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0276,Delivered,,,,39.3,,Control,Control,gdm,3000,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0277,Delivered,,,,39.3,,Control,Control,none,3560,M,1,Hx HDP,yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0278,Delivered,,,,40.1,,Control,Control,none,3310,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0279,Delivered,,,,40.1,,Control,Control,none,4050,M,1,AMA,yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0280,Delivered,,,,40.1,,Control,Control,none,3950,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0281E,Delivered,,,,35.7,,sPTB,sPTB,none,3030,M,1,"cHTN, 1st pregnancy",yes,1,3,1,1,1,0,0,0,0,0,1,1
+DP3-0282,Delivered,,,,39.1,,Control,Control,gdm,3950,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0283,Delivered,,,,37.6,,Control,Control,none,2840,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0284,Delivered,,,,37.1,,Control,Control,gdm,3090,M,1,"Hx sPTB, Hx FGR",yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0285,Delivered,,,,40.4,,Control,Control,none,3470,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0286,Loss to follow-up,,,,36.6,,Control,Control,cHTN+DM2,3170,M,1,"DM2, Hx HDP, cHTN",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,0,0
+DP3-0287,Delivered,,,,39.6,,Control,Control,none,3010,M,0,"none, 1st pregnancy",yes,1,3,1,1,1,1,1,0,1,0,1,1
+DP3-0288,Loss to follow-up,,,,38.3,,Control,Control,none,3220,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0289,Loss to follow-up,,,,39.0,,Control,Control,none,3670,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0290,Delivered,,,,37.0,,Control,Control,none,2880,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0291,Loss to follow-up,,,,38.0,,Control,Control,cHTN+gdm,3620,F,1,cHTN,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0292,Delivered,,,,37.3,,Control,Control,none,3060,F,1,Hx sPTB,yes,1,3,1,1,1,1,1,0,0,1,1,1
+DP3-0293,Delivered,,,,39.7,,Control,Control,none,2850,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0294,Delivered,,,,40.4,,Control,Control,none,3590,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0295,Delivered,,,,39.4,,Control,Control,none,3280,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0296,Delivered,,,,37.9,,Control,Control,none,2700,M,0,"none, 1st pregnancy",yes,1,3,1,1,1,1,1,0,0,1,1,1
+DP3-0297,Delivered,,,,37.6,,Control,Control,none,3020,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,0,1,1
+DP3-0298E,Delivered,,,,39.0,,HDP,pp severe SIPE,none,3510,F,1,cHTN,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0299E,Delivered,,,,39.1,,FGR,FGR <5,gdm,4070,F,0,none,yes,1,3,1,1,1,1,1,0,0,0,1,1
+DP3-0300,Delivered,,,,37.3,,Control,Control,DM1,3920,F,1,"Hx HDP, DM1",yes,1,3,1,1,1,1,1,0,0,1,1,1
+DP3-0301,Delivered,,,,33.4,,HDP,EO FGR <5 + EO severe PE,gdm,1430,M,0,"none, 1st pregnancy",yes,1,3,1,0,0,1,1,0,0,1,1,1
+DP3-0302,Delivered,,,,39.9,,Control,Control,none,3210,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0303E,Delivered,,,,38.6,,Control,Control,cHTN,3540,F,1,"Hx HDP, cHTN",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0304,Delivered,,,,34.0,,sPTB,sPTB,none,1780,F,0,none,no,1,3,1,1,1,0,0,0,0,1,1,1
+DP3-0305,Delivered,,,,38.7,,HDP,FGR <3 + LO severe PE,none,2510,M,0,"none, 1st pregnancy",yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0306,Delivered,,,,41.3,,Control,Control,none,3530,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0307,Withdraw,,,,Withdraw,,Withdraw,Withdraw,Withdraw,3320,M,withraw,withraw,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0308,Delivered,,,,40.0,,Control,Control,cHTN,3750,F,1,cHTN,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0309,Delivered,,,,40.1,,Control,Control,LGA,4080,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0310,Delivered,,,,37.0,,Control,Control,gdm,3160,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0311,Delivered,,,,34.3,,HDP,EO mild SIPE,none,3250,M,1,"Hx HDP, cHTN, DM1",yes,1,3,1,1,1,1,1,0,0,0,1,1
+DP3-0312,Delivered,,,,39.1,,Control,Control,cHTN+gdm,2950,F,1,"cHTN, gdm",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0313,Delivered,,,,40.1,,Control,Control,none,3280,M,0,none,yes,1,3,1,1,1,1,1,0,0,1,1,1
+DP3-0314,Delivered,,,,39.7,,Control,Control,none,3000,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0315,Delivered,,,,38.1,,Control,Control,cHTN,3109,F,1,cHTN,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0316,Delivered,,,,39.1,,Control,Control,LGA,4170,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0317,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,0,0
+DP3-0318,Delivered,,,,39.7,,Control,Control,none,3430,F,1,"Hx HDP, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0319,Delivered,,,,40.7,,Control,Control,none,2960,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0320,Delivered,,,,38.6,,Control,Control,none,2860,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0321,Excluded - active malignancy,,,,excluded,,excluded,excluded,excluded,excluded,excluded,excluded,excluded,yes,excluded,excluded,excluded,excluded,excluded,excluded,excluded,excluded,0,0,excluded,excluded
+DP3-0322E,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,1,0
+DP3-0323,Delivered,,,,39.0,,FGR,FGR <3+cHTN,gdm,2280,F,1,cHTN,yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0324,Delivered,,,,#N/A,,Control,Control,gdm,3540,M,0,0,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0325E,Delivered,,,,38.1,,Control,Control,cHTN+gdm,3195,F,1,"cHTN, gdm",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,0,0
+DP3-0326,Delivered,,,,38.3,,Control,Control,none,3130,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0327,Delivered,,,,35.9,,sPTB,sPTB,none,3040,M,0,none,yes,1,3,1,1,1,0,0,0,0,1,1,1
+DP3-0328,Delivered,,,,36.6,,Control,Control,DM1,3630,M,1,"DM1, cHTN",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0329,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,0,0
+DP3-0330,Delivered,,,,36.7,,sPTB,sPTB,none,2790,M,0,none,yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0331,Excluded - t21,,,,excluded,,excluded,excluded,excluded,excluded,excluded,excluded,excluded,yes,excluded,excluded,excluded,excluded,excluded,excluded,excluded,excluded,0,0,excluded,excluded
+DP3-0332,Delivered,,,,38.1,,Control,Control,none,3080,M,0,none,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0333,Delivered,,,,36.1,,HDP,LO severe PE,none,2400,M,0,none,yes,1,3,1,1,1,1,1,0,0,1,1,1
+DP3-0334,Delivered,,,,30.6,,sPTB,sPTB,none,1375,M,0,"none, 1st pregnancy",yes,1,3,1,1,1,1,1,0,0,0,1,1
+DP3-0335,Delivered,,,,39.1,,Control,Control,gdm,3080,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0336,Delivered,,,,39.1,,HDP,LO mild PE,none,3560,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0337E,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,1,1,0
+DP3-0338,Delivered,,,,39.7,,Control,Control,none,3730,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0339,Delivered,,,,25.6,,sPTB,sPTB,none,610,F,1,Hx sPTB,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,0,0
+DP3-0340,Delivered,,,,40.1,,Control,Control,none,3820,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0341,Loss to follow-up,,,,39.1,,Control,Control,none,3590,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0342,Delivered,,,,34.1,,HDP,EO severe PE,none,2290,F,1,Hx HDP,yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0343,Delivered,,,,36.9,,sptb,FGR <5+sptb,none,2090,F,0,"none, 1st pregnancy",yes,1,3,1,0,0,1,1,0,0,1,1,1
+DP3-0344,Delivered,,,,37.0,,Control,Control,none,2890,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0345,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,0,0
+DP3-0346,Delivered,,,,40.4,,Control,Control,none,3940,F,0,"none, 1st pregnancy",yes,1,3,1,1,1,1,1,0,0,1,1,1
+DP3-0347,Delivered,,,,39.4,,Control,Control,none,3370,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0348,Delivered,,,,39.9,,Control,Control,none,3300,F,1,Hx FGR,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0349,Excluded - multifetal,,,,excluded,,excluded,excluded,excluded,excluded,excluded,excluded,excluded,yes,excluded,excluded,excluded,excluded,excluded,excluded,excluded,excluded,0,0,excluded,excluded
+DP3-0350E,Delivered,,,,38.1,,Control,Control,LGA,4200,M,1,DM2,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0351,Delivered,,,,39.6,,Control,Control,none,3310,M,1,Hx HDP,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,0,1,1
+DP3-0352,Delivered,,,,38.7,,FGR,FGR <5+cHTN,none,2600,M,1,"cHTN, 1st pregnancy",yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0353,Delivered,,,,41.4,,Control,Control,none,3500,M,0,"none, 1st pregnancy",yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0354,Delivered,,,,39.1,,Control,Control,none,3280,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0355,Delivered,,,,39.4,,Control,Control,chTN,3510,F,1,"cHTN, prediabetes",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0356E,Delivered,,,,37.0,,HDP,LO mild PE,gdm,2760,M,1,"Hx HDP, Hx FGR",yes,1,3,1,1,1,1,1,0,0,0,1,1
+DP3-0357,Delivered,,,,37.1,,Control,Control,cHTN+gdm,3050,M,1,cHTN,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0358E,Delivered,,,,35.0,,HDP,LO severe PE,none,3320,M,1,"DM2, AMA, 1st pregnancy",yes,1,3,1,1,1,1,1,0,0,0,0,0
+DP3-0359,Delivered,,,,39.1,,Control,Control,LGA,4110,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0360E,Delivered,,,,39.3,,Control,Control,cHTN,3650,F,1,cHTN,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0361,Delivered,,,,38.0,,FGR,LO FGR <3,none,2450,M,1,Hx HDP,yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0362E,Delivered,,,,39.0,,Control,Control,DM1,3665,M,1,"DM1, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0363,Delivered,,,,39.4,,Control,Control,cHTN,3670,F,1,cHTN,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0364,Delivered,,,,40.4,,HDP,LO mild PE,none,3480,M,0,none,yes,1,3,1,1,1,1,1,0,0,1,1,1
+DP3-0365,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,0,0
+DP3-0366,Delivered,,,,38.1,,Control,Control,cHTN+gdm,3280,M,1,cHTN,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0367E,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,1,1,0
+DP3-0368,Delivered,,,,39.7,,Control,Control,none,3670,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0369,Delivered,,,,37.1,,Control,Control,ICP,2850,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0370,Loss to follow-up,,,,39.1,,Control,Control,none,3010,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0371E,Delivered,,,,38.0,,HDP,gHTN,none,3805,F,1,Hx HDP,yes,1,3,1,1,1,1,1,0,0,0,1,1
+DP3-0372,Delivered,,,,39.0,,Control,Control,none,2880,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0373,Delivered,,,,37.6,,Control,Control,LGA+gdm,3900,M,1,"hx IUFD, hx HDP",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0374,Delivered,,,,38.0,,FGR,FGR <5,none,2510,F,0,IBD,yes,1,3,1,0,0,1,1,0,1,1,1,1
+DP3-0375E,Delivered,,,,31.1,,HDP,EO severe SIPE,none,1710,M,1,"Hx HDP, Hx PTB, cHTN",yes,1,3,1,1,1,1,1,0,0,0,1,1
+DP3-0376E,Delivered,,,,37.0,,Control,Control,none,2440,F,1,Hx FGR,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0377E,Delivered,,,,38.7,,Control,control,none,3315,F,1,"Hx of gDM, Hx HDP, Hx of IUFD ",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0378E,Delivered,,,,39.9,,FGR,FGR <3,none,2610,M,1,Hx HDP,yes,1,3,1,1,1,1,1,0,0,1,1,1
+DP3-0379,Delivered,,,,36.0,,sPTB,sPTB,none,2410,M,1,Hx FGR,yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0380,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,1,0
+DP3-0381,Delivered,,,,39.9,,Control,Control,none,3680,M,0,"none, 1st pregnancy",yes,1,3,1,0,1,1,1,0,0,1,1,1
+DP3-0382,Withdraw,,,,Withdraw,,Withdraw,Withdraw,Withdraw,3260,F,withraw,withraw,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0383,Loss to follow-up,,,,39.3,,Control,Control,cHTN,3620,M,1,cHTN,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0384,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,0,0
+DP3-0385,Delivered,,,,37.1,,HDP,LO  (37+1) mild SIPE + DM2,none,3360,M,1,"DM2, CHTN, Hx HDP",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0386,Delivered,,,,33.9,,HDP,EO severe SIPE,none,2440,M,1,"DM2, CHTN, Hx HDP",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0387,Delivered,,,,39.0,,Control,Control,none,3980,F,1,"Hx HDP, cHTN",yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0388,Delivered,,,,39.1,,Control,Control,none,4530,F,1,"DM2, cHTN",yes,1,3,1,0,1,1,1,0,1,1,1,1
+DP3-0389,Delivered,,,,35.4,,HDP,LO severe PE,none,1940,F,0,"none, 1st pregnancy",yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0390,Delivered,,,,41.0,,Control,Control,none,3980,M,1,"Hx PTB, Hx HDP",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0391,Loss to follow-up,,,,35.1,,FGR,FGR <5,none,1820,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,0,0
+DP3-0392,Delivered,,,,37.0,,HDP,LO mild PE,none,2870,M,1,"Hx HDP, Hx PTB",yes,1,3,1,0,0,1,1,0,0,1,1,1
+DP3-0393E,Delivered,,,,38.0,,Control,Control,cHTN,delivered off site,f,1,"chTN, DM2",no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0394,Delivered,,,,41.1,,Control,Control,none,3840,M,0,0,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0395,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,1,1,0
+DP3-0396,Delivered,,,,37.0,,HDP,gHTN,none,2830,M,0,none,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0397,Delivered,,,,38.9,,Control,Control,none,3490,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,0,1,1
+DP3-0398E,Delivered,,,,39.1,,HDP,LO severe PE,none,3690,F,1,Hx HDP,yes,1,3,1,1,1,0,0,0,0,0,1,1
+DP3-0399,Delivered,,,,35.1,,FGR,FGR <3,gdm,1710,F,1,Hx HDP,yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0400E,Delivered,,,,39.0,,Control,Control,none,3180,F,1,Hx HDP,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0401E,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,1,0
+DP3-0402,Withdraw,,,,Withdraw,,Withdraw,Withdraw,Withdraw,Withdraw,F,withraw,withraw,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
+DP3-0403,Loss to follow-up,,,,34.3,,sPTB,sPTB,none,2580,F,1,Hx sPTB,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,0
+DP3-0404,Delivered,,,,37.1,,HDP,LO mild SIPE,none,3710,F,1,"DM1, cHTN",no,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0405,Delivered,,,,39.4,,HDP,LO mild SIPE,gdm,3530,F,1,cHTN,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0406E,Delivered,,,,39.7,,Control,Control,none,3070,F,1,Hx HDP,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,0,0
+DP3-0407,Delivered,,,,37.7,,Control,Control,none,2770,F,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0408,Delivered,,,,38.3,,Control,Control,none,3470,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,0,0
+DP3-0409,Delivered,,,,33.6,,HDP,EO severe PE,none,2450,M,1,DM1,yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0410E,Delivered,,,,#N/A,,Control,Control,none,3140,M,1,Hx HDP,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0411,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,0,0
+DP3-0412E,Delivered,,,,#N/A,,Control,Control,cHTN,3300,M,1,"Hx HDP, cHTN",no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0413E,Delivered,,,,#N/A,,Control,Control,none,3540,F,1,Hx HDP,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0414E,Delivered,,,,#N/A,,Control,Control,cHTN,3970,F,1,cHTN,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0415E,Delivered,,,,39.0,,Control,Control,LGA,4530,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0416,Delivered,,,,37.6,,Control,Control,none,3160,M,0,"none, 1st pregnancy",yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0417E,Delivered,,,,#N/A,,Control,Control,none,3700,M,1,Hx HDP,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,0,0
+DP3-0418,Delivered,,,,39.3,,Control,Control,LGA,4030,M,1,Hx sPTB,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,0,1,1
+DP3-0419,Delivered,,,,36.3,,HDP,LO severe SIPE,gdm,3120,M,1,"cHTN, 1st pregnancy",yes,1,3,1,1,1,0,0,0,1,1,1,1
+DP3-0420,Delivered,,,,40.0,,FGR,FGR <3,none,2770,M,0,"none, 1st pregnancy",yes,1,3,1,1,1,1,1,0,1,1,1,1
+DP3-0421,Delivered off site,,,,38.4,,Control,Control,none,3635,M,1,"hx IUFD, hx PTB",cdw,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0422E,Delivered,,,,36.1,,Control,IUFD,gdm,4460,m,0,none,no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0423E,Delivered,,,,38.1,,HDP,LO mild SIPE,none,3655,M,1,"cHTN, 1st pregnancy",yes,1,3,1,1,1,1,1,0,0,0,1,1
+DP3-0424,Delivered,,,,38.4,,Control,Control,none,3660,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0425,Delivered,,,,39.4,,HDP,LO mild SIPE,none,3770,M,1,cHTN,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0426,Delivered,,,,39.0,,Control,control,none,3090,M,1,"Hx HDP, Hx PTB",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0427E,Delivered,,,,39.1,,HDP,LO severe SIPE,none,3300,M,1,cHTN,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0428,Delivered,,,,38.0,,HDP,gHTN,gdm,2985,F,1,"Hx HDP, Hx PTB",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,0,1,1
+DP3-0429,Delivered,,,,37.4,,Control,Control,chTN,2550,F,1,"Hx HDP, cHTN",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0430,Excluded - multifetal,,,,excluded,,excluded,excluded,excluded,excluded,excluded,excluded,excluded,yes,excluded,excluded,excluded,excluded,excluded,excluded,excluded,excluded,0,0,excluded,excluded
+DP3-0431,Delivered,,,,39.6,,HDP,gHTN,none,3040,F,1,Hx HDP,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0432E,Delivered,,,,39.3,,Control,Control,LGA,4185,M,1,Hx sPTB,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0433E,Delivered,,,,#N/A,,Control,Control,none,2770,M,1,"hx IUFD, Hx FGR",no,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,1,1
+DP3-0434,Delivered,,,,39.0,,Control,Control,none,2720,F,1,Hx HDP,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
+DP3-0435E,Delivered,,,,40.3,,HDP,gHTN,none,3635,F,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
+DP3-0436,Delivered,,,,29.4,,sPTB,sptb+gHTN,none,1375,M,1,Hx HDP,yes,1,3,1,0,0,1,1,0,0,1,1,1

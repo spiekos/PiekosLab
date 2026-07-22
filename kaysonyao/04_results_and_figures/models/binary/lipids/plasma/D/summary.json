@@ -1,0 +1,64 @@
+{
+  "tissue": "plasma",
+  "timepoint": "D",
+  "data_path": "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/lipids/normalized_sliced_by_suffix/lipids_plasma_formatted_suffix_D.csv",
+  "outcome": "Complication",
+  "complications_pooled": [
+    "HDP",
+    "FGR",
+    "sPTB"
+  ],
+  "n_train": 62,
+  "n_val": 13,
+  "n_test": 14,
+  "class_dist_train": {
+    "control": 38,
+    "complication": 24
+  },
+  "class_dist_val": {
+    "control": 8,
+    "complication": 5
+  },
+  "class_dist_test": {
+    "control": 8,
+    "complication": 6
+  },
+  "n_features_pretlasso": 2436,
+  "n_features_postlasso": 2436,
+  "best_model_val": "XGBoost",
+  "best_val_pr_auc": 0.8242424242424242,
+  "test_metrics": {
+    "LogisticRegression": {
+      "pr_auc": 0.45105820105820105,
+      "roc_auc": 0.4791666666666667,
+      "accuracy": 0.5714285714285714,
+      "precision": 0.5,
+      "recall": 0.5,
+      "f1": 0.5
+    },
+    "RandomForest": {
+      "pr_auc": 0.4236263736263736,
+      "roc_auc": 0.375,
+      "accuracy": 0.42857142857142855,
+      "precision": 0.25,
+      "recall": 0.16666666666666666,
+      "f1": 0.2
+    },
+    "XGBoost": {
+      "pr_auc": 0.4828754578754578,
+      "roc_auc": 0.35416666666666663,
+      "accuracy": 0.42857142857142855,
+      "precision": 0.25,
+      "recall": 0.16666666666666666,
+      "f1": 0.2
+    },
+    "SVM": {
+      "pr_auc": 0.43877187627187625,
+      "roc_auc": 0.3958333333333333,
+      "accuracy": 0.5,
+      "precision": 0.4,
+      "recall": 0.3333333333333333,
+      "f1": 0.36363636363636365
+    }
+  }
+}

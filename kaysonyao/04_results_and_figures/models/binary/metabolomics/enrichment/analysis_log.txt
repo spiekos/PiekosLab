@@ -1,0 +1,62 @@
+2026-03-30 18:09:12,603 [INFO] ======================================================================
+2026-03-30 18:09:12,603 [INFO] Metabolomics KEGG Pathway Enrichment
+2026-03-30 18:09:12,603 [INFO] Date/time : 2026-03-30 18:09:12
+2026-03-30 18:09:12,604 [INFO] ======================================================================
+2026-03-30 18:09:12,672 [INFO] Set Complication_B_minus_A           : 3 analytes → 2 identified
+2026-03-30 18:09:12,672 [INFO] Set Complication_C_minus_B           : 2 analytes → 2 identified
+2026-03-30 18:09:12,672 [INFO] Set Complication_D_minus_C           : 10 analytes → 0 identified
+2026-03-30 18:09:12,673 [INFO] Set Control_B_minus_A                : 4 analytes → 2 identified
+2026-03-30 18:09:12,673 [INFO] Set Control_C_minus_B                : 4 analytes → 3 identified
+2026-03-30 18:09:12,673 [INFO] Set Control_D_minus_C                : 3 analytes → 1 identified
+2026-03-30 18:09:12,673 [INFO] Set FGR_C_minus_B                    : 1 analytes → 1 identified
+2026-03-30 18:09:12,673 [INFO] Set HDP_B_minus_A                    : 5 analytes → 2 identified
+2026-03-30 18:09:12,673 [INFO] Set HDP_C_minus_B                    : 2 analytes → 2 identified
+2026-03-30 18:09:12,674 [INFO] Set HDP_D_minus_C                    : 12 analytes → 2 identified
+2026-03-30 18:09:12,674 [INFO] Set superset                         : 21 analytes → 7 identified
+2026-03-30 18:09:12,674 [INFO] Loaded 9 cached KEGG responses.
+2026-03-30 18:09:12,674 [INFO] Mapping 7 unique identified compound names to KEGG …
+2026-03-30 18:09:18,889 [INFO] KEGG mapping: 3 / 7 names resolved
+2026-03-30 18:09:20,962 [INFO] Fetching compound lists for 59 relevant HSA pathways …
+2026-03-30 18:10:36,050 [INFO] KEGG universe: 5005 unique compounds across 59 pathways
+2026-03-30 18:10:36,051 [INFO] ------------------------------------------------------------
+2026-03-30 18:10:36,052 [INFO] ORA: Complication_B_minus_A  (2 identified → 1 KEGG-mapped)
+2026-03-30 18:10:49,172 [INFO]   8 pathways tested, 6 significant (FDR < 0.05)
+2026-03-30 18:10:49,330 [INFO] Plot saved → /sessions/zealous-sleepy-curie/mnt/kaysonyao/04_results_and_figures/models/binary/metabolomics/enrichment/summary/Complication_B_minus_A_kegg_enrichment.png
+2026-03-30 18:10:49,331 [INFO] ------------------------------------------------------------
+2026-03-30 18:10:49,331 [INFO] ORA: Complication_C_minus_B  (2 identified → 1 KEGG-mapped)
+2026-03-30 18:10:52,633 [INFO]   8 pathways tested, 6 significant (FDR < 0.05)
+2026-03-30 18:10:52,734 [INFO] Plot saved → /sessions/zealous-sleepy-curie/mnt/kaysonyao/04_results_and_figures/models/binary/metabolomics/enrichment/summary/Complication_C_minus_B_kegg_enrichment.png
+2026-03-30 18:10:52,734 [INFO] ------------------------------------------------------------
+2026-03-30 18:10:52,735 [INFO] ORA: Complication_D_minus_C  (0 identified → 0 KEGG-mapped)
+2026-03-30 18:10:52,735 [WARNING]   No KEGG-mapped compounds — skipping.
+2026-03-30 18:10:52,735 [INFO] ------------------------------------------------------------
+2026-03-30 18:10:52,735 [INFO] ORA: Control_B_minus_A  (2 identified → 0 KEGG-mapped)
+2026-03-30 18:10:52,736 [WARNING]   No KEGG-mapped compounds — skipping.
+2026-03-30 18:10:52,736 [INFO] ------------------------------------------------------------
+2026-03-30 18:10:52,736 [INFO] ORA: Control_C_minus_B  (3 identified → 2 KEGG-mapped)
+2026-03-30 18:12:08,018 [INFO]   50 pathways tested, 48 significant (FDR < 0.05)
+2026-03-30 18:12:08,170 [INFO] Plot saved → /sessions/zealous-sleepy-curie/mnt/kaysonyao/04_results_and_figures/models/binary/metabolomics/enrichment/summary/Control_C_minus_B_kegg_enrichment.png
+2026-03-30 18:12:08,171 [INFO] ------------------------------------------------------------
+2026-03-30 18:12:08,171 [INFO] ORA: Control_D_minus_C  (1 identified → 1 KEGG-mapped)
+2026-03-30 18:12:11,457 [INFO]   8 pathways tested, 6 significant (FDR < 0.05)
+2026-03-30 18:12:11,555 [INFO] Plot saved → /sessions/zealous-sleepy-curie/mnt/kaysonyao/04_results_and_figures/models/binary/metabolomics/enrichment/summary/Control_D_minus_C_kegg_enrichment.png
+2026-03-30 18:12:11,556 [INFO] ------------------------------------------------------------
+2026-03-30 18:12:11,556 [INFO] ORA: FGR_C_minus_B  (1 identified → 0 KEGG-mapped)
+2026-03-30 18:12:11,557 [WARNING]   No KEGG-mapped compounds — skipping.
+2026-03-30 18:12:11,557 [INFO] ------------------------------------------------------------
+2026-03-30 18:12:11,557 [INFO] ORA: HDP_B_minus_A  (2 identified → 0 KEGG-mapped)
+2026-03-30 18:12:11,557 [WARNING]   No KEGG-mapped compounds — skipping.
+2026-03-30 18:12:11,558 [INFO] ------------------------------------------------------------
+2026-03-30 18:12:11,558 [INFO] ORA: HDP_C_minus_B  (2 identified → 1 KEGG-mapped)
+2026-03-30 18:12:14,833 [INFO]   8 pathways tested, 6 significant (FDR < 0.05)
+2026-03-30 18:12:14,930 [INFO] Plot saved → /sessions/zealous-sleepy-curie/mnt/kaysonyao/04_results_and_figures/models/binary/metabolomics/enrichment/summary/HDP_C_minus_B_kegg_enrichment.png
+2026-03-30 18:12:14,930 [INFO] ------------------------------------------------------------
+2026-03-30 18:12:14,931 [INFO] ORA: HDP_D_minus_C  (2 identified → 1 KEGG-mapped)
+2026-03-30 18:12:16,584 [INFO]   1 pathways tested, 1 significant (FDR < 0.05)
+2026-03-30 18:12:16,674 [INFO] Plot saved → /sessions/zealous-sleepy-curie/mnt/kaysonyao/04_results_and_figures/models/binary/metabolomics/enrichment/summary/HDP_D_minus_C_kegg_enrichment.png
+2026-03-30 18:12:16,675 [INFO] ------------------------------------------------------------
+2026-03-30 18:12:16,675 [INFO] ORA: superset  (7 identified → 3 KEGG-mapped)
+2026-03-30 18:12:37,020 [INFO]   50 pathways tested, 43 significant (FDR < 0.05)
+2026-03-30 18:12:37,148 [INFO] Plot saved → /sessions/zealous-sleepy-curie/mnt/kaysonyao/04_results_and_figures/models/binary/metabolomics/enrichment/summary/superset_kegg_enrichment.png
+2026-03-30 18:12:37,148 [INFO] ======================================================================
+2026-03-30 18:12:37,149 [INFO] Metabolomics enrichment complete.

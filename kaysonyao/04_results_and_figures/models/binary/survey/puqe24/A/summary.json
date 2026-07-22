@@ -1,0 +1,64 @@
+{
+  "tissue": "puqe24",
+  "timepoint": "A",
+  "data_path": "/Users/kaysonyao/miniconda3/envs/PiekosLab/kaysonyao/data/cleaned/survey/model_ready/puqe24/normalized_sliced_by_suffix/puqe24_plasma_formatted_suffix_A.csv",
+  "outcome": "Complication",
+  "complications_pooled": [
+    "HDP",
+    "FGR",
+    "sPTB"
+  ],
+  "n_train": 250,
+  "n_val": 54,
+  "n_test": 54,
+  "class_dist_train": {
+    "control": 175,
+    "complication": 75
+  },
+  "class_dist_val": {
+    "control": 37,
+    "complication": 17
+  },
+  "class_dist_test": {
+    "control": 38,
+    "complication": 16
+  },
+  "n_features_pretlasso": 4,
+  "n_features_postlasso": 4,
+  "best_model_val": "XGBoost",
+  "best_val_pr_auc": 0.5328864651019987,
+  "test_metrics": {
+    "LogisticRegression": {
+      "pr_auc": 0.3839375055838471,
+      "roc_auc": 0.6110197368421053,
+      "accuracy": 0.6296296296296297,
+      "precision": 0.3333333333333333,
+      "recall": 0.25,
+      "f1": 0.2857142857142857
+    },
+    "RandomForest": {
+      "pr_auc": 0.32067930242272347,
+      "roc_auc": 0.5699013157894737,
+      "accuracy": 0.5740740740740741,
+      "precision": 0.3157894736842105,
+      "recall": 0.375,
+      "f1": 0.34285714285714286
+    },
+    "XGBoost": {
+      "pr_auc": 0.30443012822168836,
+      "roc_auc": 0.5320723684210527,
+      "accuracy": 0.5,
+      "precision": 0.2962962962962963,
+      "recall": 0.5,
+      "f1": 0.37209302325581395
+    },
+    "SVM": {
+      "pr_auc": 0.29934481371417704,
+      "roc_auc": 0.46463815789473684,
+      "accuracy": 0.2962962962962963,
+      "precision": 0.2962962962962963,
+      "recall": 1.0,
+      "f1": 0.45714285714285713
+    }
+  }
+}

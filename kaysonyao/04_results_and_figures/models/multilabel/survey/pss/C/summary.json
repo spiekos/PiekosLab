@@ -1,0 +1,122 @@
+{
+  "tissue": "pss",
+  "timepoint": "C",
+  "outcomes": [
+    "HDP",
+    "FGR",
+    "sPTB"
+  ],
+  "n_train": 221,
+  "n_val": 47,
+  "n_test": 48,
+  "n_features_pretlasso": 11,
+  "n_features_postlasso": 11,
+  "best_model_val": "LogisticRegression",
+  "best_val_macro_pr_auc": 0.4580265106852272,
+  "test_metrics": {
+    "LogisticRegression": {
+      "HDP": {
+        "pr_auc": 0.3933132525242257,
+        "roc_auc": 0.6623931623931624,
+        "accuracy": 0.5833333333333334,
+        "precision": 0.23809523809523808,
+        "recall": 0.5555555555555556,
+        "f1": 0.3333333333333333
+      },
+      "FGR": {
+        "pr_auc": 0.19232954545454545,
+        "roc_auc": 0.7556818181818181,
+        "accuracy": 0.625,
+        "precision": 0.15,
+        "recall": 0.75,
+        "f1": 0.25
+      },
+      "sPTB": {
+        "pr_auc": 0.08933958317954774,
+        "roc_auc": 0.3372093023255814,
+        "accuracy": 0.5416666666666666,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "RandomForest": {
+      "HDP": {
+        "pr_auc": 0.3006028247256317,
+        "roc_auc": 0.5740740740740741,
+        "accuracy": 0.6041666666666666,
+        "precision": 0.2222222222222222,
+        "recall": 0.4444444444444444,
+        "f1": 0.2962962962962963
+      },
+      "FGR": {
+        "pr_auc": 0.14582289055973266,
+        "roc_auc": 0.6420454545454546,
+        "accuracy": 0.8125,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "sPTB": {
+        "pr_auc": 0.08751681922413629,
+        "roc_auc": 0.2441860465116279,
+        "accuracy": 0.8541666666666666,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "XGBoost": {
+      "HDP": {
+        "pr_auc": 0.2700466209313651,
+        "roc_auc": 0.5826210826210827,
+        "accuracy": 0.8125,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "FGR": {
+        "pr_auc": 0.18953081232492996,
+        "roc_auc": 0.6477272727272727,
+        "accuracy": 0.9166666666666666,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "sPTB": {
+        "pr_auc": 0.0811904761904762,
+        "roc_auc": 0.23255813953488375,
+        "accuracy": 0.8958333333333334,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "SVM": {
+      "HDP": {
+        "pr_auc": 0.28361102030814844,
+        "roc_auc": 0.5398860398860399,
+        "accuracy": 0.6041666666666666,
+        "precision": 0.25,
+        "recall": 0.5555555555555556,
+        "f1": 0.3448275862068966
+      },
+      "FGR": {
+        "pr_auc": 0.30357142857142855,
+        "roc_auc": 0.7954545454545454,
+        "accuracy": 0.75,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "sPTB": {
+        "pr_auc": 0.22580296896086371,
+        "roc_auc": 0.7093023255813954,
+        "accuracy": 0.7708333333333334,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    }
+  }
+}

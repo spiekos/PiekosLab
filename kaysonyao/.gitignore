@@ -202,3 +202,22 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Data files Extensions
+.xlsx
+.csv
+.DS_Store
+data/
+processed_data/
+
+# R Workspace
+.Rhistory
+.RData
+.Rproj.user/
+
+# Scratch files
+scratch.py
+note.text
+note.md
+heatmap_guide.docx
+*.docx
