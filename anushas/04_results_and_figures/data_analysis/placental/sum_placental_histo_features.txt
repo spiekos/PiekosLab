@@ -17,4 +17,4 @@ maternal_inflammatory_response_stage/grade: 9
 villitis_of_unknown_etiology,_high/low_grade,_focal/diffuse: 7
 increased_perivillous_fibrin_deposition: 2
 chorangiosis: 4
-spontaneous_preterm_birth: 12
+spontaneous_preterm_birth: 11

@@ -95,6 +95,7 @@ def get_race_counts(sheet):
     eth_col = "hispanic/latino"
 
     lines = []
+    raw_data = {}
 
     lines.append(f"{'Demographic Group Subtype':<50} | {'Count':<6} | {'Percentage':<8}")
     lines.append("-" * 75)
@@ -109,26 +110,30 @@ def get_race_counts(sheet):
             hisp_count = hisp_mask.sum()
             hisp_pct = (hisp_count / total_patients) * 100 if total_patients > 0 else 0
             if hisp_count > 0:
-                lines.append(f"{f'{display_race} / Hispanic':<50} | {hisp_count:<6} | {hisp_pct:>6.1f}%")
+                group_name = f'{display_race} / Hispanic'
+                lines.append(f"{group_name:<50} | {hisp_count:<6} | {hisp_pct:>6.1f}%")
+                raw_data[group_name] = {"count": hisp_count, "percentage": hisp_pct}
 
             # calculate non-hispanic intersection
             non_hisp_mask = (patient_df[r_col] == 1) & (patient_df[eth_col] == 0)
             non_hisp_count = non_hisp_mask.sum()
             non_hisp_pct = (non_hisp_count / total_patients) * 100 if total_patients > 0 else 0
             if non_hisp_count > 0:
-                lines.append(f"{f'{display_race} / Non-Hispanic':<50} | {non_hisp_count:<6} | {non_hisp_pct:>6.1f}%")
-                        
+                group_name = f"{display_race} / Non-Hispanic"
+                lines.append(f"{group_name:<50} | {non_hisp_count:<6} | {non_hisp_pct:>6.1f}%")
+                raw_data[group_name] = {"count": non_hisp_count, "percentage": non_hisp_pct}
+
     lines.append("\n")
         
-    return lines, total_patients
+    return lines, total_patients, raw_data
 
 
 # calculates summary statistics for clinical demographic features
 # returns two tables containing these statistics:
 # one calculates median/IQR for continuous features, and the other calculates count/% for categorical features
 def calc_demographic_stats(df):
-    continuous_features = ["maternal_age", "prepregnancy_bmi_self_or_record"]
-    categorical_features = ["infant_sex", "race", "ethnicity", "smoking_encoded"]
+    continuous_features = ["prepregnancy_bmi_self_or_record"]
+    categorical_features = ["infant_sex", "race", "ethnicity", "smoking_encoded", "maternal_age"]
     
     continuous_stats = []
     categorical_stats = []
@@ -246,9 +251,181 @@ def standardize_race_ethnicity(df):
     return df
 
 
+# bins all appropriate features into categories (only if they exist in the dataframe)
+def bin_features(df):
+    # TABLE 1
+
+    # preterm birth history binning
+    if "gravida" in df.columns and "para_pre_term" in df.columns:
+        # if gravida is 0 (first pregnancy), fill NaN in preterm birth history with 0
+        df.loc[(df["para_pre_term"].isna()) & (df["gravida"] == 0), "para_pre_term"] = 0
+
+        df["para_pre_term"] = df["para_pre_term"].apply(
+            lambda x: "0" if x == 0 else ("1+" if pd.notnull(x) and x >= 1 else np.nan)
+        )
+
+    # insurance binning
+    if "hosp_insurance_grping" in df.columns:
+        def map_insurance(val):
+            if pd.isna(val):
+                return np.nan
+            val_str = str(val).strip().lower()
+            if "commercial" in val_str:
+                return "Commercial"
+            else:
+                return "Noncommercial (Medicaid/Uninsured/Self-pay)"
+
+        df["hosp_insurance_grping"] = df["hosp_insurance_grping"].apply(map_insurance)
+    
+    # maternal age binning
+    if "maternal_age" in df.columns:
+        def map_age(val):
+            num_val = pd.to_numeric(val, errors="coerce")
+            if pd.isna(num_val):
+                return np.nan
+            if num_val <= 24:
+                return "18-24"
+            elif num_val <= 29:
+                return "25-29"
+            elif num_val <= 34:
+                return "30-34"
+            elif num_val <= 39:
+                return "35-39"
+            else:
+                return "40+"
+
+        df["maternal_age"] = df["maternal_age"].apply(map_age)
+
+    # prepregnancy BMI binning
+    if "prepregnancy_bmi_self_or_record" in df.columns:
+        def map_bmi(val):
+            num_val = pd.to_numeric(val, errors="coerce")
+            if pd.isna(num_val):
+                return np.nan
+            if num_val < 18.5:
+                return "Underweight"
+            elif num_val < 25:
+                return "Normal"
+            elif num_val < 30:
+                return "Overweight"
+            elif num_val < 40:
+                return "Obese"
+            else:
+                return "Severely Obese"
+
+        df["prepregnancy_bmi_self_or_record"] = df["prepregnancy_bmi_self_or_record"].apply(map_bmi)
+    
+    # parity binning
+    if "parity" in df.columns:
+        def map_parity(val):
+            num_val = pd.to_numeric(val, errors="coerce")
+            if pd.isna(num_val):
+                return np.nan
+            if num_val == 0:
+                return "Nulliparity (0)"
+            elif 1 <= num_val <= 3:
+                return "Low Multiparity (1-3)"
+            else:
+                return "Grand Multiparity (4+)"
+
+        df["parity"] = df["parity"].apply(map_parity)
+   
+    # gravida binning
+    if "gravida" in df.columns:
+        def map_gravida(val):
+            num_val = pd.to_numeric(val, errors="coerce")
+            if pd.isna(num_val):
+                return np.nan
+            if num_val == 0:
+                return "Nulligravidity (0)"
+            elif 1 <= num_val <= 5:
+                return "Low Multigravidity (1-5)"
+            else:
+                return "Grand Multigravidity (>=6)"
+
+        df["gravida"] = df["gravida"].apply(map_gravida)
+
+    # OUTCOMES TABLE
+
+    # Gest age del binning
+    if "gest_age_del" in df.columns:
+        def map_gest_age_del(val):
+            num_val = pd.to_numeric(val, errors="coerce")
+            if pd.isna(num_val):
+                return np.nan
+            if num_val < 34:
+                return "<34"
+            elif num_val < 37:
+                return "34-36.9"
+            elif num_val < 40:
+                return "37-39.9"
+            else:
+                return "40+"
+
+        df["gest_age_del"] = df["gest_age_del"].apply(map_gest_age_del)
+
+    # Birthweight binning
+    # Note that we are maintaining the continuous column and adding a categorical column
+    if "birthweight" in df.columns:
+        def map_birthweight(val):
+            num_val = pd.to_numeric(val, errors="coerce")
+            if pd.isna(num_val):
+                return np.nan
+            if num_val < 2500:
+                return "<2500"
+            elif num_val < 3000:
+                return "2500-2999"
+            elif num_val < 3500:
+                return "3000-3499"
+            else:
+                return "3500+"
+
+        df["birthweight_binned"] = df["birthweight"].apply(map_birthweight)
+
+    # APGAR 1/5 binning
+    if "apgar_1" or "apgar_5" in df.columns:
+        def map_apgar(val):
+            num_val = pd.to_numeric(val, errors="coerce")
+            if pd.isna(num_val):
+                return np.nan
+            if num_val <= 3:
+                return "0-3"
+            elif num_val <= 6:
+                return "4-6"
+            else:
+                return "7-10"
+
+        if "apgar_1" in df.columns:
+            df["apgar_1"] = df["apgar_1"].apply(map_apgar)
+        if "apgar_5" in df.columns:
+            df["apgar_5"] = df["apgar_5"].apply(map_apgar)
+
+    # NICU days binning
+    if "nicu_days" in df.columns:
+        def map_nicu(val):
+            num_val = pd.to_numeric(val, errors="coerce")
+            if pd.isna(num_val):
+                return np.nan
+            if num_val == 0:
+                return "0"
+            elif 1 <= num_val <= 7:
+                return "1-7"
+            else:
+                return "8+"
+
+        df["nicu_days"] = df["nicu_days"].apply(map_nicu)
+
+
+
+
+    return df
+
+
+
+
 # generates a table ("Table 1") that introduces our cohort by providing statistics for various demographic features
 # categorical variables: count (%). continuous variables: median (IQR).
-def generate_table_one(clinical_sheet, master_clinical, master_main):
+def generate_table_one(clinical_sheet, master_clinical, master_main, race_data_dict):
     mc = master_clinical.copy()
     mm = master_main.copy()
     cs = clinical_sheet.copy()
@@ -269,58 +446,8 @@ def generate_table_one(clinical_sheet, master_clinical, master_main):
     df = coalesce_merged_columns(df)
     df = standardize_race_ethnicity(df)
 
-    # preterm birth history binning
-    if "gravida" in df.columns and "para_pre_term" in df.columns:
-        # if gravida is 0 (first pregnancy), fill NaN in preterm birth history with 0
-        df.loc[(df["para_pre_term"].isna()) & (df["gravida"] == 0), "para_pre_term"] = 0
-
-        df["para_pre_term"] = df["para_pre_term"].apply(
-            lambda x: "0" if x == 0 else (">=1" if pd.notnull(x) and x >= 1 else np.nan)
-        )
-
-    # insurance binning
-    if "hosp_insurance_grping" in df.columns:
-        def map_insurance(val):
-            if pd.isna(val):
-                return np.nan
-            val_str = str(val).strip().lower()
-            if "commercial" in val_str:
-                return "Commercial"
-            else:
-                return "Noncommercial (Medicaid/Uninsured/Self-pay)"
-
-        df["hosp_insurance_grping"] = df["hosp_insurance_grping"].apply(map_insurance)
-
-    # gravida binning
-    if "gravida" in df.columns:
-        def map_gravida(val):
-            num_val = pd.to_numeric(val, errors="coerce")
-            if pd.isna(num_val):
-                return np.nan
-            if num_val == 0:
-                return "Nulligravidity (0)"
-            elif 1 <= num_val <= 5:
-                return "Low Multigravidity (1-5)"
-            else:
-                return "Grand Multigravidity (>=6)"
-
-        df["gravida"] = df["gravida"].apply(map_gravida)
-
-    # parity binning
-    if "parity" in df.columns:
-        def map_parity(val):
-            num_val = pd.to_numeric(val, errors="coerce")
-            if pd.isna(num_val):
-                return np.nan
-            if num_val == 0:
-                return "Nulliparity (0)"
-            elif 1 <= num_val <= 3:
-                return "Low Multiparity (1-3)"
-            else:
-                return "Grand Multiparity (4+)"
-
-        df["parity"] = df["parity"].apply(map_parity)
-
+    df = bin_features(df)
+    
     cols_to_convert = ["chtn", "risk factor y/n", "diabetes"]
     for col in cols_to_convert:
         if col in df.columns:
@@ -343,7 +470,40 @@ def generate_table_one(clinical_sheet, master_clinical, master_main):
         "chtn"
     ]
 
-    return build_summary(df, table1_vars)
+    table_one = build_summary(df, table1_vars)
+
+    # append race/ethnicity combinations (pulled from get_race_counts()) to Table 1
+    race_rows = [
+        {"Variable / Category": "Race / Ethnicity Combinations", "Statistic": ""}
+    ]
+    for group_name, data in race_data_dict.items():
+        count = data["count"]
+        percentage = data["percentage"]
+        stat_str = f"{count} ({percentage:.1f}%)"
+
+        # indent the subcategory name slightly for clear hierarchy
+        indented_name = f"    {group_name}"
+        race_rows.append({"Variable / Category": indented_name, "Statistic": stat_str})
+    race_df = pd.DataFrame(race_rows)
+    
+    # insert the race/ethnicity combinations right after "Ethnicity" in Table 1
+    # (do this by inserting it right before "Maternal Age" for simplicity)
+    try:
+        age_idx = (
+            table_one[table_one["Variable / Category"].str.contains("Maternal Age", case=False, na=False)]
+            .index[0]
+        )
+        
+        # insert the race rows right before maternal age
+        table_one = pd.concat(
+            [table_one.iloc[:age_idx], race_df, table_one.iloc[age_idx:]],
+            ignore_index=True
+        )
+    except (IndexError, AttributeError):
+        # fallback: if 'Maternal Age' isn't found, just append to the end
+        table_one = pd.concat([table_one, race_df], ignore_index=True)
+
+    return table_one
 
 
 # generates a table that introduces our cohort by providing statistics for various pregnancy outcome features
@@ -353,7 +513,8 @@ def generate_outcomes_table(clinical_sheet, master_clinical, placental_sheet):
     df = df.merge(placental_sheet, on="id", how="left")
 
     df = coalesce_merged_columns(df)
-
+    df = bin_features(df)
+    
     # explicitly grab group and subgroup columns from clinical_sheet to avoid merge/coalesce wiping them
     group_source_cols = [c for c in ["id", "group", "subgroup"] if c in clinical_sheet.columns]
     if len(group_source_cols) >= 1:
@@ -395,6 +556,7 @@ def generate_outcomes_table(clinical_sheet, master_clinical, placental_sheet):
         "spontaneous_preterm_birth",
         "gest_age_del",
         "birthweight",
+        "birthweight_binned",
         "apgar_1",
         "apgar_5",
         "nicu_days",
@@ -423,7 +585,7 @@ def build_summary(df, variables):
             is_categorical = (
                 df[var].dtype == object
                 or df[var].dtype == bool
-                or df[var].nunique() < 5
+                or df[var].nunique() <= 5
             )
 
             if is_categorical:
@@ -447,10 +609,8 @@ def build_summary(df, variables):
                     summary_rows.append(
                         {"Variable / Category": formatted_var_name, "Statistic": ""}
                     )
-                    counts = df[var].value_counts(dropna=False).sort_index()
-                    percents = (
-                        df[var].value_counts(normalize=True, dropna=False) * 100
-                    )
+                    counts = df[var].value_counts(dropna=False, sort=False).sort_index()
+                    percents = (df[var].value_counts(normalize=True, dropna=False) * 100)
 
                     for cat, count in counts.items():
                         pct = percents[cat]
@@ -492,7 +652,9 @@ def build_summary(df, variables):
         "Apgar 1": "APGAR 1",
         "Apgar 5": "APGAR 5",
         "Nicu Days": "NICU Days",
-        "Route Of Delivery 1-Vag, 2-Cs": "Route Of Delivery 0-Vag, 1-Cs"
+        "Route Of Delivery 1-Vag, 2-Cs": "Route Of Delivery 0-Vag, 1-Cs",
+        "Birthweight": "Birthweight - Continuous",
+        "Birthweight Binned": "Birthweight - Categorical"
     }
     if "Variable / Category" in result_df.columns:
         result_df["Variable / Category"] = result_df["Variable / Category"].replace(rename_mapping)
@@ -576,10 +738,10 @@ def main():
     master_main_filtered = master_main[master_main['id'].isin(valid_patient_ids)].copy()
     
     missing_report, missing_ids = summarize_missing_info(clinical_sheet)
-    race_table, total_patients = get_race_counts(clinical_sheet)
+    race_table, total_patients, race_data_dict = get_race_counts(clinical_sheet)
     cont_summary_table, cat_summary_table = calc_demographic_stats(clinical_sheet)
 
-    table_1 = generate_table_one(clinical_sheet, master_clinical_filtered, master_main_filtered)
+    table_1 = generate_table_one(clinical_sheet, master_clinical_filtered, master_main_filtered, race_data_dict)
     outcomes_table = generate_outcomes_table(clinical_sheet, master_clinical_filtered, placental_sheet)
     export_formatted_tables_to_file(table_1, outcomes_table)
 

@@ -249,8 +249,6 @@ def main():
     sheet_encoded = one_hot_encode_demographics(sheet_cleaned)
     sheet_encoded = sheet_encoded[sheet_encoded["race_is_missing"] != 1].copy()
 
-    print(sheet_encoded["id"].nunique())
-    
     if not sheet_encoded.empty:
         clinical_csv_path = "01_data_cleaning/processed_data/processed_clinical_data.csv"
         sheet_encoded.to_csv(clinical_csv_path, index = False)

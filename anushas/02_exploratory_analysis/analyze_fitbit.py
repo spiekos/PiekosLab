@@ -257,8 +257,6 @@ def main():
 
     sheet_filtered = filter_sheet(fitbit_sheet)
 
-    print(sheet_filtered["record_id"].nunique())
-
     feature_cols = [col for col in sheet_filtered.columns if col.startswith(("activities", "sleep", "heart_rate"))]
     numeric_cols = feature_cols + ["gestational_age_by_reported_lmp", "gest_age_del"]
 

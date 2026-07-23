@@ -4,7 +4,7 @@ Variable / Category                                          Statistic
 ---------------------------------------------------------------------------
 Preterm Birth History                                        
     0                                                        259 (76.9%)
-    >=1                                                      65 (19.3%)
+    1+                                                       65 (19.3%)
     Nan                                                      13 (3.9%)
 Insurance                                                    
     Commercial                                               241 (71.5%)
@@ -20,8 +20,23 @@ Ethnicity
     Hispanic/latino                                          6 (1.8%)
     Missing                                                  20 (5.9%)
     Not hispanic/latino                                      311 (92.3%)
-Maternal Age                                                 32.0 (7.0)
-Prepregnancy BMI                                             27.7 (10.5)
+Race / Ethnicity Combinations                                
+    Asian / Non-Hispanic                                     5 (1.5%)
+    Black / Non-Hispanic                                     40 (11.9%)
+    White / Hispanic                                         6 (1.8%)
+    White / Non-Hispanic                                     286 (84.9%)
+Maternal Age                                                 
+    18-24                                                    32 (9.5%)
+    25-29                                                    58 (17.2%)
+    30-34                                                    130 (38.6%)
+    35-39                                                    98 (29.1%)
+    40+                                                      19 (5.6%)
+Prepregnancy BMI                                             
+    Normal                                                   111 (32.9%)
+    Obese                                                    102 (30.3%)
+    Overweight                                               86 (25.5%)
+    Severely obese                                           36 (10.7%)
+    Underweight                                              2 (0.6%)
 Smoking Status                                               21 (6.2%)
 Parity                                                       
     Grand multiparity (4+)                                   30 (8.9%)
@@ -48,11 +63,32 @@ Gest Hypertension                                            67 (19.9%)
 Gestational Diabetes                                         33 (9.8%)
 Preeclampsia                                                 46 (13.6%)
 Spontaneous Preterm Birth                                    11 (3.3%)
-Gest Age Del                                                 39.0 (2.1)
-Birthweight                                                  3280.0 (710.0)
-APGAR 1                                                      8.0 (1.0)
-APGAR 5                                                      9.0 (0.0)
-NICU Days                                                    0.0 (0.0)
+Gest Age Del                                                 
+    34-36.9                                                  30 (8.9%)
+    37-39.9                                                  230 (68.2%)
+    40+                                                      57 (16.9%)
+    <34                                                      13 (3.9%)
+    Nan                                                      7 (2.1%)
+Birthweight - Continuous                                     3280.0 (710.0)
+Birthweight - Categorical                                    
+    2500-2999                                                67 (19.9%)
+    3000-3499                                                116 (34.4%)
+    3500+                                                    119 (35.3%)
+    <2500                                                    35 (10.4%)
+APGAR 1                                                      
+    0-3                                                      23 (6.8%)
+    4-6                                                      23 (6.8%)
+    7-10                                                     291 (86.4%)
+APGAR 5                                                      
+    0-3                                                      3 (0.9%)
+    4-6                                                      12 (3.6%)
+    7-10                                                     321 (95.3%)
+    Nan                                                      1 (0.3%)
+NICU Days                                                    
+    0                                                        302 (89.6%)
+    1-7                                                      29 (8.6%)
+    8+                                                       4 (1.2%)
+    Nan                                                      2 (0.6%)
 Infant Sex                                                   
     F                                                        155 (46.0%)
     M                                                        182 (54.0%)

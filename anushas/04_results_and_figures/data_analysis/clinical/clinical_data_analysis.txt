@@ -37,7 +37,6 @@ Summary statistics for clinical demographic features:
 
 --- Continuous Features (Median, IQR) ---
 Feature                                  | Median               | IQR                 
-maternal_age                             | 32.00                | 7.00                
 prepregnancy_bmi_self_or_record          | 27.70                | 10.50               
 
 --- Categorical/Binary Features (Count, %) ---
@@ -53,3 +52,32 @@ ethnicity                 | nan                       | 20         | 5.9%
 ethnicity                 | hispanic or latino        | 6          | 1.8%      
 smoking_encoded           | 0                         | 316        | 93.8%     
 smoking_encoded           | 1                         | 21         | 6.2%      
+maternal_age              | 31                        | 29         | 8.6%      
+maternal_age              | 30                        | 27         | 8.0%      
+maternal_age              | 33                        | 27         | 8.0%      
+maternal_age              | 36                        | 26         | 7.7%      
+maternal_age              | 32                        | 25         | 7.4%      
+maternal_age              | 35                        | 24         | 7.1%      
+maternal_age              | 37                        | 22         | 6.5%      
+maternal_age              | 34                        | 22         | 6.5%      
+maternal_age              | 38                        | 18         | 5.3%      
+maternal_age              | 27                        | 15         | 4.5%      
+maternal_age              | 29                        | 14         | 4.2%      
+maternal_age              | 28                        | 12         | 3.6%      
+maternal_age              | 26                        | 11         | 3.3%      
+maternal_age              | 24                        | 9          | 2.7%      
+maternal_age              | 39                        | 8          | 2.4%      
+maternal_age              | 40                        | 8          | 2.4%      
+maternal_age              | 23                        | 7          | 2.1%      
+maternal_age              | 25                        | 6          | 1.8%      
+maternal_age              | 0                         | 5          | 1.5%      
+maternal_age              | 41                        | 4          | 1.2%      
+maternal_age              | 20                        | 4          | 1.2%      
+maternal_age              | 22                        | 3          | 0.9%      
+maternal_age              | 21                        | 3          | 0.9%      
+maternal_age              | 43                        | 3          | 0.9%      
+maternal_age              | 48                        | 1          | 0.3%      
+maternal_age              | 45                        | 1          | 0.3%      
+maternal_age              | 19                        | 1          | 0.3%      
+maternal_age              | 44                        | 1          | 0.3%      
+maternal_age              | 42                        | 1          | 0.3%      
