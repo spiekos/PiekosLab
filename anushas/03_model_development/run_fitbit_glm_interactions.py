@@ -49,6 +49,26 @@ def run_glm_fitbit(dat, fitbit_metrics, outcomes):
     for x in fitbit_metrics:
         # loop through each placental outcome variable (y)
         for y in outcomes:
+            # isolate and clean the series
+            data_subset = dat[[x, y]].dropna()
+            data_subset[x] = pd.to_numeric(data_subset[x], errors="coerce")
+            data_subset = data_subset.dropna()
+
+            # safety checks before running GLM
+            if len(data_subset) < 15:  # too few samples to model reliably
+                print(
+                    f"Skipping {x}: Insufficient overlapping data ({len(data_subset)}"
+                    " rows)"
+                )
+                continue
+            if data_subset[x].nunique() <= 1:
+                print(f"Skipping {x}: Zero variance (constant values)")
+                continue
+            if data_subset[x].std() < 1e-8 or np.isnan(data_subset[x].std()):
+                print(f"Skipping {x}: Near-zero variance in aligned cohort")
+                continue
+
+
             # 1. Force Gaussian distribution as requested
             family_type = family.Gaussian()
             family_type.link = links.Identity()  # identity link function for Gaussian
@@ -160,6 +180,18 @@ def run_glm_fitbit(dat, fitbit_metrics, outcomes):
 def main():
     fitbit_sheet, placental_sheet, clinical_sheet = load_sheets()
 
+    # clean placeholder strings/invalid flags across Fitbit metrics
+    fitbit_sheet["heart_rate_resting_heart_rate"] = pd.to_numeric(
+        fitbit_sheet["heart_rate_resting_heart_rate"].replace("no value", np.nan),
+        errors="coerce"
+    )
+
+    # if -1.0 is an invalid placeholder for activity score, convert it to NaN:
+    if "activities_summary_activescore" in fitbit_sheet.columns:
+        fitbit_sheet["activities_summary_activescore"] = fitbit_sheet[
+            "activities_summary_activescore"
+        ].replace(-1.0, np.nan)
+
     print(fitbit_sheet.columns)
 
     merged = fitbit_sheet.merge(placental_sheet, left_on='record_id', right_on='id', how='inner')
@@ -191,14 +223,23 @@ def main():
        'sleep_summary_total_minutes_asleep'
     ]
 
-    print("Length of fitbit_metrics list: ", len(fitbit_metrics))
-
+    # filter your fitbit_metrics list dynamically to only include columns with actual valid data
+    valid_fitbit_metrics = []
     for metric in fitbit_metrics:
+        if metric in fitbit_sheet.columns:
+            # check how many non-null numeric values remain after conversion
+            clean_series = pd.to_numeric(fitbit_sheet[metric].replace(["no value", -1.0], np.nan), errors="coerce")
+            if clean_series.dropna().shape[0] > 10:  # ensure there's a minimum threshold of data
+                valid_fitbit_metrics.append(metric)
+
+    print("Length of fitbit_metrics list: ", len(valid_fitbit_metrics))
+
+    for metric in valid_fitbit_metrics:
         print(merged[metric].value_counts())
         print("\n")
 
     # Returns non-null, non-zero counts for all metrics at once
-    non_zero_counts = (merged[fitbit_metrics].notna() & (merged[fitbit_metrics] != 0)).sum()
+    non_zero_counts = (merged[valid_fitbit_metrics].notna() & (merged[valid_fitbit_metrics] != 0)).sum()
     print(non_zero_counts)
     
     outcomes = [

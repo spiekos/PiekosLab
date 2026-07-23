@@ -1,5 +1,5 @@
 Clinical Sheet Demographics Summary Report
-Total Patient Records Analyzed: 346
+Total Patient Records Analyzed: 337
 
 
 Patient missingness summary report:
@@ -7,30 +7,30 @@ Patient missingness summary report:
 However, median imputation has been performed on this feature, so 0 missing values are displayed
 to accurately reflect the current status of the dataset.)
                Feature / Metric  Missing Count (NaNs) Percent Missing
-                   maternal_age                     7           2.02%
-                     infant_sex                     1           0.29%
+                   maternal_age                     5           1.48%
+                     infant_sex                     0           0.00%
 prepregnancy_bmi_self_or_record                     0           0.00%
-                           race                     9           2.60%
-                      ethnicity                    25           7.23%
-                        smoking                     2           0.58%
+                           race                     0           0.00%
+                      ethnicity                    20           5.93%
+                        smoking                     0           0.00%
 
 
 Patient IDs of patients with missing data per feature:
-maternal_age: DP3-0057, DP3-0111, DP3-0143, DP3-0188, DP3-0242, DP3-0387, DP3-0393E
-infant_sex: DP3-0393E
+maternal_age: DP3-0057, DP3-0111, DP3-0143, DP3-0188, DP3-0387
+infant_sex: None
 prepregnancy_bmi_self_or_record: None
-race: DP3-0072, DP3-0128, DP3-0202, DP3-0217, DP3-0242, DP3-0256, DP3-0334, DP3-0368, DP3-0393E
-ethnicity: DP3-0024, DP3-0041E, DP3-0057, DP3-0070, DP3-0118E, DP3-0120, DP3-0125, DP3-0127, DP3-0128, DP3-0196E, DP3-0217, DP3-0222, DP3-0242, DP3-0256, DP3-0264, DP3-0292, DP3-0320, DP3-0355, DP3-0362E, DP3-0379, DP3-0388, DP3-0392, DP3-0393E, DP3-0405, DP3-0434
-smoking: DP3-0242, DP3-0393E
+race: None
+ethnicity: DP3-0024, DP3-0041E, DP3-0057, DP3-0070, DP3-0118E, DP3-0120, DP3-0125, DP3-0127, DP3-0196E, DP3-0222, DP3-0264, DP3-0292, DP3-0320, DP3-0355, DP3-0362E, DP3-0379, DP3-0388, DP3-0392, DP3-0405, DP3-0434
+smoking: None
 
 
 Counts for race/ethnicity intersections:
 Demographic Group Subtype                          | Count  | Percentage
 ---------------------------------------------------------------------------
-Asian / Non-Hispanic                               | 5      |    1.4%
-Black / Non-Hispanic                               | 40     |   11.6%
-White / Hispanic                                   | 6      |    1.7%
-White / Non-Hispanic                               | 286    |   82.7%
+Asian / Non-Hispanic                               | 5      |    1.5%
+Black / Non-Hispanic                               | 40     |   11.9%
+White / Hispanic                                   | 6      |    1.8%
+White / Non-Hispanic                               | 286    |   84.9%
 
 
 Summary statistics for clinical demographic features:
@@ -38,20 +38,18 @@ Summary statistics for clinical demographic features:
 --- Continuous Features (Median, IQR) ---
 Feature                                  | Median               | IQR                 
 maternal_age                             | 32.00                | 7.00                
-prepregnancy_bmi_self_or_record          | 27.70                | 10.48               
+prepregnancy_bmi_self_or_record          | 27.70                | 10.50               
 
 --- Categorical/Binary Features (Count, %) ---
 Feature                   | Category                  | Count      | %         
 ---------------------------------------------------------------------------
-infant_sex                | m                         | 188        | 54.3%     
-infant_sex                | f                         | 157        | 45.4%     
-infant_sex                | nan                       | 1          | 0.3%      
-race                      | white                     | 292        | 84.4%     
-race                      | black                     | 40         | 11.6%     
-race                      | nan                       | 9          | 2.6%      
-race                      | asian                     | 5          | 1.4%      
-ethnicity                 | not hispanic or latino    | 314        | 90.8%     
-ethnicity                 | nan                       | 25         | 7.2%      
-ethnicity                 | hispanic or latino        | 7          | 2.0%      
-smoking_encoded           | 0                         | 325        | 93.9%     
-smoking_encoded           | 1                         | 21         | 6.1%      
+infant_sex                | m                         | 182        | 54.0%     
+infant_sex                | f                         | 155        | 46.0%     
+race                      | white                     | 292        | 86.6%     
+race                      | black                     | 40         | 11.9%     
+race                      | asian                     | 5          | 1.5%      
+ethnicity                 | not hispanic or latino    | 311        | 92.3%     
+ethnicity                 | nan                       | 20         | 5.9%      
+ethnicity                 | hispanic or latino        | 6          | 1.8%      
+smoking_encoded           | 0                         | 316        | 93.8%     
+smoking_encoded           | 1                         | 21         | 6.2%      

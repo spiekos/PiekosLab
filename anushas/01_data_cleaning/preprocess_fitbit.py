@@ -185,6 +185,8 @@ def main():
 
     print_log(exclusion_counts)
 
+    print(merged_clean["record_id"].nunique())
+
     # write sheet to an output file
     merged_clean.to_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv", index = False)
 

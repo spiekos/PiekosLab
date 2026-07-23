@@ -222,11 +222,9 @@ def standardize_race_ethnicity(df):
                 return "Asian"
             elif v in ["american indian or alaska native", "american indian/alaska native"]:
                 return "American Indian/Alaska Native"
-            elif v == "declined":
-                return "Declined"
-            elif v in ["unknown", "na", "nan"]:
-                return "Na"
-            return "Na"  # Fallback for any unexpected entries
+            elif v in ["declined", "unknown", "na", "nan"]:
+                return "Missing"
+            return "Missing"  # Fallback for any unexpected entries
         
         df["race"] = df["race"].apply(map_race)
 
@@ -239,11 +237,9 @@ def standardize_race_ethnicity(df):
                 return "Hispanic/Latino"
             elif v in ["not hispanic or latino", "non hispanic"]:
                 return "Not Hispanic/Latino"
-            elif v == "declined":
-                return "Declined"
-            elif v in ["unspecified", "unknown", "na", "nan"]:
-                return "Na"
-            return "Na"  # Fallback for any unexpected entries
+            elif v in ["declined", "unspecified", "unknown", "na", "nan"]:
+                return "Missing"
+            return "Missing"  # Fallback for any unexpected entries
             
         df["ethnicity"] = df["ethnicity"].apply(map_ethnicity)
         
@@ -257,16 +253,73 @@ def generate_table_one(clinical_sheet, master_clinical, master_main):
     mm = master_main.copy()
     cs = clinical_sheet.copy()
 
+    # filter master_clinical and master_main to ensure we only keep the 337 patients we want
+    valid_ids = clinical_sheet["id"].unique()
+    mc_filtered = mc[mc["id"].isin(valid_ids)].copy()
+    mm_filtered = mm[mm["id"].isin(valid_ids)].copy()
+
     # drop duplicate columns from mm and cs that already exist in mc 
     # (except 'id') to prevent any column collision suffixes from happening
-    mm = mm[[c for c in mm.columns if c == "id" or c not in mc.columns]]
-    cs = cs[[c for c in cs.columns if c == "id" or c not in mc.columns and c not in mm.columns]]
+    mm_filtered = mm_filtered[[c for c in mm_filtered.columns if c == "id" or c not in mc_filtered.columns]]
+    cs = cs[[c for c in cs.columns if c == "id" or c not in mc_filtered.columns and c not in mm_filtered.columns]]
 
-    df = mc.merge(mm, on="id", how="left")
+    df = mc_filtered.merge(mm_filtered, on="id", how="left")
     df = df.merge(cs, on="id", how="left")
 
     df = coalesce_merged_columns(df)
     df = standardize_race_ethnicity(df)
+
+    # preterm birth history binning
+    if "gravida" in df.columns and "para_pre_term" in df.columns:
+        # if gravida is 0 (first pregnancy), fill NaN in preterm birth history with 0
+        df.loc[(df["para_pre_term"].isna()) & (df["gravida"] == 0), "para_pre_term"] = 0
+
+        df["para_pre_term"] = df["para_pre_term"].apply(
+            lambda x: "0" if x == 0 else (">=1" if pd.notnull(x) and x >= 1 else np.nan)
+        )
+
+    # insurance binning
+    if "hosp_insurance_grping" in df.columns:
+        def map_insurance(val):
+            if pd.isna(val):
+                return np.nan
+            val_str = str(val).strip().lower()
+            if "commercial" in val_str:
+                return "Commercial"
+            else:
+                return "Noncommercial (Medicaid/Uninsured/Self-pay)"
+
+        df["hosp_insurance_grping"] = df["hosp_insurance_grping"].apply(map_insurance)
+
+    # gravida binning
+    if "gravida" in df.columns:
+        def map_gravida(val):
+            num_val = pd.to_numeric(val, errors="coerce")
+            if pd.isna(num_val):
+                return np.nan
+            if num_val == 0:
+                return "Nulligravidity (0)"
+            elif 1 <= num_val <= 5:
+                return "Low Multigravidity (1-5)"
+            else:
+                return "Grand Multigravidity (>=6)"
+
+        df["gravida"] = df["gravida"].apply(map_gravida)
+
+    # parity binning
+    if "parity" in df.columns:
+        def map_parity(val):
+            num_val = pd.to_numeric(val, errors="coerce")
+            if pd.isna(num_val):
+                return np.nan
+            if num_val == 0:
+                return "Nulliparity (0)"
+            elif 1 <= num_val <= 3:
+                return "Low Multiparity (1-3)"
+            else:
+                return "Grand Multiparity (4+)"
+
+        df["parity"] = df["parity"].apply(map_parity)
 
     cols_to_convert = ["chtn", "risk factor y/n", "diabetes"]
     for col in cols_to_convert:
@@ -438,7 +491,8 @@ def build_summary(df, variables):
         "O Gdm": "Gestational Diabetes",
         "Apgar 1": "APGAR 1",
         "Apgar 5": "APGAR 5",
-        "Nicu Days": "NICU Days"
+        "Nicu Days": "NICU Days",
+        "Route Of Delivery 1-Vag, 2-Cs": "Route Of Delivery 0-Vag, 1-Cs"
     }
     if "Variable / Category" in result_df.columns:
         result_df["Variable / Category"] = result_df["Variable / Category"].replace(rename_mapping)
@@ -454,26 +508,26 @@ def export_formatted_tables_to_file(
 ):
     def format_df_to_string(df):
         lines = []
-        header_col1 = "Variable / Category".ljust(45)
+        header_col1 = "Variable / Category".ljust(60)
         header_col2 = "Statistic"
         lines.append(f"{header_col1} {header_col2}")
-        lines.append("-" * 60)
+        lines.append("-" * 75)
 
         for _, row in df.iterrows():
-            col1_val = str(row["Variable / Category"]).ljust(45)
+            col1_val = str(row["Variable / Category"]).ljust(60)
             col2_val = str(row["Statistic"])
             lines.append(f"{col1_val} {col2_val}")
         return "\n".join(lines)
 
     with open(output_filename, "w") as f:
         f.write("Table 1: Demographic Characteristics\n")
-        f.write("-" * 60 + "\n")
+        f.write("-" * 75 + "\n")
         f.write(format_df_to_string(table1_df))
 
         f.write("\n\n\n")
 
         f.write("Outcomes Table\n")
-        f.write("-" * 60 + "\n")
+        f.write("-" * 75 + "\n")
         f.write(format_df_to_string(outcomes_df))
 
 
@@ -515,12 +569,18 @@ def print_log(missing_report, missing_ids, race_table, total_patients, cont_summ
 
 def main():
     clinical_sheet, master_clinical, placental_sheet, master_main = load_sheet()
+    
+    # filter master_clinical and master_main to only contain the 337 patient IDs we want
+    valid_patient_ids = clinical_sheet['id'].unique()
+    master_clinical_filtered = master_clinical[master_clinical['id'].isin(valid_patient_ids)].copy()
+    master_main_filtered = master_main[master_main['id'].isin(valid_patient_ids)].copy()
+    
     missing_report, missing_ids = summarize_missing_info(clinical_sheet)
     race_table, total_patients = get_race_counts(clinical_sheet)
     cont_summary_table, cat_summary_table = calc_demographic_stats(clinical_sheet)
 
-    table_1 = generate_table_one(clinical_sheet, master_clinical, master_main)
-    outcomes_table = generate_outcomes_table(clinical_sheet, master_clinical, placental_sheet)
+    table_1 = generate_table_one(clinical_sheet, master_clinical_filtered, master_main_filtered)
+    outcomes_table = generate_outcomes_table(clinical_sheet, master_clinical_filtered, placental_sheet)
     export_formatted_tables_to_file(table_1, outcomes_table)
 
     print_log(missing_report, missing_ids, race_table, total_patients, cont_summary_table, cat_summary_table)

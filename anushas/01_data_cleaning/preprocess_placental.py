@@ -214,6 +214,8 @@ def main():
 
     print_totals(merged)
 
+    print(merged["id"].nunique())
+
     # write sheet to an output file
     merged.to_csv("01_data_cleaning/processed_data/processed_placental_data.csv", index = False)
 

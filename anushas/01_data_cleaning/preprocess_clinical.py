@@ -37,14 +37,14 @@ def fix_typos(sheet):
 
 
 # include only patients with "delivered" in their "status" column
-def filter_by_status(sheet):
+def filter_sheet(sheet):
     sheet_copy = sheet.copy()
 
     if "status" in sheet_copy.columns:
         status_clean = sheet_copy["status"].astype(str).str.strip()
         keep_mask = status_clean == "delivered"
         sheet_copy = sheet_copy[keep_mask].reset_index(drop=True)
-                
+      
     return sheet_copy
 
 
@@ -241,13 +241,16 @@ def main():
 
     sheet_cleaned = standardize_sheet(sheet)
     sheet_cleaned = fix_typos(sheet_cleaned)
-    sheet_cleaned = filter_by_status(sheet_cleaned)
+    sheet_cleaned = filter_sheet(sheet_cleaned)
     sheet_cleaned = unmask_missing_data(sheet_cleaned)
     sheet_cleaned = add_missingness_indicators(sheet_cleaned)
     sheet_cleaned = encode_smoking_status(sheet_cleaned)
     sheet_cleaned = impute_bmi_median(sheet_cleaned)
     sheet_encoded = one_hot_encode_demographics(sheet_cleaned)
+    sheet_encoded = sheet_encoded[sheet_encoded["race_is_missing"] != 1].copy()
 
+    print(sheet_encoded["id"].nunique())
+    
     if not sheet_encoded.empty:
         clinical_csv_path = "01_data_cleaning/processed_data/processed_clinical_data.csv"
         sheet_encoded.to_csv(clinical_csv_path, index = False)
