@@ -125,7 +125,54 @@ def get_race_counts(sheet):
 
     lines.append("\n")
         
-    return lines, total_patients, raw_data
+    return lines, total_patients
+
+
+# create and return a table containing race/ethnicity combinations for the control and adverse outcomes groups
+def get_stratified_race_counts(df):
+    patient_df = df.copy()
+    
+    # Split into control and adverse
+    df_control = patient_df[patient_df["group"].astype(str).str.lower() == "control"]
+    df_adverse = patient_df[patient_df["group"].astype(str).str.lower() != "control"]
+    
+    total_ctrl = len(df_control)
+    total_adv = len(df_adverse)
+
+    race_cols = sorted([col for col in patient_df.columns if col.startswith("race_") and col != "race_is_missing"])
+    eth_col = "hispanic/latino"
+
+    race_rows = [
+        {"Variable / Category": "Race / Ethnicity Combinations", "Control": "", "Adverse Outcomes": ""}
+    ]
+
+    for r_col in race_cols:
+        if r_col in patient_df.columns and eth_col in patient_df.columns:
+            display_race = r_col.replace("race_", "").title()
+
+            for is_hisp, label_suffix in [(1, "Hispanic"), (0, "Non-Hispanic")]:
+                group_name = f"{display_race} / {label_suffix}"
+                
+                # control group
+                ctrl_mask = (df_control[r_col] == 1) & (df_control[eth_col] == is_hisp)
+                ctrl_count = ctrl_mask.sum()
+                ctrl_pct = (ctrl_count / total_ctrl * 100) if total_ctrl > 0 else 0.0
+                ctrl_stat = f"{ctrl_count} ({ctrl_pct:.1f}%)" if ctrl_count > 0 else "0 (0.0%)"
+
+                # adverse group
+                adv_mask = (df_adverse[r_col] == 1) & (df_adverse[eth_col] == is_hisp)
+                adv_count = adv_mask.sum()
+                adv_pct = (adv_count / total_adv * 100) if total_adv > 0 else 0.0
+                adv_stat = f"{adv_count} ({adv_pct:.1f}%)" if adv_count > 0 else "0 (0.0%)"
+
+                if ctrl_count > 0 or adv_count > 0:
+                    race_rows.append({
+                        "Variable / Category": f"    {group_name}",
+                        "Control": ctrl_stat,
+                        "Adverse Outcomes": adv_stat
+                    })
+
+    return pd.DataFrame(race_rows)
 
 
 # calculates summary statistics for clinical demographic features
@@ -421,11 +468,9 @@ def bin_features(df):
     return df
 
 
-
-
 # generates a table ("Table 1") that introduces our cohort by providing statistics for various demographic features
 # categorical variables: count (%). continuous variables: median (IQR).
-def generate_table_one(clinical_sheet, master_clinical, master_main, race_data_dict):
+def generate_table_one(clinical_sheet, master_clinical, master_main):
     mc = master_clinical.copy()
     mm = master_main.copy()
     cs = clinical_sheet.copy()
@@ -467,25 +512,14 @@ def generate_table_one(clinical_sheet, master_clinical, master_main, race_data_d
         "parity",
         "gravida",
         "diabetes",
-        "chtn"
+        "chtn",
+        "aspirin"
     ]
 
     table_one = build_summary(df, table1_vars)
 
     # append race/ethnicity combinations (pulled from get_race_counts()) to Table 1
-    race_rows = [
-        {"Variable / Category": "Race / Ethnicity Combinations", "Statistic": ""}
-    ]
-    for group_name, data in race_data_dict.items():
-        count = data["count"]
-        percentage = data["percentage"]
-        stat_str = f"{count} ({percentage:.1f}%)"
-
-        # indent the subcategory name slightly for clear hierarchy
-        indented_name = f"    {group_name}"
-        race_rows.append({"Variable / Category": indented_name, "Statistic": stat_str})
-    race_df = pd.DataFrame(race_rows)
-    
+    race_df = get_stratified_race_counts(df)
     # insert the race/ethnicity combinations right after "Ethnicity" in Table 1
     # (do this by inserting it right before "Maternal Age" for simplicity)
     try:
@@ -570,17 +604,24 @@ def generate_outcomes_table(clinical_sheet, master_clinical, placental_sheet):
 def build_summary(df, variables):
     summary_rows = []
 
+    df_control = df[df["group"].astype(str).str.lower() == "control"]
+    df_adverse = df[df["group"].astype(str).str.lower() != "control"]
+
     for var in variables:
         if var in df.columns:
             # map binary 0/1 indicator columns to yes/no
             if set(df[var].dropna().unique()).issubset({0, 1, 0.0, 1.0, "0", "1"}):
                 df[var] = df[var].map({1: "Yes", 0: "No", 1.0: "Yes", 0.0: "No", "1": "Yes", "0": "No"})
+                df_control[var] = df_control[var].map({1: "Yes", 0: "No", 1.0: "Yes", 0.0: "No", "1": "Yes", "0": "No"})
+                df_adverse[var] = df_adverse[var].map({1: "Yes", 0: "No", 1.0: "Yes", 0.0: "No", "1": "Yes", "0": "No"})
 
             # format display name
             formatted_var_name = str(var).replace("_", " ").title()
             
             if df[var].dtype == bool:
                 df[var] = df[var].map({True: "Yes", False: "No"})
+                df_control[var] = df_control[var].map({True: "Yes", False: "No"})
+                df_adverse[var] = df_adverse[var].map({True: "Yes", False: "No"})
 
             is_categorical = (
                 df[var].dtype == object
@@ -595,46 +636,80 @@ def build_summary(df, variables):
 
                 if is_binary:
                     # for binary variables, only show the "yes" count and %
-                    total_rows = len(df)
-                    yes_count = (df[var] == "Yes").sum()
-                    yes_pct = (yes_count / total_rows * 100) if total_rows > 0 else 0.0
+                    # control stats
+                    ctrl_total = len(df_control)
+                    ctrl_yes = (df_control[var] == "Yes").sum()
+                    ctrl_pct = (ctrl_yes / ctrl_total * 100) if ctrl_total > 0 else 0.0
+                    ctrl_stat = f"{ctrl_yes} ({ctrl_pct:.1f}%)"
 
+                    # adverse stats
+                    adv_total = len(df_adverse)
+                    adv_yes = (df_adverse[var] == "Yes").sum()
+                    adv_pct = (adv_yes / adv_total * 100) if adv_total > 0 else 0.0
+                    adv_stat = f"{adv_yes} ({adv_pct:.1f}%)"
+                    
                     summary_rows.append(
                         {
                             "Variable / Category": formatted_var_name,
-                            "Statistic": f"{yes_count} ({yes_pct:.1f}%)",
+                            "Control": ctrl_stat,
+                            "Adverse Outcomes": adv_stat
                         }
                     )
                 else:
                     summary_rows.append(
-                        {"Variable / Category": formatted_var_name, "Statistic": ""}
+                        {"Variable / Category": formatted_var_name, "Control": "", "Adverse Outcomes": ""}
                     )
-                    counts = df[var].value_counts(dropna=False, sort=False).sort_index()
-                    percents = (df[var].value_counts(normalize=True, dropna=False) * 100)
 
-                    for cat, count in counts.items():
-                        pct = percents[cat]
+                    all_cats = df[var].dropna().unique()
+
+                    ctrl_counts = df_control[var].value_counts(dropna=False, sort=False)
+                    ctrl_percents = df_control[var].value_counts(normalize=True, dropna=False, sort=False) * 100
+                    adv_counts = df_adverse[var].value_counts(dropna=False, sort=False)
+                    adv_percents = df_adverse[var].value_counts(normalize=True, dropna=False, sort=False) * 100
+
+                    for cat in sorted(all_cats, key=str):
                         formatted_cat = str(cat).capitalize()
+
+                        # control category stat
+                        c_count = ctrl_counts.get(cat, 0)
+                        c_pct = ctrl_percents.get(cat, 0.0)
+                        ctrl_stat = f"{c_count} ({c_pct:.1f}%)"
+
+                        # adverse category stat
+                        a_count = adv_counts.get(cat, 0)
+                        a_pct = adv_percents.get(cat, 0.0)
+                        adv_stat = f"{a_count} ({a_pct:.1f}%)"
 
                         summary_rows.append(
                             {
                                 "Variable / Category": f"    {formatted_cat}",
-                                "Statistic": f"{count} ({pct:.1f}%)",
+                                "Control": ctrl_stat,
+                                "Adverse Outcomes": adv_stat
                             }
                         )
 
             else:
-                valid_data = pd.to_numeric(df[var], errors="coerce").dropna()
-                if not valid_data.empty:
-                    median = valid_data.median()
-                    q25 = valid_data.quantile(0.25)
-                    q75 = valid_data.quantile(0.75)
-                    iqr = q75 - q25
+                ctrl_data = pd.to_numeric(df_control[var], errors="coerce").dropna()
+                if not ctrl_data.empty:
+                    c_med = ctrl_data.median()
+                    c_iqr = ctrl_data.quantile(0.75) - ctrl_data.quantile(0.25)
+                    ctrl_stat = f"{c_med:.1f} ({c_iqr:.1f})"
+                else:
+                    ctrl_stat = "N/A"
+
+                adv_data = pd.to_numeric(df_adverse[var], errors="coerce").dropna()
+                if not adv_data.empty:
+                    a_med = adv_data.median()
+                    a_iqr = adv_data.quantile(0.75) - adv_data.quantile(0.25)
+                    adv_stat = f"{a_med:.1f} ({a_iqr:.1f})"
+                else:
+                    adv_stat = "N/A"
 
                     summary_rows.append(
                         {
                             "Variable / Category": formatted_var_name,
-                            "Statistic": f"{median:.1f} ({iqr:.1f})",
+                            "Control": ctrl_stat,
+                            "Adverse Outcomes": adv_stat
                         }
                     )
 
@@ -670,26 +745,28 @@ def export_formatted_tables_to_file(
 ):
     def format_df_to_string(df):
         lines = []
-        header_col1 = "Variable / Category".ljust(60)
-        header_col2 = "Statistic"
-        lines.append(f"{header_col1} {header_col2}")
-        lines.append("-" * 75)
+        header_col1 = "Variable / Category".ljust(50)
+        header_col2 = "Control".ljust(25)
+        header_col3 = "Adverse Outcomes"
+        lines.append(f"{header_col1} {header_col2} {header_col3}")
+        lines.append("-" * 95)
 
         for _, row in df.iterrows():
-            col1_val = str(row["Variable / Category"]).ljust(60)
-            col2_val = str(row["Statistic"])
-            lines.append(f"{col1_val} {col2_val}")
+            col1_val = str(row["Variable / Category"]).ljust(50)
+            col2_val = str(row["Control"]).ljust(25)
+            col3_val = str(row["Adverse Outcomes"])
+            lines.append(f"{col1_val} {col2_val} {col3_val}")
         return "\n".join(lines)
 
     with open(output_filename, "w") as f:
         f.write("Table 1: Demographic Characteristics\n")
-        f.write("-" * 75 + "\n")
+        f.write("-" * 95 + "\n")
         f.write(format_df_to_string(table1_df))
 
         f.write("\n\n\n")
 
         f.write("Outcomes Table\n")
-        f.write("-" * 75 + "\n")
+        f.write("-" * 95 + "\n")
         f.write(format_df_to_string(outcomes_df))
 
 
@@ -738,10 +815,10 @@ def main():
     master_main_filtered = master_main[master_main['id'].isin(valid_patient_ids)].copy()
     
     missing_report, missing_ids = summarize_missing_info(clinical_sheet)
-    race_table, total_patients, race_data_dict = get_race_counts(clinical_sheet)
+    race_table, total_patients = get_race_counts(clinical_sheet)
     cont_summary_table, cat_summary_table = calc_demographic_stats(clinical_sheet)
 
-    table_1 = generate_table_one(clinical_sheet, master_clinical_filtered, master_main_filtered, race_data_dict)
+    table_1 = generate_table_one(clinical_sheet, master_clinical_filtered, master_main_filtered)
     outcomes_table = generate_outcomes_table(clinical_sheet, master_clinical_filtered, placental_sheet)
     export_formatted_tables_to_file(table_1, outcomes_table)
 

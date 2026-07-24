@@ -247,7 +247,8 @@ def main():
     sheet_cleaned = encode_smoking_status(sheet_cleaned)
     sheet_cleaned = impute_bmi_median(sheet_cleaned)
     sheet_encoded = one_hot_encode_demographics(sheet_cleaned)
-    sheet_encoded = sheet_encoded[sheet_encoded["race_is_missing"] != 1].copy()
+    sheet_encoded = sheet_encoded[sheet_encoded["race_is_missing"] != 1].copy() # questionable line, get rid of this??
+    sheet_encoded.rename(columns={sheet_encoded.columns[-1]: "aspirin"}, inplace=True)
 
     if not sheet_encoded.empty:
         clinical_csv_path = "01_data_cleaning/processed_data/processed_clinical_data.csv"
