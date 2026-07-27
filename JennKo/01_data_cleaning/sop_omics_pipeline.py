@@ -6,29 +6,52 @@ Compound Discoverer style exports stored under ../kaylaxu/data/.
 
 Does NOT overwrite the older collaborator-integrated scripts. Provides a
 clean replacement entrypoint that follows the SOP ordering:
-
-1. Missing-value standardization
-2. Sample type / batch / injection-order parsing
-3. Pre-normalization drift diagnostics
+Part One: Normalization and Drift Correction
+1. Standardize Missing Values
+2. Identify Sample Types, Batches, and Injection Order
+3. Drift Assessment
 4. ISTD normalization
 5. Median fold-change batch normalization
-6. Post-normalization drift diagnostics
+6. Post-normalization drift check
+
+Part Two: Data Cleaning and Batch Correction
 7. Feature missingness filter
-8. Sample missingness filter
+8. Sample missingness filter and flag
 9. Log2 transformation
 10. Half-minimum imputation
 11. Pre-correction PCA
-12. Batch-confounding checks
-13. Batch correction (ComBat)
+12. Verify Batch Confounding with Biological Covariates
+13. ComBat Batch Correction
 14. Post-correction PCA
 15. Post-ComBat intensity check
-16. Sample-level ISTD MAD QC (post-ComBat)
-17. QC-pool RSD filter (post-ComBat, on corrected data)
-18. IQR filter (within-timepoint, post-ComBat)
-19. Bridge-sample averaging
-20-33. Deduplication, annotation, metadata integration, and file outputs
-34. Biological trajectory plots
-35. Human-readable pipeline log
+16. Sample-level QC via Internal Standards
+17. RSD Filter on QC Pools
+18. IQR filter (within-timepoint)
+19. Average Bridge Samples
+
+Part Three: Feature Deduplication
+Part 3A: Within-Compound Feature Deduplication
+20. Expected Parent Ion Calculation
+21. Feature Classification
+22. Feature Filtering
+23. Multiple Parent Handling
+24. Quality Scoring
+25. Feature Selection
+Part 3B: Cross-Feature Deduplication for Unnanotated Features (Metabolomics)
+26. Formula-Based Grouping for Unannotated Features with Formulas
+27. Mass-Based Grouping for Unannotated Features without Formulas
+28. Adduct-Relationship Collapsing for Unannotated Features
+
+Part Four: Metadata Integration and Annotation
+29. Replace Placeholder Feature IDs with Names
+30. Merge Ionization Modes
+31. Assign Confidence Levels
+32. Drop Mass-Only Features
+33. Add Metadata Columns
+
+Part Five: Pipeline Validation and Sanity Checks
+34. Biological trajectory plots for longitudinal tissues
+35. Write Final Pipeline Log 
 
 Notes
 -----
@@ -39,9 +62,9 @@ Notes
 """
 
 from __future__ import annotations
+from curses import meta
 from enum import Enum,auto
 from dataclasses import dataclass,field
-
 import argparse
 import logging
 import math
@@ -50,15 +73,12 @@ import re
 import subprocess
 import tempfile
 import textwrap
-import logging
 from collections import Counter, defaultdict
-from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 import openpyxl
 from pycombat import Combat
-from utilities import half_min_impute_wide as _half_minimum_impute
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -76,15 +96,176 @@ import matplotlib.pyplot as plt
 
 LOGGER = logging.getLogger("sop_omics_pipeline")
 
-PROTON_MASS = 1.007276
 VALID_TIMEPOINTS = set("ABCDE")
 
+
+#========================
+# Universal modality constants
+#========================
 ##Master Switch
 class Modality(Enum):
     METABOLOMICS=auto()
     LIPIDOMICS=auto()
 
-##Parameter Configuration
+##Global Parameter Values
+#Modality-specific parameters
+METABOLOMICS_DATABASE="HMDB"
+METABOLOMICS_MODIFICATION_LIST_CSV="common_metabolite_modification_list.csv"
+METABOLOMICS_ANNOTATION_SYSTEM="schymanski"
+METABOLOMICS_POSITIVE_ISTD_NAMES=(
+	"D3-Alanine-ISTD",
+	"D3-Creatinine-ISTD",
+)
+METABOLOMICS_NEGATIVE_ISTD_NAMES=(
+	"D4-Taurine-ISTD",
+	"D3-Lactate-ISTD",
+)
+
+LIPIDOMICS_DATABASE="LIPID_MAPS"
+LIPIDOMICS_MODIFICATION_LIST_CSV="common_lipid_modification_list.csv"
+LIPIDOMICS_ANNOTATION_SYSTEM="lsi+schymanski"
+LIPIDOMICS_NORMALIZATION_MODE={
+	"POS":"class_matched",
+	"NEG":"pooled",
+}
+LIPIDOMICS_CLASS_TO_ISTD_POS={
+	"LPC":"18:1_LPC-d7",
+	"LPE":"18:1_LPC-d7",
+	"LPI":"18:1_LPC-d7",
+	"LPG":"18:1_LPC-d7",
+	"LPS":"18:1_LPC-d7",
+	"LPA":"18:1_LPC-d7",
+	"PC":"15:0/18:1_PC-d7",
+	"PE":"15:0/18:1_PC-d7",
+	"PI":"15:0/18:1_PC-d7",
+	"PG":"15:0/18:1_PC-d7",
+	"PS":"15:0/18:1_PC-d7",
+	"PA":"15:0/18:1_PC-d7",
+	"SM":"18:1_SM-d9",
+	"Cer":"18:1_SM-d9",
+	"HexCer":"18:1_SM-d9",
+	"DG":"15:0/18:1_DG-d7",
+	"MG":"15:0/18:1_DG-d7",
+	"TG":"15:0/18:1/15:0_TG-d7",
+	"CE":"18:1_CE-d7",
+}
+LIPIDOMICS_CLASS_ADDUCT_MAP={
+	"PC":"[M+CH3COO]-",
+	"LPC":"[M+CH3COO]-",
+	"SM":"[M+CH3COO]-",
+	"PE":"[M-H]-",
+	"LPE":"[M-H]-",
+	"PG":"[M-H]-",
+	"LPG":"[M-H]-",
+	"PI":"[M-H]-",
+	"LPI":"[M-H]-",
+	"PS":"[M-H]-",
+	"LPS":"[M-H]-",
+	"PA":"[M-H]-",
+	"LPA":"[M-H]-",
+	"FA":"[M-H]-",
+	"Cer":"[M-H]-",
+	"HexCer":"[M-H]-",
+	"DG":"[M+NH4]+",
+	"MG":"[M+NH4]+",
+	"TG":"[M+NH4]+",
+	"CE":"[M+NH4]+",
+}
+LIPIDOMICS_POSITIVE_ISTD_NAMES=(
+	"18:1_LPC-d7",
+	"15:0/18:1_PC-d7",
+	"18:1_SM-d9",
+	"15:0/18:1_DG-d7",
+	"15:0/18:1/15:0_TG-d7",
+	"18:1_CE-d7",
+)
+LIPIDOMICS_NEGATIVE_ISTD_NAMES=(
+	"15:0-18:1(d7)-PC",
+	"18:1-18:1(d9)-PE",
+)
+
+DATABASE_BY_MODALITY={
+	Modality.METABOLOMICS:METABOLOMICS_DATABASE,
+	Modality.LIPIDOMICS:LIPIDOMICS_DATABASE,
+}
+
+MODIFICATION_LIST_CSV_BY_MODALITY={
+	Modality.METABOLOMICS:METABOLOMICS_MODIFICATION_LIST_CSV,
+	Modality.LIPIDOMICS:LIPIDOMICS_MODIFICATION_LIST_CSV,
+}
+
+ANNOTATION_SYSTEM_BY_MODALITY={
+	Modality.METABOLOMICS:METABOLOMICS_ANNOTATION_SYSTEM,
+	Modality.LIPIDOMICS:LIPIDOMICS_ANNOTATION_SYSTEM,
+}
+
+POSITIVE_ISTD_NAMES_BY_MODALITY={
+	Modality.METABOLOMICS:METABOLOMICS_POSITIVE_ISTD_NAMES,
+	Modality.LIPIDOMICS:LIPIDOMICS_POSITIVE_ISTD_NAMES,
+}
+
+NEGATIVE_ISTD_NAMES_BY_MODALITY={
+	Modality.METABOLOMICS:METABOLOMICS_NEGATIVE_ISTD_NAMES,
+	Modality.LIPIDOMICS:LIPIDOMICS_NEGATIVE_ISTD_NAMES,
+}
+
+DEFAULT_NORMALIZATION_MODE_BY_MODALITY={
+	Modality.LIPIDOMICS:LIPIDOMICS_NORMALIZATION_MODE,
+}
+
+CLASS_TO_ISTD_POS_BY_MODALITY={
+	Modality.LIPIDOMICS:LIPIDOMICS_CLASS_TO_ISTD_POS,
+}
+
+CLASS_ADDUCT_MAP_BY_MODALITY={
+	Modality.LIPIDOMICS:LIPIDOMICS_CLASS_ADDUCT_MAP,
+}
+
+def _require_supported_modality(modality:Modality)->None:
+	if modality not in DATABASE_BY_MODALITY:
+		raise ValueError(f"Unsupported modality: {modality}")
+
+
+def get_istd_names(modality:Modality,polarity:str)->tuple[str,...]:
+	_require_supported_modality(modality)
+	polarity=polarity.upper()
+
+	if polarity=="POS":
+		if modality not in POSITIVE_ISTD_NAMES_BY_MODALITY:
+			raise ValueError(f"No POS ISTD names configured for modality: {modality}")
+		return POSITIVE_ISTD_NAMES_BY_MODALITY[modality]
+
+	if polarity=="NEG":
+		if modality not in NEGATIVE_ISTD_NAMES_BY_MODALITY:
+			raise ValueError(f"No NEG ISTD names configured for modality: {modality}")
+		return NEGATIVE_ISTD_NAMES_BY_MODALITY[modality]
+
+	raise ValueError(f"Unsupported polarity: {polarity}")
+
+#Non-modality-specific parameters
+PROTON_MASS = 1.007276
+AMMONIUM_MASS=18.033823
+SODIUM_MASS=22.989218
+ACETATE_MASS=59.013304
+FORMATE_MASS=44.997654
+MASS_TOLERANCE_PARENT=0.02
+MASS_TOLERANCE_NON_PARENT=0.10
+MASS_TOLERANCE_DEDUP_NO_FORMULA=0.02
+RT_TOLERANCE=0.2
+PPM_TOLERANCE_ANNOTATION=5.0
+SAMPLE_MAD_THRESHOLD=5.0
+SAMPLE_MISSING_THRESHOLD=0.50
+FEATURE_MISSING_THRESHOLD=0.20
+RSD_THRESHOLD=30.0
+IQR_LOW_PERCENTILE=5.0
+IQR_HIGH_PERCENTILE=95.0
+IQR_FLOOR=0.1
+IQR_CEILING=5.0
+MZCLOUD_L2_THRESHOLD=80.0
+ANNOT_SOURCE_L2_THRESHOLD=3
+RT_ARTIFACT_MAX=0.5
+RT_ISOMER_MAX=3.0
+
 @dataclass(frozen=True)
 class DatasetConfig:
     dataset_id:str
@@ -102,65 +283,76 @@ class DatasetConfig:
     raw_sheet_neg:str|None=None
     raw_sample_row:int|None=None
     raw_file_row:int|None=None
-
     database:str=""
     modification_list_csv:str=""
     annotation_system:str=""
+    normalization_mode:str|dict[str,str]="pooled"
+    class_to_istd_pos:dict[str,str]=field(default_factory=dict)
+    class_adduct_map:dict[str,str]=field(default_factory=dict)
 
     def __post_init__(self):
-        if self.modality is Modality.METABOLOMICS:
-            if not self.database:
-                object.__setattr__(self,"database","HMDB")
-            if not self.modification_list_csv:
-                object.__setattr__(self,"modification_list_csv","common_metabolite_modification_list.csv")
-            if not self.annotation_system:
-                object.__setattr__(self,"annotation_system","schymanski")
+        _require_supported_modality(self.modality)
 
-        elif self.modality is Modality.LIPIDOMICS:
-            if not self.database:
-                object.__setattr__(self,"database","LIPID_MAPS")
-            if not self.modification_list_csv:
-                object.__setattr__(self,"modification_list_csv","common_lipid_modification_list.csv")
-            if not self.annotation_system:
-                object.__setattr__(self,"annotation_system","lsi+schymanski")
+        if not self.database:
+            object.__setattr__(
+                self,
+                "database",
+                DATABASE_BY_MODALITY[self.modality],
+            )
 
-##Shared parameters
-@dataclass(frozen=True)
-class Thresholds:
-    mass_tolerance_parent:float=0.02
-    mass_tolerance_non_parent:float=0.10
-    mass_tolerance_dedup_no_formula:float=0.02
-    rt_tolerance:float=0.2
-    ppm_tolerance_annotation:float=5.0
-    sample_mad_threshold:float=5.0
-    sample_missing_threshold:float=0.50
-    feature_missing_threshold:float=0.20
-    rsd_threshold:float=30.0
-    iqr_low_percentile:float=5.0
-    iqr_high_percentile:float=95.0
-    iqr_floor:float=0.1
-    iqr_ceiling:float=5.0
-    mzcloud_l2_threshold:float=80.0
-    annot_source_l2_threshold:int=3
+        if not self.modification_list_csv:
+            object.__setattr__(
+                self,
+                "modification_list_csv",
+                MODIFICATION_LIST_CSV_BY_MODALITY[self.modality],
+            )
 
-##Container classes for data management and log tracking
-@dataclass(frozen=True)
-class DatasetConfig:
-    dataset_id: str
-    database: str
-    tissue: str
-    meta_sheet: str
-    meta_sample_col: str
-    input_dir: Path
-    output_dir: Path
-    positive_istd_names: tuple[str, ...]
-    negative_istd_names: tuple[str, ...]
-    bridge_expected: bool = True
-    raw_workbook: Path | None = None
-    raw_sheet_pos: str | None = None
-    raw_sheet_neg: str | None = None
-    raw_sample_row: int | None = None
-    raw_file_row: int | None = None
+        if not self.annotation_system:
+            object.__setattr__(
+                self,
+                "annotation_system",
+                ANNOTATION_SYSTEM_BY_MODALITY[self.modality],
+            )
+
+        if self.normalization_mode=="pooled" and self.modality in DEFAULT_NORMALIZATION_MODE_BY_MODALITY:
+            object.__setattr__(
+                self,
+                "normalization_mode",
+                DEFAULT_NORMALIZATION_MODE_BY_MODALITY[self.modality],
+            )
+
+        if not self.class_to_istd_pos and self.modality in CLASS_TO_ISTD_POS_BY_MODALITY:
+            object.__setattr__(
+                self,
+                "class_to_istd_pos",
+                CLASS_TO_ISTD_POS_BY_MODALITY[self.modality],
+            )
+
+        if not self.class_adduct_map and self.modality in CLASS_ADDUCT_MAP_BY_MODALITY:
+            object.__setattr__(
+                self,
+                "class_adduct_map",
+                CLASS_ADDUCT_MAP_BY_MODALITY[self.modality],
+            )
+
+#Modifications List
+#Note: no longer hard-coded in (since files are now available in repo)
+def _load_modifications(config:DatasetConfig)->pd.DataFrame:
+	path=Path(config.modification_list_csv)
+	if not path.is_absolute():
+		path=Path(__file__).resolve().parents[1]/"data"/path
+	if not path.exists():
+		raise FileNotFoundError(f"Modification list not found: {path}")
+
+	df=pd.read_csv(path)
+	required={"Type","Name","Delta_m/z","Description"}
+	missing=required-set(df.columns)
+	if missing:
+		raise ValueError(
+			f"{path} is missing required columns: {sorted(missing)}"
+		)
+
+	return df[["Type","Name","Delta_m/z","Description"]].copy()
 
 ##Container of data objects for one polarity run
 @dataclass
@@ -171,6 +363,7 @@ class PolarityRun:
     sample_info: pd.DataFrame
     feature_meta: pd.DataFrame
     raw_istd: pd.DataFrame
+    class_to_istd_pos:dict[str,str]=field(default_factory=dict)
     injection_order_source: str = "row_order_proxy"
     retained_feature_meta: pd.DataFrame | None = None
     retained_expression: pd.DataFrame | None = None
@@ -241,6 +434,160 @@ def _record_drop(
         }
     )
 
+#Clinical data loader and standardization: 
+def _build_configs(repo_root: Path, kayla_root: Path, output_root: Path) -> dict[str, DatasetConfig]:
+    return {
+        "MTBL_plasma": DatasetConfig(
+            dataset_id="MTBL_plasma",
+            modality=Modality.METABOLOMICS,
+            tissue="plasma",
+            meta_sheet="n=133 metabolomics",
+            meta_sample_col="Sample ID",
+            input_dir=kayla_root / "data" / "MTBL_plasma",
+            output_dir=output_root / "MTBL_plasma",
+            raw_workbook=repo_root / "data" / "metabolomics_raw" / "050725_Sadovsky DP3 Plasma Polar Untargeted_ALL copy.xlsx",
+            raw_sheet_pos="POS Compounds",
+            raw_sheet_neg="NEG Compounds",
+            raw_sample_row=2,
+            raw_file_row=3,
+        ),
+        "MTBL_placenta": DatasetConfig(
+            dataset_id="MTBL_placenta",
+            modality=Modality.METABOLOMICS,
+            tissue="placenta",
+            meta_sheet="n=133 placenta",
+            meta_sample_col="ID",
+            input_dir=kayla_root / "data" / "MTBL_placenta",
+            output_dir=output_root / "MTBL_placenta",
+        ),
+        "LIPD_plasma": DatasetConfig(
+            dataset_id="LIPD_plasma",
+            modality=Modality.LIPIDOMICS,
+            tissue="plasma",
+            meta_sheet="n=133 metabolomics",
+            meta_sample_col="Sample ID",
+            input_dir=kayla_root / "data" / "LIPD_plasma",
+            output_dir=output_root / "LIPD_plasma",
+            raw_workbook=repo_root / "data" / "lipids" / "072925 Sadovsky Plasma Lipids Untargeted ALL.xlsx",
+            raw_sheet_pos="Plasma POS Lipids",
+            raw_sheet_neg="Plasma NEG Lipids",
+            raw_sample_row=3,
+            raw_file_row=4,
+        ),
+        "LIPD_placenta": DatasetConfig(
+            dataset_id="LIPD_placenta",
+            modality=Modality.LIPIDOMICS,
+            tissue="placenta",
+            meta_sheet="n=133 placenta",
+            meta_sample_col="ID",
+            input_dir=kayla_root / "data" / "LIPD_placenta",
+            output_dir=output_root / "LIPD_placenta",
+        ),
+    }
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    root = Path(__file__).resolve().parents[1]
+    parser = argparse.ArgumentParser(description="DP3 SOP-native omics preprocessing pipeline.")
+    parser.add_argument(
+        "--kayla-root",
+        default="/Users/jennko/Desktop/Penn/Piekos Lab",
+        help="Path to raw-export repository root.",
+    )
+    parser.add_argument(
+        "--metadata",
+        default=str(root / "data" / "dp3 master table v2.xlsx"),
+        help="Path to the master metadata workbook.",
+    )
+    parser.add_argument(
+        "--output-root",
+        default=str(root / "data" / "cleaned" / "sop_omics_pipeline"),
+        help="Root directory for SOP-native outputs.",
+    )
+    parser.add_argument(
+        "--datasets",
+        nargs="+",
+        default=["MTBL_plasma", "MTBL_placenta", "LIPD_plasma", "LIPD_placenta"],
+        help="Datasets to process.",
+    )
+    return parser
+
+def _load_metadata(meta_path: Path, config: DatasetConfig) -> pd.DataFrame:
+    cols = [
+        config.meta_sample_col,
+        "group",
+        "subgroup",
+        "gest age del",
+        "omics set#",
+    ]
+    if config.tissue == "plasma":
+        cols.append("sample gest Age")
+
+    meta = _read_xlsx_sheet(meta_path, config.meta_sheet)
+    available = [c for c in cols if c in meta.columns]
+    meta = meta[available].dropna(subset=[config.meta_sample_col]).copy()
+    meta[config.meta_sample_col] = meta[config.meta_sample_col].map(_canonical_sample_name)
+    meta = meta.rename(
+        columns={
+            config.meta_sample_col: "SampleID",
+            "group": "Group",
+            "subgroup": "Subgroup",
+            "gest age del": "GestAgeDelivery",
+            "omics set#": "Batch",
+            "sample gest Age": "SampleGestAge",
+        }
+    )
+    meta["Group"] = meta["Group"].replace({"sptb": "sPTB", "SPTB": "sPTB"})
+    meta = meta.set_index("SampleID")
+    meta = meta[~meta.index.duplicated(keep="first")].copy()
+    meta["MetadataCanonicalID"] = meta.index
+    #Pull information from the clinical dataset
+    clinical=pd.read_excel(
+        meta_path,
+        sheet_name="clinical data",
+        usecols=["ID","LABOR_ONSET","INDICATED_ONSET (1=INDICATED; 0=NOT INDICATED)"],
+    )
+    clinical=clinical.rename(
+        columns={
+            "LABOR_ONSET":"labor_onset",
+            "INDICATED_ONSET (1=INDICATED; 0=NOT INDICATED)":"indicated_onset",
+        }
+    )
+    clinical["SampleID"]=clinical["ID"].map(_canonical_sample_name)
+    clinical=clinical.set_index("SampleID")
+    clinical=clinical.reindex(meta.index)
+    meta=meta.join(clinical[["labor_onset","indicated_onset"]])
+
+    #Labor onset/indicated onset flags
+    meta["spont_labor_flag"]=(meta["labor_onset"]=="SPONTANEOUS").astype("Int64")
+    meta["indicated_onset_flag"]=(meta["indicated_onset"]==1).astype("Int64")
+        #if spontaneous or NOT indicated 
+    meta["cat_labor_onset_flag"]=(
+        (meta["labor_onset"]=="SPONTANEOUS") | (meta["indicated_onset_flag"]==0)).astype("Int64")
+    # Indicator if sample was taken within 0.1 weeks of spontaneous/non-indicated delivery
+    if "SampleGestAge" in meta.columns:
+        diff=(meta["GestAgeDelivery"]-meta["SampleGestAge"]).abs()
+        within_01=(diff<=0.1)
+        has_onset=(meta["labor_onset"].notna()) | (meta["indicated_onset"].notna())
+        meta["within_0_1wk_delivery_flag"]=(within_01 & has_onset).astype("Int64")
+        meta["post_birth_sample_flag"]=(meta["SampleGestAge"]>meta["GestAgeDelivery"]).astype("Int64")
+    else:
+        meta["within_0_1wk_delivery_flag"]=pd.NA
+        meta["post_birth_sample_flag"]=pd.NA
+    #Indicator if sample is taken after the birth period
+    alias_rows: list[pd.Series] = []
+    for sample_id, row in meta.iterrows():
+        for alias in _metadata_alias_candidates(sample_id):
+            if alias in meta.index:
+                continue
+            alias_row = row.copy()
+            alias_row.name = alias
+            alias_rows.append(alias_row)
+    if alias_rows:
+        meta = pd.concat([meta, pd.DataFrame(alias_rows)], axis=0)
+        meta = meta[~meta.index.duplicated(keep="first")].copy()
+    return meta
+
 """
 Part 1: Normalization and Drift Correction
 """
@@ -251,11 +598,11 @@ def _safe_float(value) -> float:
         out = float(value)
     except (TypeError, ValueError):
         return float("nan")
-    if out == 0:
+    if out <= 0:
         return float("nan")
     return out
 
-### Step 2: Identify Sample Types, Batches, and Injection Order
+### STEP 2: Identify Sample Types, Batches, and Injection Order
 
 ##Pre-step helpers: sample type, batch, and injection order parsing
 
@@ -389,7 +736,7 @@ def _load_raw_acquisition_map(
         batch = _extract_batch_label_from_text(raw_file, sample_label)
         if not batch:
             continue
-        sample_type = _infer_sample_type
+        sample_type = _infer_sample_type(sample_label)
         order = _extract_injection_order_value(config.modality,raw_file,sample_label)
         if not np.isfinite(order):
             order = float(rank)
@@ -553,21 +900,25 @@ def _load_polarity_run(
     exp = exp[feature_ids].copy()
     comp = comp.loc[feature_ids].copy()
 
+    wanted = {_normalise_name(x) for x in istd_names}
     raw_istd_ids = [
         fid
         for fid in comp.index
-        if fid.lower().startswith("c")
-        or _normalise_name(comp.at[fid, "annotation_name"])
-        in {_normalise_name(x) for x in istd_names}
+        if (
+            "annotation_name" in comp.columns
+            and _normalise_name(str(comp.at[fid, "annotation_name"])) in wanted
+        )
+        or _normalise_name(fid) in wanted
     ]
     raw_istd = exp[raw_istd_ids].copy()
     return PolarityRun(
         polarity=polarity.upper(),
-        modality = Modality,
+        modality = config.modality,
         expression=exp,
         sample_info=sample_info,
         feature_meta=comp,
         raw_istd=raw_istd,
+        class_to_istd_pos=dict(config.class_to_istd_pos),
         injection_order_source=order_source,
     )
 
@@ -649,6 +1000,32 @@ def _plot_istd_diagnostics(
         else "Injection order proxy"
     )
 
+    if run.modality is Modality.METABOLOMICS and run.polarity.upper() == "POS":
+        wanted = {_normalise_name(n) for n in METABOLOMICS_POSITIVE_ISTD_NAMES}
+    elif run.modality is Modality.METABOLOMICS and run.polarity.upper() == "NEG":
+        wanted = {_normalise_name(n) for n in METABOLOMICS_NEGATIVE_ISTD_NAMES}
+    elif run.modality is Modality.LIPIDOMICS and run.polarity.upper() == "POS":
+        wanted = {_normalise_name(n) for n in LIPIDOMICS_POSITIVE_ISTD_NAMES}
+    elif run.modality is Modality.LIPIDOMICS and run.polarity.upper() == "NEG":
+        wanted = {_normalise_name(n) for n in LIPIDOMICS_NEGATIVE_ISTD_NAMES}
+    else:
+        wanted = set()
+
+    if "annotation_name" in run.feature_meta.columns:
+        istd_columns = [
+            c for c in run.raw_istd.columns
+            if (
+                not wanted
+                or _normalise_name(str(run.feature_meta.at[c, "annotation_name"])) in wanted
+                or _normalise_name(c) in wanted
+            )
+        ]
+    else:
+        istd_columns = [
+            c for c in run.raw_istd.columns
+            if not wanted or _normalise_name(c) in wanted
+        ]
+
     for batch, batch_rows in biological_or_qc.groupby("batch"):
         batch_rows = batch_rows.sort_values("injection_order")
         row_ids = batch_rows.index.tolist()
@@ -657,7 +1034,7 @@ def _plot_istd_diagnostics(
         fig, axes = plt.subplots(3, 1, figsize=(10, 11), sharex=True)
 
         # (a) Raw ISTD signal vs injection order
-        for column in run.raw_istd.columns:
+        for column in istd_columns:
             axes[0].plot(
                 batch_rows["injection_order"],
                 run.raw_istd.loc[row_ids, column].values,
@@ -666,10 +1043,12 @@ def _plot_istd_diagnostics(
             )
         axes[0].set_title(f"{prefix} batch {batch}: raw ISTD signal")
         axes[0].set_ylabel("raw intensity")
-        axes[0].legend(fontsize=8)
+        if istd_columns:
+            axes[0].legend(fontsize=8)
+
         # (b) ISTD concordance
-        for column in run.raw_istd.columns:
-            values = run.raw_istd.loc[row_ids, column].astype(float)
+        for column in istd_columns:
+            values = pd.to_numeric(run.raw_istd.loc[row_ids, column], errors="coerce")
             mean_val = values.mean(skipna=True)
             scaled = values / mean_val if mean_val and np.isfinite(mean_val) else values
             axes[1].plot(
@@ -680,7 +1059,8 @@ def _plot_istd_diagnostics(
             )
         axes[1].set_title("ISTD concordance (scaled to per-ISTD mean)")
         axes[1].set_ylabel("scaled signal")
-        axes[1].legend(fontsize=8)
+        if istd_columns:
+            axes[1].legend(fontsize=8)
 
         # (c) TIC vs injection order
         axes[2].plot(
@@ -697,9 +1077,9 @@ def _plot_istd_diagnostics(
         fig.savefig(out_path, dpi=180)
         plt.close(fig)
 
-        if run.raw_istd.shape[1] >= 2:
+        if len(istd_columns) >= 2:
             # ISTD concordance flag (min pairwise r across ISTDs)
-            corr = run.raw_istd.loc[row_ids].corr(min_periods=3).values
+            corr = run.raw_istd.loc[row_ids, istd_columns].corr(min_periods=3).values
             if corr.size and np.isfinite(corr).any():
                 finite = corr[np.isfinite(corr)]
                 if finite.size and np.nanmin(finite) < 0.50:
@@ -708,8 +1088,6 @@ def _plot_istd_diagnostics(
                         f"(minimum pairwise r={np.nanmin(finite):.2f})."
                     )
     return flags
-
-###Step 4: ISTD Normalization
 
 ## Pre-Step 4 helpers:
 
@@ -721,60 +1099,117 @@ def _geometric_mean(values:Iterable[float])->float:
         return float("nan")
     return float(np.exp(np.mean(np.log(arr))))
 
-## (a): Pooled Normalization (metabolomics all modes, lipidomics NEG mode)
+###Step 4: ISTD Normalization
 def _istd_normalize(
     run: PolarityRun,
     artifacts: PipelineArtifacts,
 ) -> tuple[pd.DataFrame, list[str]]:
+    istd_columns=run.raw_istd.columns.tolist()
     feature_ids = run.feature_meta.index.tolist()
-    non_istd_features = [c for c in feature_ids if c not in run.raw_istd.columns]
+    non_istd_features = [c for c in feature_ids if c not in istd_columns]
     normalized = run.expression[feature_ids].copy()
-    if run.raw_istd.empty:
+    
+    if not istd_columns or run.raw_istd.empty:
         artifacts.qc_warnings.append(
             f"{run.polarity}: no internal standards were detected; ISTD normalization was skipped."
         )
         return normalized[non_istd_features], []
-    # Per-sample ISTD geometric mean
-    geo = run.raw_istd.apply(_geometric_mean, axis=1)
-    finite_geo = geo[np.isfinite(geo) & (geo > 0)]
-    if finite_geo.empty:
-        artifacts.qc_warnings.append(
-            f"{run.polarity}: all internal-standard geometric means were missing; "
-            "ISTD normalization was skipped."
-        )
-        return normalized[non_istd_features], list(run.raw_istd.columns)
 
-    geo_filled = geo.copy()
-    # Fill missing ISTD geometric means using batch/global medians
-    batch_geo = geo.groupby(run.sample_info["batch"]).transform(
-        lambda s: s[np.isfinite(s) & (s > 0)].median()
-    )
-    geo_filled = geo_filled.where(np.isfinite(geo_filled) & (geo_filled > 0), batch_geo)
-    global_geo = float(finite_geo.median())
-    geo_filled = geo_filled.fillna(global_geo)
-    imputed_rows = int(((~np.isfinite(geo)) | (geo <= 0)).sum())
-    if imputed_rows:
-        artifacts.method_log.append(
-            f"{run.polarity}: filled missing sample-level ISTD geometric means for "
-            f"{imputed_rows} rows using batch/global medians."
+    ## (a): Pooled Normalization (metabolomics all modes, lipidomics NEG mode)
+    # (ai): pooled normalization (Metabolomics all modes, Lipidomics NEG mode)
+    if (
+        run.modality is Modality.METABOLOMICS
+        or (run.modality is Modality.LIPIDOMICS and run.polarity.upper()=="NEG")
+    ):
+        geo=run.raw_istd.apply(_geometric_mean,axis=1)
+        finite_geo=geo[np.isfinite(geo)&(geo>0)]
+        if finite_geo.empty:
+            artifacts.qc_warnings.append(
+                f"{run.polarity}: all internal-standard geometric means were missing; "
+                "ISTD normalization was skipped."
+            )
+            return normalized[non_istd_features],list(istd_columns)
+
+        geo_filled=geo.copy()
+        batch_geo=geo.groupby(run.sample_info["batch"]).transform(
+            lambda s:s[np.isfinite(s)&(s>0)].median()
         )
-    # Divide all features by per-sample ISTD factor
-    normalized = normalized.divide(geo_filled.replace(0, np.nan), axis=0)
-    normalized = normalized.replace([np.inf, -np.inf], np.nan)
-    artifacts.method_log.append(
-        f"{run.polarity}: ISTD normalization used geometric mean of {list(run.raw_istd.columns)}."
-    )
-## (b): Remove ISTD features from the dataset and log their removal
-    removed_istds = list(run.raw_istd.columns)
+        geo_filled=geo_filled.where(
+            np.isfinite(geo_filled)&(geo_filled>0),
+            batch_geo,
+        )
+        global_geo=float(finite_geo.median())
+        geo_filled=geo_filled.fillna(global_geo)
+        imputed_rows=int(((~np.isfinite(geo))|(geo<=0)).sum())
+        if imputed_rows:
+            artifacts.method_log.append(
+                f"{run.polarity}: filled missing sample-level ISTD geometric means for "
+                f"{imputed_rows} rows using batch/global medians."
+            )
+
+        normalized=normalized.divide(geo_filled.replace(0,np.nan),axis=0)
+        normalized=normalized.replace([np.inf,-np.inf],np.nan)
+        artifacts.method_log.append(
+            f"{run.polarity}: ISTD normalization (Step 4(ai)) used geometric mean of {list(istd_columns)}."
+        )
+    # (aii): Class-matched normalization (Lipidomics POS mode)
+    elif run.modality is Modality.LIPIDOMICS and run.polarity.upper()=="POS":
+        pooled_geo=run.raw_istd.apply(_geometric_mean,axis=1)
+        finite_geo=pooled_geo[np.isfinite(pooled_geo)&(pooled_geo>0)]
+        if finite_geo.empty:
+            artifacts.qc_warnings.append(
+                f"{run.polarity}: all POS internal-standard geometric means were missing; "
+                "ISTD normalization was skipped."
+            )
+            return normalized[non_istd_features],list(istd_columns)
+
+        batch_geo=pooled_geo.groupby(run.sample_info["batch"]).transform(
+            lambda s:s[np.isfinite(s)&(s>0)].median()
+        )
+        pooled_geo_filled=pooled_geo.where(
+            np.isfinite(pooled_geo)&(pooled_geo>0),
+            batch_geo,
+        ).fillna(float(finite_geo.median()))
+
+        class_to_istd_pos=run.class_to_istd_pos or {}
+
+        for feature_id in non_istd_features:
+            feature_class=str(run.feature_meta.at[feature_id,"Class"]) if "Class" in run.feature_meta.columns else ""
+            istd_name=class_to_istd_pos.get(feature_class,"")
+
+            if istd_name in run.raw_istd.columns:
+                factor=run.raw_istd[istd_name].replace(0,np.nan)
+                factor=factor.where(np.isfinite(factor)&(factor>0),pooled_geo_filled)
+            else:
+                factor=pooled_geo_filled
+                artifacts.method_log.append(
+                    f"{run.polarity}: {feature_id} class {feature_class} had no class-matched ISTD; "
+                    "used pooled POS ISTD geometric mean (semi-quantitative)."
+                )
+
+            normalized[feature_id]=normalized[feature_id].divide(factor)
+
+        normalized=normalized.replace([np.inf,-np.inf],np.nan)
+        artifacts.method_log.append(
+            f"{run.polarity}: ISTD normalization (Step 4(aii)) used class-matched POS ISTDs where available."
+        )
+
+    else:
+        artifacts.qc_warnings.append(
+            f"{run.polarity}: unsupported modality/polarity for ISTD normalization; step skipped."
+        )
+        return normalized[non_istd_features],[]
+    
+    ## (b): Remove ISTD features from the dataset and log their removal
+    removed_istds = list(istd_columns)
     for istd_id in removed_istds:
         _record_drop(
             artifacts, "feature", istd_id,
-            step=4, step_name="Step 4 — ISTD Removal (normalization reference)",
+            step=4, step_name="Step 4(b) — ISTD Removal (normalization reference)",
             polarity=run.polarity,
             reason="Internal standard removed after normalization; not a biological analyte",
         )
-    return normalized[non_istd_features], removed_istds
-
+    return normalized[non_istd_features], removed_istds    
 
 #Appending suffix for duplicate features
 def _make_unique(names: list[str]) -> list[str]:
@@ -788,144 +1223,9 @@ def _make_unique(names: list[str]) -> list[str]:
             unique.append(f"{name}__{counts[name]}")
     return unique
 
-#Hard coded mass shifts for common adducts, isotopes, and fragments used in annotation and deduplication
-def _default_modifications() -> pd.DataFrame:
-    """
-    Canonical adduct/isotope/fragment mass shifts used for classification.
-
-    Covers the high-frequency metabolomics and lipidomics shifts needed by
-    the SOP. The file-based canonical list mentioned in the SOP is not
-    present in the repo, so the pipeline uses a hardcoded default.
-    """
-    rows=[
-        ("Isotope","15N isotope",0.99703,"Natural 15N incorporation (M+1)"),
-        ("Isotope","13C isotope",1.00336,"Single 13C incorporation (M+1)"),
-        ("Isotope","18O isotope",2.00425,"Natural 18O incorporation (M+2)"),
-        ("Isotope","2x13C isotope",2.00671,"Two 13C incorporations (M+2)"),
-        ("Isotope","3x13C isotope",3.01007,"Three 13C incorporations (M+3)"),
-        ("Isotope","4x13C isotope",4.01342,"Four 13C incorporations (M+4)"),
-        ("Isotope","5x13C isotope",5.01678,"Five 13C incorporations (M+5)"),
-        ("Adduct","[M+H]+",1.00728,"Protonated ion (proton mass; reference adduct for POS mode)"),
-        ("Adduct","[M+NH4]+",18.03383,"Ammonium adduct (ammonium mobile phases)"),
-        ("Adduct","[M+H2O+H]+",19.01784,"Hydrated protonated ion (high water content samples)"),
-        ("Adduct","[M+Na]+",22.98922,"Sodium adduct (ubiquitous sodium contamination)"),
-        ("Adduct","[M+CH3OH+H]+",33.03349,"Methanol adduct (methanol mobile phases)"),
-        ("Adduct","[M+K]+",38.96316,"Potassium adduct (potassium from glassware/salts)"),
-        ("Adduct","[M+Na+H2O]+",40.99979,"Sodium hydrate cluster"),
-        ("Adduct","[M+CH3CN+H]+",42.03383,"Acetonitrile adduct (acetonitrile mobile phase)"),
-        ("Adduct","[M+HCOOH+H]+",47.01276,"Formic acid adduct in POS (formic acid modifier)"),
-        ("Adduct","[M+CH3COOH+H]+",61.02841,"Acetic acid adduct in POS (acetate buffer)"),
-        ("Adduct","[M+2Na-H]+",44.97114,"Sodium cluster (high sodium samples)"),
-        ("Adduct","[M+CH3COOH+Na]+",83.01035,"Acetate with sodium"),
-        ("Adduct","[M+2K-H]+",76.91904,"Potassium cluster (high potassium samples)"),
-        ("Adduct","[M+K+HCOOH]+",84.96864,"Potassium formate cluster"),
-        ("Adduct","[M-H]-",-1.00728,"Deprotonated ion (reference adduct for NEG mode)"),
-        ("Adduct","[M+Cl]-",34.96940,"Chloride adduct (35Cl)"),
-        ("Adduct","[M+HCOO]-",44.99820,"Formate adduct (formate mobile phases)"),
-        ("Adduct","[M-H+HCOOH]-",44.99820,"Formate adduct of deprotonated ion (formic acid mobile phases; common for amines)"),
-        ("Adduct","[M+CH3COO]-",59.01385,"Acetate adduct (acetate buffers)"),
-        ("Adduct","[M+Br]-",78.91889,"Bromide adduct (79Br)"),
-        ("Adduct","[M+81Br]-",80.91684,"Bromide adduct (81Br)"),
-        ("Fragment","Loss of H",-1.00783,"Radical fragmentation"),
-        ("Fragment","Loss of 2H",-2.01565,"Unsaturated bond formation"),
-        ("Fragment","Loss of CH2",-14.01565,"Alkyl chains"),
-        ("Fragment","Loss of NH2",-16.01872,"Amides amines (radical loss)"),
-        ("Fragment","Loss of CH3",-15.02348,"Methylated compounds (radical loss)"),
-        ("Fragment","Loss of O",-15.99491,"Oxygen loss"),
-        ("Fragment","Loss of CH4",-16.03130,"Methane loss"),
-        ("Fragment","Loss of NH3",-17.02655,"Amino acids amines"),
-        ("Fragment","Loss of H2O",-18.01056,"Hydroxylated compounds (very common in POS)"),
-        ("Fragment","Loss of H+Na (Na-2H)",-20.97412,"Sodium replaces 2 hydrogens"),
-        ("Fragment","Loss of C2H2",-26.01565,"Acetylene loss"),
-        ("Fragment","Loss of HCN",-27.01090,"Nitrogen heterocycles pyrimidines"),
-        ("Fragment","Loss of CHN",-27.01090,"Cyano group (same mass as HCN)"),
-        ("Fragment","Loss of C2H3",-27.02348,"Vinyl loss (radical)"),
-        ("Fragment","Loss of C2H4",-28.03130,"Ethylene loss"),
-        ("Fragment","Loss of CO",-27.99491,"Carbonyl compounds"),
-        ("Fragment","Loss of CHO",-29.00274,"Aldehyde groups (radical loss)"),
-        ("Fragment","Loss of CH2O",-30.01056,"Formaldehyde loss"),
-        ("Fragment","Loss of CH3O",-31.01839,"Methoxy radical"),
-        ("Fragment","Loss of CH4O",-32.02621,"Methanol loss"),
-        ("Fragment","Loss of H2S",-33.98772,"Cysteine/taurine/glutathione derivatives"),
-        ("Fragment","Loss of H+K (K-2H)",-36.94806,"Potassium replaces 2 hydrogens"),
-        ("Fragment","Loss of C3H6",-42.04695,"Propylene loss"),
-        ("Fragment","Loss of C2H2O",-42.01056,"Ketene loss"),
-        ("Fragment","Loss of C3H7",-43.05478,"Propyl loss (radical)"),
-        ("Fragment","Loss of C2H3O",-43.01839,"Acetyl loss (radical)"),
-        ("Fragment","Loss of CO2",-43.98983,"Carboxylic acids esters"),
-        ("Fragment","Loss of C2H4O",-44.02621,"Acetaldehyde loss"),
-        ("Fragment","Loss of C2H5O",-45.03404,"Ethoxy loss (radical)"),
-        ("Fragment","Loss of COOH",-44.99765,"Carboxyl loss (radical)"),
-        ("Fragment","Loss of HCOOH",-46.00548,"Formic acid loss"),
-        ("Fragment","Loss of SO",-47.96699,"Sulfoxides"),
-        ("Fragment","Loss of CH3SH",-48.00337,"Methionine"),
-        ("Fragment","Loss of C2H2O2",-58.00548,"Glyoxal loss"),
-        ("Fragment","Loss of C2H3O2",-59.01330,"Acetate methyl ester loss (radical)"),
-        ("Fragment","Loss of C2H4O2",-60.02113,"Acetic acid"),
-        ("Fragment","Loss of H2O+CO2",-62.00039,"Combined dehydration/decarboxylation"),
-        ("Fragment","Loss of SO2",-63.96190,"Sulfonic acids"),
-        ("Fragment","Loss of C3H5O2",-73.02895,"Propionate loss (radical)"),
-        ("Fragment","Loss of HPO3",-79.96633,"Phosphonic acids"),
-        ("Fragment","Loss of SO3",-79.95681,"Sulfate esters"),
-        ("Fragment","Loss of H2PO3",-80.97416,"Phosphonates (radical)"),
-        ("Fragment","Loss of H3PO4",-97.97690,"Phosphoric acid esters"),
-        ("Fragment","Loss of glucuronide (C6H8O6)",-176.03209,"Phase II glucuronide conjugate loss; common for steroid metabolites bile acids and drug metabolites"),
-        ("Fragment","Loss of erythrose (C4H8O4)",-120.04226,"Carbohydrate fragment (C4H8O4)"),
-        ("Fragment","Loss of pentose (C5H8O4 dehydrated)",-132.04226,"Pentose glycoside cleavage (dehydrated form; standard for glycoside bond cleavage)"),
-        ("Fragment","Loss of hexose (C6H10O5 dehydrated)",-162.05282,"Hexose glycoside cleavage (dehydrated; standard glucose/galactose/mannose loss)"),
-        ("Fragment","Loss of glucose (C6H12O6 hydrated)",-180.06339,"Glucose conjugates with water (less common than dehydrated form)")
-    ]
-    return pd.DataFrame(rows,columns=["Type","Name","Delta_m/z","Description"])
-
 #Sample matching: canonical sample name for biological samples, empty string for QC pools
 def _sample_match_key(sample_name: str, sample_type: str) -> str:
     return "" if sample_type == "qc_pool" else _canonical_sample_name(sample_name)
-
-#Clinical data loader and standardization: 
-# reads the metadata file, standardizes sample names, and identifies 
-# metadata aliases for matching to expression samples
-def _load_metadata(meta_path: Path, config: DatasetConfig) -> pd.DataFrame:
-    cols = [
-        config.meta_sample_col,
-        "group",
-        "subgroup",
-        "gest age del",
-        "omics set#",
-    ]
-    if config.tissue == "plasma":
-        cols.append("sample gest Age")
-
-    meta = _read_xlsx_sheet(meta_path, config.meta_sheet)
-    available = [c for c in cols if c in meta.columns]
-    meta = meta[available].dropna(subset=[config.meta_sample_col]).copy()
-    meta[config.meta_sample_col] = meta[config.meta_sample_col].map(_canonical_sample_name)
-    meta = meta.rename(
-        columns={
-            config.meta_sample_col: "SampleID",
-            "group": "Group",
-            "subgroup": "Subgroup",
-            "gest age del": "GestAgeDelivery",
-            "omics set#": "Batch",
-            "sample gest Age": "SampleGestAge",
-        }
-    )
-    meta["Group"] = meta["Group"].replace({"sptb": "sPTB", "SPTB": "sPTB"})
-    meta = meta.set_index("SampleID")
-    meta = meta[~meta.index.duplicated(keep="first")].copy()
-    meta["MetadataCanonicalID"] = meta.index
-
-    alias_rows: list[pd.Series] = []
-    for sample_id, row in meta.iterrows():
-        for alias in _metadata_alias_candidates(sample_id):
-            if alias in meta.index:
-                continue
-            alias_row = row.copy()
-            alias_row.name = alias
-            alias_rows.append(alias_row)
-    if alias_rows:
-        meta = pd.concat([meta, pd.DataFrame(alias_rows)], axis=0)
-        meta = meta[~meta.index.duplicated(keep="first")].copy()
-    return meta
 
 #Changes values to floats where possible, non-convertible values become NaN
 def _standardize_expression(exp: pd.DataFrame) -> pd.DataFrame:
@@ -1149,21 +1449,62 @@ def _median_fold_change_batch_normalize(
     return corrected
 
 ###Step 6: Post-Normalization Drift Check
-# Picks IDs of 3-5 high-abundance features
-def _select_feature_traces(df: pd.DataFrame, n_features: int = 5) -> list[str]:
-    means = df.mean(axis=0, skipna=True).sort_values(ascending=False)
+# (a) Picks IDs of 3-5 high-abundance features
+def _select_feature_traces(
+    run:PolarityRun,
+    df: pd.DataFrame, 
+    n_features: int = 5,
+) -> list[str]:
+    if run.modality is Modality.METABOLOMICS:
+        means = df.mean(axis=0, skipna=True).sort_values(ascending=False)
+        return means.head(n_features).index.tolist()
+    if run.modality is Modality.LIPIDOMICS:
+        if "Class" not in run.feature_meta.columns:
+            means = df.mean(axis=0, skipna=True).sort_values(ascending=False)
+            return means.head(n_features).index.tolist()
+        means = df.mean(axis=0, skipna=True)
+        meta = run.feature_meta.reindex(df.columns).copy()
+        meta["mean_intensity"] = means.reindex(meta.index)
+        meta = meta.sort_values("mean_intensity", ascending=False)
+
+        selected = list[str] = []
+        seen_classes = set[str] = set()
+
+        for idx,row in meta.iterrows():
+            cls=str(row.get("Class","") or "")
+            if cls and cls not in seen_classes:
+                selected.append(idx)
+                seen_classes.add(cls)
+                if len(selected)>=n_features:
+                    break
+        
+        if len(selected)<n_features:
+            for fid in meta.index:
+                if fid in selected:
+                    continue
+                selected.append(fid)
+                if len(selected)>=n_features:
+                    break
+
+        return selected
+
+    means=df.mean(axis=0,skipna=True).sort_values(ascending=False)
     return means.head(n_features).index.tolist()
 
-#Diagnostic plots of post-normalization intensity trends for TIC and top features
+##(b) Plots TIC and top feature traces vs injection order, per batch and across batches
 def _plot_post_normalization_diagnostics(
     run: PolarityRun,
     normalized: pd.DataFrame,
     output_dir: Path,
     prefix: str,
+    istd_columns:Iterable[str],
 ) -> list[str]:
     flags: list[str] = []
     _ensure_dir(output_dir)
-    traces = _select_feature_traces(normalized.drop(columns=run.raw_istd.columns, errors="ignore"))
+    
+    non_istd=normalized.drop(columns=list(istd_columns),errors="ignore")
+    traces = _select_feature_traces(run, non_istd)
+
     x_label = (
         "Injection order (F#)"
         if "f_number" in run.injection_order_source
@@ -1171,7 +1512,7 @@ def _plot_post_normalization_diagnostics(
         if "raw_workbook" in run.injection_order_source or "file_sequence" in run.injection_order_source
         else "Injection order proxy"
     )
-    ##(a) Plot total ion current vs injection order
+    ##per-batch plots of TIC and top feature traces vs injection order
     for batch, batch_rows in run.sample_info.groupby("batch"):
         batch_rows = batch_rows.sort_values("injection_order")
         row_ids = batch_rows.index.tolist()
@@ -1180,7 +1521,7 @@ def _plot_post_normalization_diagnostics(
         axes[0].plot(batch_rows["injection_order"], tic.values, marker="o", color="black")
         axes[0].set_title(f"{prefix} batch {batch}: post-normalization TIC")
         axes[0].set_ylabel("TIC")
-    ##(b) Plot top feature traces vs injection order
+    ##per-batch TIC and top-feature traces
         for feature in traces:
             axes[1].plot(
                 batch_rows["injection_order"],
@@ -1206,14 +1547,14 @@ def _plot_post_normalization_diagnostics(
                         f"{prefix} batch {batch}: post-normalization TIC still trends with "
                         f"injection order (relative slope={abs(slope)/scale:.3f})."
                     )
+    ##Overlay plots of TIC and top feature traces across batches
     if traces:
         batch_frames = [
             (batch, batch_rows.sort_values("injection_order"))
             for batch, batch_rows in run.sample_info.groupby("batch")
         ]
         fig, axes = plt.subplots(len(traces) + 1, 1, figsize=(11, 3.1 * (len(traces) + 1)))
-        if len(traces) == 0:
-            axes = [axes]
+
         for batch, batch_rows in batch_frames:
             row_ids = batch_rows.index.tolist()
             axes[0].plot(
@@ -1249,134 +1590,248 @@ Part 2: Data Cleaning and Batch Correction
 """
 
 ### Step 7: Feature Missingness Filter
-def _feature_missingness_filter(
-    df: pd.DataFrame,
-    sample_info: pd.DataFrame,
-    sample_metadata: pd.DataFrame,
-    thresholds: Thresholds,
-    artifacts: PipelineArtifacts,
-    polarity: str,
-    feature_meta: pd.DataFrame | None = None,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
-    ##(a) Compute the fraction of missing values per feature across biological samples
-    biological = sample_info["sample_type"] == "biological"
-    bio_df = df.loc[biological].copy()
-    meta = sample_metadata.reindex(sample_info.loc[biological, "sample_name"]).copy()
-    groups = meta["Group"].fillna("Unknown").values
-    kept_cols: list[str] = []
-    rows: list[dict] = []
-    for col in bio_df.columns:
-        series = bio_df[col]
-        miss_any = float(series.isna().mean())
-        #Compute missingness separately in control vs case groups
-        control_mask = groups == "Control"
-        case_mask = ~control_mask
-        control_missing = (
-            float(series[control_mask].isna().mean()) if control_mask.any() else float("nan")
-        )
-        case_missing = (
-            float(series[case_mask].isna().mean()) if case_mask.any() else float("nan")
-        )
-    ##(b) Drop if feature missingness is greater than threshold in BOTH control and case groups
-        high_control=(np.isfinite(control_missing)
-                      and control_missing>thresholds.feature_missing_threshold)
-        high_case=(np.isfinite(case_missing)
-                   and case_missing>thresholds.feature_missing_threshold)
-        drop=high_control and high_case
+def categorize_sample_time(gest_age_samp):
+ if gest_age_samp is None:
+  return None
+ if gest_age_samp<6.0:
+  return None
+ if gest_age_samp<=13.9:
+  return '1'
+ if gest_age_samp<=21.9:
+  return '2'
+ if gest_age_samp<=31.9:
+  return '3'
+ if gest_age_samp<=36.9:
+  return '4'
+ return '5'
 
-        rows.append(
-            {
-                "feature_id": col,
-                "polarity": polarity,
-                "overall_missing": miss_any,
-                "control_missing": control_missing,
-                "case_missing": case_missing,
-                "dropped": drop,
-            }
-        )
-        if drop:
-            reason_str = (
-                f"missingness control={control_missing:.3f}, "
-                f"case={case_missing:.3f}"
-            )
-            artifacts.feature_filter_log.append(
-                {
-                    "step": 7,
-                    "feature_id": col,
-                    "polarity": polarity,
-                    "reason": reason_str,
-                }
-            )
-            _fm = feature_meta.loc[col] if (feature_meta is not None and col in feature_meta.index) else None
-            _record_drop(
-                artifacts, "feature", col,
-                step=7, step_name="Step 7 — Feature Missingness",
-                polarity=polarity, reason=reason_str,
-                annotation_name=str(_fm["annotation_name"]) if _fm is not None else "",
-                formula=str(_fm["formula"]) if _fm is not None else "",
-                mz=float(_fm["mz"]) if _fm is not None and pd.notna(_fm.get("mz")) else None,
-                rt_min=float(_fm["rt"]) if _fm is not None and pd.notna(_fm.get("rt")) else None,
-                metric_value=round(miss_any, 4),
-                metric_threshold=thresholds.feature_missing_threshold,
-            )
-        else: 
-            if high_control!=high_case:
-                artifacts.qc_warnings.append(
-                    f"{polarity} feature {col} has missingness > threshold in one group "
-                    f"(control={control_missing:.2f}, case={case_missing:.2f}, "
-                    f"threshold={thresholds.feature_missing_threshold:.2f})."
-                )
-            if (
-                np.isfinite(control_missing)
-                and np.isfinite(case_missing)
-                and abs(control_missing - case_missing) > 0.10
-            ):
-                artifacts.qc_warnings.append(
-                    f"{polarity} feature {col} shows differential missingness "
-                    f"(control={control_missing:.2f}, case={case_missing:.2f})."
-                )
-            kept_cols.append(col)
-    return df[kept_cols].copy(), pd.DataFrame(rows)
+def gest_age_diff(gest_age_deliv,gest_age_samp):
+ if gest_age_deliv in ("",None)or gest_age_samp in ("",None):
+  return None
+ try:
+  return float(gest_age_deliv)-float(gest_age_samp)
+ except ValueError:
+  return None
+
+def _feature_missingness_filter(
+	df:pd.DataFrame,
+	sample_info:pd.DataFrame,
+	sample_metadata:pd.DataFrame,
+	artifacts:PipelineArtifacts,
+	polarity:str,
+	feature_meta:pd.DataFrame|None=None,
+)->tuple[pd.DataFrame,pd.DataFrame]:
+	biological=sample_info["sample_type"]=="biological"
+	bio_df=df.loc[biological].copy()
+	meta=sample_metadata.reindex(sample_info.loc[biological,"sample_name"]).copy()
+	groups=meta["Group"].fillna("Unknown").values
+	timepoints=meta["SampleGestAge"].map(categorize_sample_time).values
+
+	rows=[]
+	drop_map={col:False for col in df.columns}
+
+	for tpt in [t for t in pd.unique(timepoints) if t is not None]:
+		tmask=(timepoints==tpt)
+		if not tmask.any():
+			continue
+
+		t_bio=bio_df.loc[tmask]
+		t_groups=groups[tmask]
+		control_mask=(t_groups=="Control")
+		case_mask=~control_mask
+
+		for col in t_bio.columns:
+			series=t_bio[col]
+			miss_any=float(series.isna().mean())
+			control_missing=float(series[control_mask].isna().mean()) if control_mask.any() else float("nan")
+			case_missing=float(series[case_mask].isna().mean()) if case_mask.any() else float("nan")
+
+			high_control=np.isfinite(control_missing) and control_missing>FEATURE_MISSING_THRESHOLD
+			high_case=np.isfinite(case_missing) and case_missing>FEATURE_MISSING_THRESHOLD
+			drop=high_control and high_case
+
+			rows.append({
+				"feature_id":col,
+				"polarity":polarity,
+				"timepoint":tpt,
+				"miss_any":miss_any,
+				"control_missing":control_missing,
+				"case_missing":case_missing,
+				"dropped":drop,
+			})
+
+			if drop and not drop_map[col]:
+				drop_map[col]=True
+				reason_str=(
+					f"timepoint={tpt}, "
+					f"missingness control={control_missing:.3f}, "
+					f"case={case_missing:.3f}"
+				)
+				_fm=feature_meta.loc[col] if (feature_meta is not None and col in feature_meta.index) else None
+				_record_drop(
+					artifacts,"feature",col,
+					step=7,step_name="Step 7 — Feature Missingness",
+					polarity=polarity,reason=reason_str,
+					annotation_name=str(_fm["annotation_name"]) if _fm is not None else "",
+					formula=str(_fm["formula"]) if _fm is not None else "",
+					mz=float(_fm["mz"]) if _fm is not None and pd.notna(_fm.get("mz")) else None,
+					rt_min=float(_fm["rt"]) if _fm is not None and pd.notna(_fm.get("rt")) else None,
+					metric_value=round(miss_any,4),
+					metric_threshold=FEATURE_MISSING_THRESHOLD,
+				)
+			else:
+				if high_control!=high_case:
+					artifacts.qc_warnings.append(
+						f"{polarity} feature {col} (timepoint {tpt}) has missingness > threshold in one group "
+						f"(control={control_missing:.2f}, case={case_missing:.2f}, "
+						f"threshold={FEATURE_MISSING_THRESHOLD:.2f})."
+					)
+
+	kept_cols=[col for col in df.columns if not drop_map[col]]
+	return df.loc[:,kept_cols].copy(),pd.DataFrame(rows)
 
 ###STEP 8: Sample-Level Missingness Filter
 def _sample_missingness_filter(
-    df: pd.DataFrame,
-    sample_info: pd.DataFrame,
-    thresholds: Thresholds,
-    artifacts: PipelineArtifacts,
-    polarity: str,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
-    keep_mask = pd.Series(True, index=df.index)
-    ##(a) Compute the fraction of missing values per sample across remaining features
-    biological = sample_info["sample_type"] == "biological"
-    miss = df.loc[biological].isna().mean(axis=1)
-    ##(b) Drop if sample missingness is greater than threshold
-    for row_id, frac in miss.items():
-        if frac > thresholds.sample_missing_threshold:
-            keep_mask.loc[row_id] = False
-            sname = sample_info.at[row_id, "sample_name"]
-            batch = str(sample_info.at[row_id, "batch"]) if "batch" in sample_info.columns else ""
-            tp_match = re.search(r"([A-E])$", str(sname).strip())
-            tp = tp_match.group(1) if tp_match else ""
-            reason_str = f"missingness={frac:.3f}"
+    df:pd.DataFrame,
+    sample_info:pd.DataFrame,
+    artifacts:PipelineArtifacts,
+    polarity:str,
+    )->tuple[pd.DataFrame,pd.DataFrame]:
+    keep_mask=pd.Series(True,index=df.index)
+
+    ##(a) Missingness: fraction missing per biological sample across remaining features
+    biological=sample_info["sample_type"]=="biological"
+    miss=df.loc[biological].isna().mean(axis=1)
+    # Drop if sample missingness is greater than threshold
+    for row_id,frac in miss.items():
+        if frac>SAMPLE_MISSING_THRESHOLD:
+            keep_mask.loc[row_id]=False
+            sname=sample_info.at[row_id,"sample_name"]
+            batch=str(sample_info.at[row_id,"batch"]) if "batch" in sample_info.columns else ""
+            tp_match=re.search(r"([A-E])$",str(sname).strip())
+            tp=tp_match.group(1) if tp_match else ""
+            reason_str=f"missingness={frac:.3f}"
             artifacts.sample_filter_log.append(
                 {
-                    "step": 8,
-                    "row_id": row_id,
-                    "sample_name": sname,
-                    "polarity": polarity,
-                    "reason": reason_str,
+                    "step":8,
+                    "row_id":row_id,
+                    "sample_name":sname,
+                    "polarity":polarity,
+                    "reason":reason_str,
                 }
             )
             _record_drop(
-                artifacts, "sample", sname,
-                step=8, step_name="Step 8 — Sample Missingness",
-                polarity=polarity, reason=reason_str,
-                metric_value=round(frac, 4),
-                metric_threshold=thresholds.sample_missing_threshold,
-                batch=batch, timepoint=tp,
+                artifacts,"sample",sname,
+                step=8,step_name="Step 8 — Sample Missingness",
+                polarity=polarity,reason=reason_str,
+                metric_value=round(frac,4),
+                metric_threshold=SAMPLE_MISSING_THRESHOLD,
+                batch=batch,timepoint=tp,
             )
-    return df.loc[keep_mask].copy(), sample_info.loc[keep_mask].copy()
+
+    ##(b) Time-Point Specific Filters: at / within 0.1 weeks of delivery, and post-delivery
+    if "GestAgeDelivery" in sample_info.columns and "SampleGestAge" in sample_info.columns:
+        for row_id in df.index:
+            if not keep_mask.loc[row_id]:
+                continue
+
+            ga_deliv=sample_info.at[row_id,"GestAgeDelivery"]
+            ga_samp=sample_info.at[row_id,"SampleGestAge"]
+            diff=gest_age_diff(ga_deliv,ga_samp)
+            if diff is None:
+                continue
+
+            sname=sample_info.at[row_id,"sample_name"]
+            batch=str(sample_info.at[row_id,"batch"]) if "batch" in sample_info.columns else ""
+            tp_match=re.search(r"([A-E])$",str(sname).strip())
+            tp=tp_match.group(1) if tp_match else ""
+
+            # drop at or within 0.1 wks before delivery: 0 <= diff <= 0.1
+            if 0<=diff<=0.1:
+                keep_mask.loc[row_id]=False
+                reason_str=f"within_0_1wk_before_or_at_delivery, GA_diff={diff:.3f}"
+                artifacts.sample_filter_log.append(
+                    {
+                        "step":8,
+                        "row_id":row_id,
+                        "sample_name":sname,
+                        "polarity":polarity,
+                        "reason":reason_str,
+                    }
+                )
+                _record_drop(
+                    artifacts,"sample",sname,
+                    step=8,step_name="Step 8 — Sample Missingness",
+                    polarity=polarity,reason=reason_str,
+                    metric_value=round(diff,4),
+                    metric_threshold=0.1,
+                    batch=batch,
+                    timepoint=tp,
+                )
+            elif diff<0:
+                keep_mask.loc[row_id]=False
+                reason_str=f"post_birth_sample, GA_diff={diff:.3f}"
+                artifacts.sample_filter_log.append(
+                    {
+                        "step":8,
+                        "row_id":row_id,
+                        "sample_name":sname,
+                        "polarity":polarity,
+                        "reason":reason_str,
+                    }
+                )
+                _record_drop(
+                    artifacts,"sample",sname,
+                    step=8,step_name="Step 8 — Sample Missingness",
+                    polarity=polarity,reason=reason_str,
+                    metric_value=round(diff,4),
+                    metric_threshold=None,
+                    batch=batch,timepoint=tp,
+                )
+    #(c): Multiple Samples Within Each Timepoint: keep sample closest to median GA within that timepoint
+    if "SampleGestAge" in sample_info.columns:
+        kept_idx=sample_info.index[keep_mask]
+        tp_series=sample_info.loc[kept_idx,"SampleGestAge"].map(categorize_sample_time)
+        tp_df=pd.DataFrame(
+                {
+                    "SampleGestAge":sample_info.loc[kept_idx,"SampleGestAge"],
+                    "timepoint":tp_series,
+                },
+                index=kept_idx,
+            )
+        tp_df=tp_df[tp_df["timepoint"].notna()]
+        for tpt,sub in tp_df.groupby("timepoint"):
+            if len(sub)<=1:
+                continue
+            median_ga=float(sub["SampleGestAge"].median())
+            keep_idx_tpt=(sub["SampleGestAge"]-median_ga).abs().idxmin()
+            for drop_id in sub.index:
+                if drop_id==keep_idx_tpt:
+                    continue
+                if not keep_mask.loc[drop_id]:
+                    continue
+                keep_mask.loc[drop_id]=False
+                sname=sample_info.at[drop_id,"sample_name"]
+                batch=str(sample_info.at[drop_id,"batch"]) if "batch" in sample_info.columns else ""
+                reason_str=f"multiple_samples_in_timepoint_{tpt}, kept_closest_to_median_GA"
+                artifacts.sample_filter_log.append(
+                    {
+                        "step":8,
+                        "row_id":drop_id,
+                        "sample_name":sname,
+                        "polarity":polarity,
+                        "reason":reason_str,
+                    }
+                )
+                _record_drop(
+                    artifacts,"sample",sname,
+                    step=8,step_name="Step 8 — Sample Missingness",
+                    polarity=polarity,reason=reason_str,
+                    metric_value=None,
+                    metric_threshold=None,
+                    batch=batch,
+                )
+    return df.loc[keep_mask].copy(),sample_info.loc[keep_mask].copy()
 
 ###STEP 9: Applying log2 transformation
 def log2_transform(df:pd.DataFrame)->pd.DataFrame:
@@ -1743,10 +2198,36 @@ def _post_combat_intensity_check(
     diag_dir = output_dir / "post_combat_intensity_check"
     _ensure_dir(diag_dir)
 
+    if run.modality is Modality.METABOLOMICS and run.polarity.upper()=="POS":
+        wanted={_normalise_name(n) for n in METABOLOMICS_POSITIVE_ISTD_NAMES}
+    elif run.modality is Modality.METABOLOMICS and run.polarity.upper()=="NEG":
+        wanted={_normalise_name(n) for n in METABOLOMICS_NEGATIVE_ISTD_NAMES}
+    elif run.modality is Modality.LIPIDOMICS and run.polarity.upper()=="POS":
+        wanted={_normalise_name(n) for n in LIPIDOMICS_POSITIVE_ISTD_NAMES}
+    elif run.modality is Modality.LIPIDOMICS and run.polarity.upper()=="NEG":
+        wanted={_normalise_name(n) for n in LIPIDOMICS_NEGATIVE_ISTD_NAMES} 
+    else:
+        wanted=set()
+
+    if "annotation_name" in run.feature_meta.columns:
+        istd_columns=[
+            c for c in run.raw_istd.columns
+            if (
+				not wanted
+				or _normalise_name(str(run.feature_meta.at[c,"annotation_name"])) in wanted
+				or _normalise_name(c) in wanted
+			)
+		]
+    else:
+        istd_columns=[
+		 c for c in run.raw_istd.columns
+		 if not wanted or _normalise_name(c) in wanted
+		]
+
     # Select representative high-abundance features (excluding ISTDs)
     bio_mask = sample_info["sample_type"] == "biological"
     bio_corrected = corrected.loc[bio_mask]
-    traces = _select_feature_traces(bio_corrected.drop(columns=run.raw_istd.columns, errors="ignore"))
+    traces = _select_feature_traces(bio_corrected.drop(columns=istd_columns, errors="ignore"))
 
     x_label = (
         "Injection order (F#)"
@@ -1852,41 +2333,109 @@ def _post_combat_intensity_check(
 def _sample_istd_mad_filter(
     run: PolarityRun,
     sample_info: pd.DataFrame,
-    thresholds: Thresholds,
     artifacts: PipelineArtifacts,
+    modality: Modality,
 ) -> set[str]:
     bad_row_ids: set[str] = set()
     # Collect per-sample ISTD failures: row_id -> list of reason strings
     sample_failure_reasons: dict[str, list[str]] = {}
     biological = sample_info["sample_type"] == "biological"
+    
+    if run.modality is Modality.METABOLOMICS:
+        artifacts.qc_warnings.append(
+            f"{run.polarity} Step 16 skipped: ISTD MAD sample QC is not implemented for metabolomics."
+        )
+        return bad_row_ids
+    
+    if modality is Modality.LIPIDOMICS:
+        if str(run.polarity).upper()=="POS":
+            istd_columns=[
+                col for col in LIPIDOMICS_POSITIVE_ISTD_NAMES
+                if col in run.raw_istd.columns
+            ]
+            neutral_lipid_istds={"15:0/18:1_DG-d7","15:0/18:1/15:0_TG-d7","18:1_CE-d7"}
+            phospholipid_istds={
+                "18:1_LPC-d7",
+                "15:0/18:1_PC-d7",
+                "18:1_SM-d9",
+            }
+        elif str(run.polarity).upper()=="NEG":
+            istd_columns=[
+                col for col in LIPIDOMICS_NEGATIVE_ISTD_NAMES
+                if col in run.raw_istd.columns
+            ]
+            neutral_lipid_istds=set()
+            phospholipid_istds=set()
+        else:
+            raise ValueError(f"Unsupported polarity for lipidomics: {run.polarity}")
+    else:
+        raise ValueError("This Step 16 implementation is lipidomics-specific.")
+
     for batch, rows in sample_info.loc[biological].groupby("batch"):
         row_ids = rows.index.tolist()
-        for column in run.raw_istd.columns:
+        batch_failures: dict[str, list[dict]] = {}
+        for column in istd_columns:
             values = run.raw_istd.loc[row_ids, column].astype(float)
             med = values.median(skipna=True)
             mad = stats.median_abs_deviation(values.dropna(), nan_policy="omit")
             if not np.isfinite(mad) or mad == 0:
                 continue
-            lo = med - thresholds.sample_mad_threshold * mad
-            hi = med + thresholds.sample_mad_threshold * mad
+            lo = med - SAMPLE_MAD_THRESHOLD * mad
+            hi = med + SAMPLE_MAD_THRESHOLD * mad
             failures = values[(values < lo) | (values > hi)]
-            for row_id, value in failures.items():
-                bad_row_ids.add(row_id)
-                reason_str = (
-                    f"{column} raw ISTD={value:.3e} outside [{lo:.3e}, {hi:.3e}] "
-                    f"(median={med:.3e}, MAD={mad:.3e})"
+
+        for row_id, value in failures.items():
+                        batch_failures.setdefault(row_id, []).append(
+                            {
+                                "istd": column,
+                                "value": float(value),
+                                "median": med,
+                                "mad": mad,
+                                "lo": lo,
+                                "hi": hi,
+                            }
+                        )
+
+        for row_id, failed_list in batch_failures.items():
+            sname = sample_info.at[row_id, "sample_name"]
+            failed_istds = {x["istd"] for x in failed_list}
+
+            neutral_only_pattern = (
+                str(run.polarity).upper() == "POS"
+                and len(failed_istds) > 0
+                and failed_istds.issubset(neutral_lipid_istds)
+                and failed_istds.isdisjoint(phospholipid_istds)
+            )
+
+            reason_parts = []
+            for x in failed_list:
+                reason_parts.append(
+                    f'{x["istd"]}: raw_ISTD={x["value"]:.3e}, '
+                    f'batch_median={x["median"]:.3e}, '
+                    f'batch_MAD={x["mad"]:.3e}, '
+                    f'limits=[{x["lo"]:.3e}, {x["hi"]:.3e}]'
                 )
-                artifacts.sample_filter_log.append(
-                    {
-                        "step": 16,
-                        "row_id": row_id,
-                        "sample_name": sample_info.at[row_id, "sample_name"],
-                        "polarity": run.polarity,
-                        "batch": batch,
-                        "reason": reason_str,
-                    }
+
+            if neutral_only_pattern:
+                artifacts.qc_warnings.append(
+                    f"{run.polarity} lipidomics sample {sname} in batch {batch} failed only neutral-lipid POS ISTDs "
+                    f"({', '.join(sorted(failed_istds))}); this may reflect class-specific extraction or matrix effects "
+                    f"rather than a globally bad sample."
                 )
-                sample_failure_reasons.setdefault(row_id, []).append(reason_str)
+
+            bad_row_ids.add(row_id)
+            sample_failure_reasons[row_id] = reason_parts
+
+            artifacts.sample_filter_log.append(
+                {
+                    "step":16,
+                    "row_id":row_id,
+                    "sample_name":sname,
+                    "polarity":run.polarity,
+                    "batch":batch,
+                    "reason":"; ".join(reason_parts),
+                }
+        )
 
     # One comprehensive drop_log entry per flagged sample (not per ISTD)
     for row_id, reasons in sample_failure_reasons.items():
@@ -1897,7 +2446,7 @@ def _sample_istd_mad_filter(
         combined_reason = "; ".join(reasons)
         _record_drop(
             artifacts, "sample", sname,
-            step=16, step_name="Step 16 — ISTD MAD Filter (post-ComBat)",
+            step=16, step_name="Step 16 — ISTD MAD Filter",
             polarity=run.polarity,
             reason=f"Failed {len(reasons)} ISTD check(s): {combined_reason}",
             batch=batch_val, timepoint=tp,
@@ -1909,7 +2458,6 @@ def _sample_istd_mad_filter(
 def _rsd_filter(
     df: pd.DataFrame,
     sample_info: pd.DataFrame,
-    thresholds: Thresholds,
     artifacts: PipelineArtifacts,
     polarity: str,
     feature_meta: pd.DataFrame | None = None,
@@ -1952,7 +2500,7 @@ def _rsd_filter(
     # Feature fails if it exceeds the threshold in ANY batch (Kayla's logic)
     fail_mask = pd.Series(False, index=df.columns)
     for rsd_series in batch_rsd.values():
-        fail_mask |= rsd_series.reindex(df.columns).fillna(np.inf) > thresholds.rsd_threshold
+        fail_mask |= rsd_series.reindex(df.columns).fillna(np.inf) > RSD_THRESHOLD
 
     for col in fail_mask.index[fail_mask]:
         per_batch_str = ", ".join(
@@ -1984,7 +2532,7 @@ def _rsd_filter(
             mz=float(_fm["mz"]) if _fm is not None and pd.notna(_fm.get("mz")) else None,
             rt_min=float(_fm["rt"]) if _fm is not None and pd.notna(_fm.get("rt")) else None,
             metric_value=round(worst_rsd, 2) if np.isfinite(worst_rsd) else None,
-            metric_threshold=thresholds.rsd_threshold,
+            metric_threshold=RSD_THRESHOLD,
         )
 
     keep = ~fail_mask
@@ -1994,7 +2542,6 @@ def _rsd_filter(
 def _iqr_filter(
     df: pd.DataFrame,
     sample_info: pd.DataFrame,
-    thresholds: Thresholds,
     artifacts: PipelineArtifacts,
     polarity: str,
     feature_meta: pd.DataFrame | None = None,
@@ -2057,30 +2604,30 @@ def _iqr_filter(
 
     ### (c) Compute percentile rank of each feature's median IQR
     n_features = len(median_iqr)
-    low_pct_val = float(np.nanpercentile(median_iqr.values, thresholds.iqr_low_percentile))
-    high_pct_val = float(np.nanpercentile(median_iqr.values, thresholds.iqr_high_percentile))
+    low_pct_val = float(np.nanpercentile(median_iqr.values, IQR_LOW_PERCENTILE))
+    high_pct_val = float(np.nanpercentile(median_iqr.values, IQR_HIGH_PERCENTILE))
 
     # Log whether the filter is active
     artifacts.qc_warnings.append(
         f"{polarity} Step 18 IQR filter: "
-        f"{thresholds.iqr_low_percentile}th pct IQR = {low_pct_val:.4f} "
-        f"(floor = {thresholds.iqr_floor}; filter active = {low_pct_val < thresholds.iqr_floor}), "
-        f"{thresholds.iqr_high_percentile}th pct IQR = {high_pct_val:.4f} "
-        f"(ceiling = {thresholds.iqr_ceiling}; filter active = {high_pct_val > thresholds.iqr_ceiling})."
+        f"{IQR_LOW_PERCENTILE}th pct IQR = {low_pct_val:.4f} "
+        f"(floor = {IQR_FLOOR}; filter active = {low_pct_val < IQR_FLOOR}), "
+        f"{IQR_HIGH_PERCENTILE}th pct IQR = {high_pct_val:.4f} "
+        f"(ceiling = {IQR_CEILING}; filter active = {high_pct_val > IQR_CEILING})."
     )
 
-    ### (d) Remove features where BOTH relative/absolute threshold are constant or hyypervariable 
+    ### (d) Remove features where BOTH relative/absolute threshold are constant or hypervariable 
     to_drop: list[str] = []
     for feat, miqr in median_iqr.items():
         if pd.isna(miqr):
             continue
         _fm = feature_meta.loc[feat] if (feature_meta is not None and feat in feature_meta.index) else None
-        if miqr < low_pct_val and miqr < thresholds.iqr_floor:
+        if miqr < low_pct_val and miqr < IQR_FLOOR:
             # Near-constant: fails both relative and absolute threshold
             reason_str = (
                 f"near-constant: median IQR={miqr:.4f} < "
-                f"{thresholds.iqr_low_percentile}th pct ({low_pct_val:.4f}) "
-                f"AND < floor ({thresholds.iqr_floor})"
+                f"{IQR_LOW_PERCENTILE}th pct ({low_pct_val:.4f}) "
+                f"AND < floor ({IQR_FLOOR})"
             )
             artifacts.feature_filter_log.append(
                 {
@@ -2099,15 +2646,15 @@ def _iqr_filter(
                 mz=float(_fm["mz"]) if _fm is not None and pd.notna(_fm.get("mz")) else None,
                 rt_min=float(_fm["rt"]) if _fm is not None and pd.notna(_fm.get("rt")) else None,
                 metric_value=round(float(miqr), 4),
-                metric_threshold=thresholds.iqr_floor,
+                metric_threshold=IQR_FLOOR,
             )
             to_drop.append(feat)
-        elif miqr > high_pct_val and miqr > thresholds.iqr_ceiling:
+        elif miqr > high_pct_val and miqr > IQR_CEILING:
             # Hypervariable: fails both relative and absolute threshold
             reason_str = (
                 f"hypervariable: median IQR={miqr:.4f} > "
-                f"{thresholds.iqr_high_percentile}th pct ({high_pct_val:.4f}) "
-                f"AND > ceiling ({thresholds.iqr_ceiling})"
+                f"{IQR_HIGH_PERCENTILE}th pct ({high_pct_val:.4f}) "
+                f"AND > ceiling ({IQR_CEILING})"
             )
             artifacts.feature_filter_log.append(
                 {
@@ -2126,7 +2673,7 @@ def _iqr_filter(
                 mz=float(_fm["mz"]) if _fm is not None and pd.notna(_fm.get("mz")) else None,
                 rt_min=float(_fm["rt"]) if _fm is not None and pd.notna(_fm.get("rt")) else None,
                 metric_value=round(float(miqr), 4),
-                metric_threshold=thresholds.iqr_ceiling,
+                metric_threshold=IQR_CEILING,
             )
             to_drop.append(feat)
 
@@ -2160,7 +2707,6 @@ def _merge_polarities(
     runs: list[tuple[PolarityRun, pd.DataFrame, pd.DataFrame]],
     sample_metadata: pd.DataFrame,
     config: DatasetConfig,
-    thresholds: Thresholds,
     artifacts: PipelineArtifacts,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     feature_tables: list[pd.DataFrame] = []
@@ -2168,16 +2714,22 @@ def _merge_polarities(
 
     istd_names = {
         _normalise_name(name)
-        for name in config.positive_istd_names + config.negative_istd_names
+        for name in get_istd_names(config.modality, "POS") + get_istd_names(config.modality, "NEG")
     }
 
     for run, corrected_before_average, sample_info in runs:
         # Average bridge samples after correction, on the log scale.
         biological_mask = sample_info["sample_type"] == "biological"
         biological_names = sample_info.loc[biological_mask, "sample_name"]
+        counts=biological_names.value_counts()
+        n_bridges=int((counts>1).sum())
+        if n_bridges>0:
+            artifacts.qc_warnings.append(
+                f"{config.dataset_id} {run.polarity}: averaged {n_bridges} biological bridge samples."  # NEW
+            )
         averaged = corrected_before_average.loc[biological_mask].groupby(biological_names).mean()
         meta = run.retained_feature_meta.loc[corrected_before_average.columns].copy()
-        meta = _finalize_feature_ids(meta, config.database, thresholds, istd_names)
+        meta = _finalize_feature_ids(meta, config.database, istd_names)
         averaged.columns = meta["final_feature_id"].values
         meta.index = averaged.columns
         feature_tables.append(meta)
@@ -2211,7 +2763,151 @@ def _merge_polarities(
     )
     return final_matrix, feature_meta
 
-def _annotation_score(meta: pd.DataFrame, expression: pd.DataFrame) -> pd.Series:
+"""
+Part 3: Feature Deduplication
+"""
+
+###STEP 20: Expected Parent Ion Calculation; STEP 21: Feature Classification
+def _candidate_classifications(
+    group_meta:pd.DataFrame,
+    modality:Modality,
+    polarity:str,
+    modifications:pd.DataFrame,
+)->pd.DataFrame:
+    group_meta=group_meta.copy()
+    group_meta["expected_parent_mz"]=np.nan
+    group_meta["classification"]="Unclassified"
+    group_meta["modification_name"]=""
+
+    if not group_meta["calc_mw"].notna().all():
+        return group_meta
+
+    if modality is Modality.METABOLOMICS:
+        expected=(
+            group_meta["calc_mw"]+PROTON_MASS
+            if polarity=="POS"
+            else group_meta["calc_mw"]-PROTON_MASS
+        )
+
+    elif modality is Modality.LIPIDOMICS:
+        adduct_col=group_meta.get("AdductIon",pd.Series(index=group_meta.index,dtype=object)).fillna("").astype(str).str.strip()
+        class_col=group_meta.get("Class",pd.Series(index=group_meta.index,dtype=object)).fillna("").astype(str).str.strip()
+
+        expected=pd.Series(np.nan,index=group_meta.index,dtype=float)
+
+        for idx in group_meta.index:
+            mw=group_meta.at[idx,"calc_mw"]
+            adduct=adduct_col.at[idx] if idx in adduct_col.index else ""
+            lipid_class=class_col.at[idx] if idx in class_col.index else ""
+
+            if adduct=="[M+H]+":
+                expected.at[idx]=mw+PROTON_MASS
+            elif adduct=="[M-H]-":
+                expected.at[idx]=mw-PROTON_MASS
+            elif adduct=="[M+NH4]+":
+                expected.at[idx]=mw+AMMONIUM_MASS
+            elif adduct=="[M+Na]+":
+                expected.at[idx]=mw+SODIUM_MASS
+            elif adduct=="[M+CH3COO]-":
+                expected.at[idx]=mw+ACETATE_MASS
+            elif adduct=="[M+HCOO]-":
+                expected.at[idx]=mw+FORMATE_MASS
+            else:
+                if polarity=="NEG":
+                    if lipid_class in {"PC","SM"}:
+                        expected.at[idx]=mw+ACETATE_MASS
+                    elif lipid_class in {"PE","PG","PI","PS","PA","LPC","LPE","FFA","FA","Cer","CER"}:
+                        expected.at[idx]=mw-PROTON_MASS
+                elif polarity=="POS":
+                    if lipid_class in {"TG","DG","CE"}:
+                        expected.at[idx]=mw+AMMONIUM_MASS
+                    else:
+                        expected.at[idx]=mw+PROTON_MASS
+    else:
+        raise ValueError(f"Unsupported modality:{modality}")
+
+    valid_expected=expected.notna()
+    if not valid_expected.any():
+        return group_meta
+
+    delta=group_meta["mz"]-expected
+    group_meta.loc[valid_expected,"expected_parent_mz"]=expected.loc[valid_expected]
+    group_meta.loc[valid_expected,"classification"]="Unknown/Measurement Error"
+
+    parent_mask=valid_expected & (delta.abs()<=MASS_TOLERANCE_PARENT)
+    group_meta.loc[parent_mask,"classification"]="Parent"
+
+    for idx,value in delta.loc[valid_expected & ~parent_mask].items():
+        matched=modifications.loc[
+            (modifications["Delta_m/z"]-value).abs()<=MASS_TOLERANCE_NON_PARENT
+        ]
+        if not matched.empty:
+            group_meta.at[idx,"classification"]=matched.iloc[0]["Type"]
+            group_meta.at[idx,"modification_name"]=matched.iloc[0]["Name"]
+
+    return group_meta
+
+###STEP 22-23: Feature Filter and Flag (Multiple at same m/z ratio but differing retention times)
+def _filter_and_flag_dedup_unit(
+    group:pd.DataFrame,
+    polarity:str,
+    modifications:pd.DataFrame,
+)->tuple[pd.DataFrame,list[str],str]:
+    """
+    Steps 22–23 for a single named compound group (metabolomics):
+    - classify features as Parent / non-Parent / Unknown
+    - apply Step 22 filtering logic
+    - compute Step 23 RT flag (chromatographic_artifact / potential_structural_isomers /
+      likely_annotation_error / single_candidate)
+
+    Returns:
+        candidate_meta: DataFrame of candidates that proceed to quality scoring
+        dropped: list of feature_ids dropped at this stage
+        rt_flag: RT spread classification for the candidate set
+    """
+    classified=_candidate_classifications(group,polarity,modifications)
+
+    parent_ids=classified.index[classified["classification"]=="Parent"].tolist()
+    if parent_ids:
+        candidate_ids=parent_ids
+        dropped=[idx for idx in classified.index if idx not in candidate_ids]
+    else:
+        candidate_ids=classified.index[
+            classified["classification"]!="Unknown/Measurement Error"
+        ].tolist()
+        if not candidate_ids:
+            candidate_ids=classified.index.tolist()
+        dropped=[idx for idx in classified.index if idx not in candidate_ids]
+
+    candidate_meta=classified.loc[candidate_ids].copy()
+    #Compute RT spread and assign RT flag
+    rt_spread=candidate_meta["rt"].max(skipna=True)-candidate_meta["rt"].min(skipna=True)
+    if len(candidate_meta)>1 and np.isfinite(rt_spread):
+        # < 0.5 min: Chromatographic artifact
+        if rt_spread<RT_ARTIFACT_MAX: 
+            rt_flag="chromatographic_artifact"
+        # 0.5 - 3 min: Potential structural isomers
+        elif rt_spread<=RT_ISOMER_MAX:
+            rt_flag="potential_structural_isomers"
+        # > 3.0 min: Likely annotation error
+        else:
+            rt_flag="likely_annotation_error"
+    #Single candidate or RT spread was not computable
+    else:
+        rt_flag="single_candidate"
+
+    return candidate_meta,dropped,rt_flag
+
+###STEP 24: Quality Annotation Scoring
+def _annotation_score(
+    meta: pd.DataFrame, 
+    expression: pd.DataFrame, 
+    modality: str = "metabolomics",
+) -> pd.Series:
+    if modality not in {"metabolomics","lipidomics"}:
+        raise ValueError("modality must be 'metabolomics' or 'lipidomics'")
+    
+    #Signal Intensity
     intensity = meta["area_max"].copy()
     if intensity.isna().all():
         intensity = expression.mean(axis=0, skipna=True).reindex(meta.index)
@@ -2222,7 +2918,8 @@ def _annotation_score(meta: pd.DataFrame, expression: pd.DataFrame) -> pd.Series
             return pd.Series(10.0, index=values.index)
         scaled = (values - values.min()) / (values.max() - values.min())
         return scaled * 10.0
-
+    
+    #Peak Quality Ratings
     peak = meta["peak_rating"].apply(
         lambda x: 10
         if pd.notna(x) and x >= 7
@@ -2232,6 +2929,8 @@ def _annotation_score(meta: pd.DataFrame, expression: pd.DataFrame) -> pd.Series
         if pd.notna(x) and x >= 3
         else 1
     )
+
+    #Reproducibility Ratings (RSD)
     rsd = meta["rsd_qc"].apply(
         lambda x: 10
         if pd.notna(x) and x < 10
@@ -2245,6 +2944,8 @@ def _annotation_score(meta: pd.DataFrame, expression: pd.DataFrame) -> pd.Series
         if pd.notna(x) and x < 30
         else 0
     )
+
+    #MS2 Ratings
     ms2 = meta["ms2"].fillna("").map(
         lambda x: 10
         if x == "DDA for preferred ion"
@@ -2254,6 +2955,7 @@ def _annotation_score(meta: pd.DataFrame, expression: pd.DataFrame) -> pd.Series
         if x == "DDA available"
         else 0
     )
+
     annotation = meta["mzcloud_confidence"].apply(
         lambda x: 10
         if pd.notna(x) and x >= 90
@@ -2294,116 +2996,175 @@ def _annotation_score(meta: pd.DataFrame, expression: pd.DataFrame) -> pd.Series
         return 0
 
     annotation.loc[no_mzcloud] = meta.loc[no_mzcloud].apply(_annot_source_score, axis=1)
+    
+    if modality == "lipidomics":
+        lipidid=(
+                    meta.get("lipidid",
+                        meta.get("lipid_id_norm",
+                            meta.get("LipidID",pd.Series(index=meta.index,dtype=object))
+                        )
+                    )
+                    .fillna("")
+                )
+        lsi = lipidid.map(
+            lambda s: 10
+            if "/" in str(s) and "(" in str(s) and ")" in str(s)
+            else 9
+            if "/" in str(s)
+            else 7
+            if "_" in str(s)
+            else 5
+            if ":" in str(s)
+            else 2
+            if str(s).strip() != ""
+            else 0
+        )
+        annotation = pd.concat([annotation, lsi], axis=1).max(axis=1)
+    elif modality != "metabolomics":
+        raise ValueError("modality must be 'metabolomics' or 'lipidomics'")
+
     return peak + rsd + ms2 + scaled_rank(intensity) + annotation
 
-
-def _candidate_classifications(
-    group_meta: pd.DataFrame,
-    polarity: str,
-    modifications: pd.DataFrame,
-    thresholds: Thresholds,
+##Full Part 3A Pipeline: Deduplication of Named Features Within Each Compound Group
+def _build_dedup_units(
+    feature_meta: pd.DataFrame,
+    modality: Modality,
+    artifacts: PipelineArtifacts,
 ) -> pd.DataFrame:
-    group_meta = group_meta.copy()
-    if group_meta["calc_mw"].notna().all():
-        expected = (
-            group_meta["calc_mw"] + PROTON_MASS
-            if polarity == "POS"
-            else group_meta["calc_mw"] - PROTON_MASS
-        )
-        delta = group_meta["mz"] - expected
-        group_meta["expected_parent_mz"] = expected
-        group_meta["classification"] = "Unknown/Measurement Error"
-        parent_mask = delta.abs() <= thresholds.mass_tolerance_parent
-        group_meta.loc[parent_mask, "classification"] = "Parent"
-        for idx, value in delta.loc[~parent_mask].items():
-            matched = modifications.loc[
-                (modifications["Delta_m/z"] - value).abs() <= thresholds.mass_tolerance_non_parent
-            ]
-            if not matched.empty:
-                group_meta.at[idx, "classification"] = matched.iloc[0]["Type"]
-                group_meta.at[idx, "modification_name"] = matched.iloc[0]["Name"]
-            else:
-                group_meta.at[idx, "modification_name"] = ""
+    meta = feature_meta.copy()
+
+    # Metabolomics: group by annotation_name
+    if modality is Modality.METABOLOMICS:
+        if "annotation_name" not in meta.columns:
+            raise ValueError("Metabolomics dedup requires 'annotation_name'.")
+        names = meta["annotation_name"].fillna("").astype(str).str.strip()
+        valid = names.ne("") & ~names.str.lower().isin(["not named", "nan"])
+        meta["dedup_unit_id"] = np.where(valid, names, meta.index.astype(str))
+
+    # Lipidomics: group by LipidID
+    elif modality is Modality.LIPIDOMICS:
+        # Try typical lipid ID columns in order
+        for col in ("LipidID", "lipidid", "annotation_name"):
+            if col in meta.columns:
+                lipid_ids = meta[col].fillna("").astype(str).str.strip()
+                break
+        else:
+            raise ValueError("Lipidomics dedup requires 'LipidID' or equivalent column.")
+
+        valid = lipid_ids.ne("") & ~lipid_ids.str.lower().isin(["not named", "nan"])
+        meta["dedup_unit_id"] = np.where(valid, lipid_ids, meta.index.astype(str))
+
     else:
-        group_meta["classification"] = "Unclassified"
-        group_meta["modification_name"] = ""
-    return group_meta
+        raise ValueError(f"Unsupported modality: {modality}")
 
+    return meta
 
+def _run_part3_named_dedup(
+    feature_meta:pd.DataFrame,
+    expression:pd.DataFrame,
+    modality,
+    polarity:str,
+    modifications:pd.DataFrame,
+    artifacts:PipelineArtifacts,
+):
+    meta=_build_dedup_units(feature_meta,modality,artifacts).copy()
+
+    score_modality="lipidomics" if modality is Modality.LIPIDOMICS else "metabolomics"
+
+    kept=[]
+    dropped=[]
+    meta["quality_score"]=np.nan
+    meta["rt_flag"]=""
+
+    for unit_id,group in meta.groupby("dedup_unit_id",dropna=False):
+        candidate_meta,early_drops,rt_flag=_filter_and_flag_dedup_unit(
+            group=group,
+            polarity=polarity,
+            modifications=modifications
+        )
+        candidate_expr=expression.reindex(columns=candidate_meta.index)
+
+        scores=_annotation_score(
+            meta=candidate_meta,
+            expression=candidate_expr,
+            modality=score_modality,
+        )
+        candidate_meta["quality_score"]=scores
+        candidate_meta["rt_flag"]=rt_flag
+        meta.loc[candidate_meta.index,"quality_score"]=scores
+        meta.loc[candidate_meta.index,"rt_flag"]=rt_flag
+
+        ranked=candidate_meta.sort_values(
+            ["quality_score","area_max","rsd_qc","rt"],
+            ascending=[False,False,True,True],
+        )
+        best_id=ranked.index[0]
+        kept.append(best_id)
+
+        unit_drops=[idx for idx in candidate_meta.index if idx!=best_id]
+        unit_drops.extend(early_drops)
+        dropped.extend(unit_drops)
+
+        group_name=str(group["dedup_unit_id"].iloc[0]) if len(group)>0 else str(unit_id)
+        for loser in unit_drops:
+            artifacts.dedup_log.append(
+                {
+                    "phase":"named_within_compound",
+                    "polarity":polarity,
+                    "group_name":group_name,
+                    "representative":best_id,
+                    "dropped_feature":loser,
+                    "rt_flag":rt_flag,
+                }
+            )
+            _loser_row=meta.loc[loser] if loser in meta.index else None
+            _record_drop(
+                artifacts,"feature",loser,
+                step=24,
+                step_name="Steps 20-25 — Named Within-Compound Deduplication",
+                polarity=polarity,
+                reason=f"Lower quality than representative '{best_id}' in named group '{group_name}' (rt_flag={rt_flag})",
+                annotation_name=str(_loser_row["annotation_name"]) if _loser_row is not None and "annotation_name" in _loser_row.index else "",
+                formula=str(_loser_row["formula"]) if _loser_row is not None and "formula" in _loser_row.index else "",
+                mz=float(_loser_row["mz"]) if _loser_row is not None and "mz" in _loser_row.index and pd.notna(_loser_row["mz"]) else None,
+                rt_min=float(_loser_row["rt"]) if _loser_row is not None and "rt" in _loser_row.index and pd.notna(_loser_row["rt"]) else None,
+                dedup_phase="named_within_compound",
+                representative_feature=best_id,
+            )
+
+    return kept,dropped,meta
+
+###STEP 25: Feature Selection (Based on Feature Classification, Filtering, and Quality Scores)
 def _resolve_named_groups(
     run: PolarityRun,
     expression: pd.DataFrame,
-    thresholds: Thresholds,
     modifications: pd.DataFrame,
     artifacts: PipelineArtifacts,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     meta = run.feature_meta.loc[expression.columns].copy()
-    meta["quality_score"] = _annotation_score(meta, expression)
-    keep_ids: set[str] = set()
+    score_modality="lipidomics" if run.modality is Modality.LIPIDOMICS else "metabolomics"
+    meta["quality_score"]=_annotation_score(meta,expression,modality=score_modality)
 
     named = meta[meta["is_named"]].copy()
     unnamed = meta[~meta["is_named"]].copy()
-    for name, group in named.groupby("compound_group_name"):
-        classified = _candidate_classifications(group, run.polarity, modifications, thresholds)
-        parent_ids = classified.index[classified["classification"] == "Parent"].tolist()
-        if parent_ids:
-            candidate_ids = parent_ids
-            dropped = [idx for idx in classified.index if idx not in candidate_ids]
-        else:
-            candidate_ids = classified.index[
-                classified["classification"] != "Unknown/Measurement Error"
-            ].tolist()
-            if not candidate_ids:
-                candidate_ids = classified.index.tolist()
-            dropped = [idx for idx in classified.index if idx not in candidate_ids]
 
-        candidate_meta = classified.loc[candidate_ids].copy()
-        rt_spread = candidate_meta["rt"].max(skipna=True) - candidate_meta["rt"].min(skipna=True)
-        if len(candidate_meta) > 1 and np.isfinite(rt_spread):
-            if rt_spread < 0.5:
-                rt_flag = "chromatographic_artifact"
-            elif rt_spread <= 3.0:
-                rt_flag = "potential_structural_isomers"
-            else:
-                rt_flag = "likely_annotation_error"
-        else:
-            rt_flag = "single_candidate"
+    keep_ids,dropped_ids,named_units_meta=_run_part3_named_dedup(
+        feature_meta=named,
+        expression=expression,
+        modality=run.modality,
+        polarity=run.polarity,
+        modifications=modifications,
+        artifacts=artifacts,
+    )
 
-        ranked = candidate_meta.sort_values(
-            ["quality_score", "area_max", "rsd_qc", "rt"],
-            ascending=[False, False, True, True],
-        )
-        winner = ranked.index[0]
-        keep_ids.add(winner)
-        for loser in ranked.index[1:].tolist() + dropped:
-            artifacts.dedup_log.append(
-                {
-                    "phase": "named_within_compound",
-                    "polarity": run.polarity,
-                    "group_name": name,
-                    "representative": winner,
-                    "dropped_feature": loser,
-                    "rt_flag": rt_flag,
-                }
-            )
-            _loser_row = meta.loc[loser] if loser in meta.index else None
-            _record_drop(
-                artifacts, "feature", loser,
-                step=24, step_name="Steps 20-25 — Named Within-Compound Deduplication",
-                polarity=run.polarity,
-                reason=f"Lower quality than representative '{winner}' in compound group '{name}' (rt_flag={rt_flag})",
-                annotation_name=str(_loser_row["annotation_name"]) if _loser_row is not None else "",
-                formula=str(_loser_row["formula"]) if _loser_row is not None else "",
-                mz=float(_loser_row["mz"]) if _loser_row is not None and pd.notna(_loser_row.get("mz")) else None,
-                rt_min=float(_loser_row["rt"]) if _loser_row is not None and pd.notna(_loser_row.get("rt")) else None,
-                dedup_phase="named_within_compound",
-                representative_feature=winner,
-            )
-
-    named_kept = meta.loc[sorted(keep_ids)].copy() if keep_ids else meta.iloc[0:0].copy()
+    meta.update(named_units_meta)
+    named_kept=meta.loc[sorted(keep_ids)].copy() if keep_ids else meta.iloc[0:0].copy()
     return named_kept, unnamed.copy()
 
-
+#####PART 3B: Cross-Feature Deduplication for Unannotated Features (Metabolomics Only)
+        ##add flag for lipidomics, only proceed with metabolomics
+###Steps 26/27: Formula-Based Grouping and Mass Based Grouping for Unannotated Features with Formulas
+#Grouping features close in m/z and RT
 def _cluster_indices(
     meta: pd.DataFrame,
     mz_tol: float,
@@ -2442,7 +3203,7 @@ def _cluster_indices(
         clusters.append(seed)
     return clusters
 
-
+#Select best representative within cluster based on quality score, area, RSD, and RT
 def _collapse_group_by_quality(
     group_ids: list[str],
     meta: pd.DataFrame,
@@ -2486,27 +3247,28 @@ def _collapse_group_by_quality(
         )
     return winner
 
-
+#Applying the grouping/selection steps
+    #Formula-Based, Mass-Based, then Adduct-Based
 def _resolve_unnamed_groups(
     run: PolarityRun,
     unnamed_meta: pd.DataFrame,
     expression: pd.DataFrame,
-    thresholds: Thresholds,
     modifications: pd.DataFrame,
     artifacts: PipelineArtifacts,
 ) -> pd.DataFrame:
     if unnamed_meta.empty:
         return unnamed_meta
     meta = unnamed_meta.copy()
-    meta["quality_score"] = _annotation_score(meta, expression)
+    meta["quality_score"] = _annotation_score(meta, expression, modality = run.modality)
 
     keep: set[str] = set()
 
+    #Step 26: Formula-based grouping (unnamed features with formulas)
     formula_meta = meta[meta["formula"].astype(str).str.strip() != ""].copy()
     for cluster in _cluster_indices(
         formula_meta,
-        mz_tol=thresholds.mass_tolerance_non_parent,
-        rt_tol=thresholds.rt_tolerance,
+        mz_tol=MASS_TOLERANCE_NON_PARENT,
+        rt_tol=RT_TOLERANCE,
         require_formula=True,
     ):
         keep.add(
@@ -2515,11 +3277,12 @@ def _resolve_unnamed_groups(
             )
         )
 
+    #Step 27: Mass+RT Grouping (unnamed features without formulas)
     no_formula = meta[meta["formula"].astype(str).str.strip() == ""].copy()
     for cluster in _cluster_indices(
         no_formula,
-        mz_tol=thresholds.mass_tolerance_dedup_no_formula,
-        rt_tol=thresholds.rt_tolerance,
+        mz_tol=MASS_TOLERANCE_DEDUP_NO_FORMULA,
+        rt_tol=RT_TOLERANCE,
         require_formula=False,
     ):
         keep.add(
@@ -2528,11 +3291,12 @@ def _resolve_unnamed_groups(
             )
         )
 
+    #Construct reduced meta table of remaining features
     reduced = meta.loc[sorted(keep)] if keep else meta.iloc[0:0].copy()
     if reduced.empty:
         return reduced
 
-    # Adduct relationship collapsing among remaining unnamed features.
+    #STEP 28: Adduct/Isotope/Fragment Collapse on remaining unnamed features
     ids = reduced.sort_values(["rt", "mz"]).index.tolist()
     parent: dict[str, str] = {fid: fid for fid in ids}
 
@@ -2555,14 +3319,14 @@ def _resolve_unnamed_groups(
         for right in ids[i + 1 :]:
             right_rt = reduced.at[right, "rt"]
             right_mz = reduced.at[right, "mz"]
-            if right_rt - left_rt > thresholds.rt_tolerance:
+            if right_rt - left_rt > RT_TOLERANCE:
                 break
-            if abs(right_rt - left_rt) > thresholds.rt_tolerance:
+            if abs(right_rt - left_rt) > RT_TOLERANCE:
                 continue
             delta = abs(right_mz - left_mz)
             matched = modifications.loc[
                 (modifications["Delta_m/z"].abs() - delta).abs()
-                <= thresholds.mass_tolerance_non_parent
+                <= MASS_TOLERANCE_NON_PARENT
             ]
             if not matched.empty:
                 union(left, right)
@@ -2585,45 +3349,64 @@ def _resolve_unnamed_groups(
     ordered_winners = sorted(set(winners), key=winners.index)
     return reduced.loc[ordered_winners].copy()
 
-
+"""
+Part 4: Metadata Integration and Annotation
+"""
+###STEPS 29-31: Final Feature ID and Schymanski Level Assignment
 def _finalize_feature_ids(
     meta: pd.DataFrame,
     database: str,
-    thresholds: Thresholds,
     istd_names: set[str],
 ) -> pd.DataFrame:
     meta = meta.copy()
     final_ids: list[str] = []
     schymanski: list[str] = []
-    for fid, row in meta.iterrows():
-        polarity = row["polarity"]
-        name = str(row.get("compound_group_name", row["annotation_name"])).strip()
-        formula = str(row["formula"]).strip()
-        mz = row["mz"]
-        rt = row["rt"]
 
-        if name and name.lower() not in {"not named", "nan"}:
+    #STEP 29: Replacing placeholder feature IDs with final feature IDs
+    for fid, row in meta.iterrows():
+        polarity = str(row.get("polarity","")).strip()
+
+        raw_name = row.get("compound_group_name", row.get("annotation_name",""))
+        if pd.isna(raw_name):
+            raw_name = row.get("annotation_name","")
+        name = "" if pd.isna(raw_name) else str(raw_name).strip()
+
+        raw_formula = row.get("formula","")
+        formula = "" if pd.isna(raw_formula) else str(raw_formula).strip()
+
+        mz = pd.to_numeric(row.get("mz",np.nan), errors="coerce")
+        rt = pd.to_numeric(row.get("rt",np.nan), errors="coerce")
+        mzcloud_confidence = pd.to_numeric(row.get("mzcloud_confidence",np.nan), errors="coerce")
+        annot_matches = pd.to_numeric(row.get("annotation_source_matches",0), errors="coerce")
+        if pd.isna(annot_matches):
+            annot_matches = 0
+        mass_list_matches = "" if pd.isna(row.get("mass_list_matches","")) else str(row.get("mass_list_matches","")).strip()
+
+        if name and name.lower() not in {"not named","nan"}:
             final_id = f"{name}_{polarity}"
         else:
             mz_text = f"{mz:.4f}" if np.isfinite(mz) else "nan"
             rt_text = f"{rt:.2f}" if np.isfinite(rt) else "nan"
+            #Encode Polarity into final_feature_id
             final_id = f"unk_{fid}_{polarity}_{mz_text}_RT{rt_text}"
         final_ids.append(final_id)
 
-        if _normalise_name(name) in istd_names or "istd" in _normalise_name(name):
+        #STEP 31: Assigning Schymanski levels
+        norm_name = _normalise_name(name)
+        if norm_name in istd_names or "istd" in norm_name:
             schymanski.append("Level 1")
-        elif name and name.lower() not in {"not named", "nan"}:
+        elif name and name.lower() not in {"not named","nan"}:
             if (
-                pd.notna(row["mzcloud_confidence"])
-                and row["mzcloud_confidence"] >= thresholds.mzcloud_l2_threshold
-            ) or row["annotation_source_matches"] >= thresholds.annot_source_l2_threshold:
+                pd.notna(mzcloud_confidence)
+                and mzcloud_confidence >= MZCLOUD_L2_THRESHOLD
+            ) or annot_matches >= ANNOT_SOURCE_L2_THRESHOLD:
                 schymanski.append("Level 2")
             else:
                 schymanski.append("Level 3")
-        elif formula:
+        elif formula and formula.lower() != "nan":
             candidates = [
                 token.strip()
-                for token in re.split(r"[;|]", row["mass_list_matches"])
+                for token in re.split(r"[;|]", mass_list_matches)
                 if token.strip()
             ]
             if len(candidates) > 1:
@@ -2638,6 +3421,10 @@ def _finalize_feature_ids(
     meta["database"] = database
     return meta
 
+"""
+Part 5: Pipeline Validation and Sanity Checks
+"""
+###STEP 34: Biological Trajectory Plots for Longitudinal Tissues
 def _trajectory_plots(
     final_matrix: pd.DataFrame,
     feature_meta: pd.DataFrame,
@@ -2647,30 +3434,66 @@ def _trajectory_plots(
 ) -> None:
     if config.tissue != "plasma" or "SampleGestAge" not in final_matrix.columns:
         return
-    targets = ("progesterone", "cortisol", "estradiol")
+
+    modality = config.modality.name.lower() if hasattr(config.modality,"name") else str(config.modality).lower()
+
     analyte_names = {
-        fid: str(feature_meta.at[fid, "annotation_name"]).lower()
+        fid: str(
+            feature_meta.at[fid,"annotation_name"]
+            if "annotation_name" in feature_meta.columns
+            and fid in feature_meta.index
+            and pd.notna(feature_meta.at[fid,"annotation_name"])
+            and str(feature_meta.at[fid,"annotation_name"]).strip() != ""
+            else feature_meta.at[fid,"lipidid"]
+            if "lipidid" in feature_meta.columns
+            and fid in feature_meta.index
+            and pd.notna(feature_meta.at[fid,"lipidid"])
+            else ""
+        ).lower()
         for fid in feature_meta.index
     }
+
+    if modality == "lipidomics":
+        targets = (
+            "pc(",
+            "pe(",
+            "lpc",
+            "sm(",
+            "cer(",
+            "fa 18:1",
+            "fa 18:2",
+            "fa 20:4",
+            "fa 22:6",
+            "pc(38:6",
+            "pc(40:6",
+            "pe(40:6",
+        )
+        warn_msg = f"{config.dataset_id}: no curated pregnancy-trajectory lipids were retained."
+    else:
+        targets = ("progesterone","cortisol","estradiol")
+        warn_msg = f"{config.dataset_id}: no curated pregnancy-trajectory metabolites were retained."
+
     selected = [
         fid for fid, name in analyte_names.items() if any(keyword in name for keyword in targets)
     ]
     if not selected:
-        artifacts.qc_warnings.append(
-            f"{config.dataset_id}: no curated pregnancy-trajectory metabolites were retained."
-        )
+        artifacts.qc_warnings.append(warn_msg)
         return
+
     traj_dir = output_dir / "trajectory_plots"
     _ensure_dir(traj_dir)
     x = pd.to_numeric(final_matrix["SampleGestAge"], errors="coerce")
+
     for fid in selected[:6]:
+        if fid not in final_matrix.columns:
+            continue
         y = pd.to_numeric(final_matrix[fid], errors="coerce")
         valid = x.notna() & y.notna()
         if valid.sum() < 3:
             continue
-        fig, ax = plt.subplots(figsize=(7, 4))
+        fig, ax = plt.subplots(figsize=(7,4))
         ax.scatter(x[valid], y[valid], alpha=0.7)
-        ax.set_title(f"{feature_meta.at[fid, 'annotation_name']} trajectory")
+        ax.set_title(f"{analyte_names[fid]} trajectory")
         ax.set_xlabel("Gestational age at collection")
         ax.set_ylabel("Processed abundance")
         fig.tight_layout()
@@ -2902,12 +3725,13 @@ def _write_plain_text_log(
 
     (output_dir / "pipeline_log.txt").write_text("\n".join(lines) + "\n")
 
-
+"""
+PROCESSING FUNCTION FOR SINGLE RUN
+"""
 def _process_polarity(
     run: PolarityRun,
     sample_metadata: pd.DataFrame,
     ref_batch: str,
-    thresholds: Thresholds,
     modifications: pd.DataFrame,
     output_dir: Path,
     artifacts: PipelineArtifacts,
@@ -2951,7 +3775,7 @@ def _process_polarity(
     '''
     artifacts.drift_flags.extend(
         _plot_post_normalization_diagnostics(
-            run, normalized, diag_dir / "post_norm", f"{run.polarity}_post"
+            run, normalized, diag_dir / "post_norm", f"{run.polarity}_post", removed_istds,
         )
     )
 
@@ -2959,16 +3783,15 @@ def _process_polarity(
         normalized,
         run.sample_info,
         sample_metadata,
-        thresholds,
         artifacts,
         run.polarity,
         feature_meta=run.feature_meta,
     )
-    _snap("after Step 7 (feature missingness)", filtered, run.sample_info)
+    _snap("after Step 7 (feature missingness)", filtered, sample_info)
 
     # ── Step 8: Sample missingness filter (moved before log2 in SOP v4) ──────
     filtered, sample_info = _sample_missingness_filter(
-        filtered, run.sample_info, thresholds, artifacts, run.polarity
+        filtered, run.sample_info, artifacts, run.polarity
     )
     _snap("after Step 8 (sample missingness)", filtered, sample_info)
 
@@ -2976,7 +3799,7 @@ def _process_polarity(
     log2_df=log2_transform(filtered)
     
     # -- Step 10: Half-minimum imputation ──────────────────────────────────────
-    imputed = _half_minimum_impute(log2_df)
+    imputed = half_min_impute_wide(log2_df)
 
     # ── Step 11: Pre-correction PCA ───────────────────────────────────────────
     batch_labels = sample_info["batch"]
@@ -3038,7 +3861,7 @@ def _process_polarity(
     artifacts.drift_flags.extend(post_combat_flags)
 
     # ── Step 16: ISTD MAD filter (moved post-ComBat in SOP v4) ───────────────
-    bad_samples = _sample_istd_mad_filter(run, sample_info, thresholds, artifacts)
+    bad_samples = _sample_istd_mad_filter(run, sample_info, artifacts)
     if bad_samples:
         keep_mask = ~sample_info.index.isin(bad_samples)
         corrected = corrected.loc[keep_mask].copy()
@@ -3046,27 +3869,29 @@ def _process_polarity(
     _snap("after Step 16 (sample ISTD MAD, post-ComBat)", corrected, sample_info)
 
     # ── Step 17: RSD filter on QC pools (post-ComBat in SOP v4) ─────────────
-    corrected = _rsd_filter(corrected, sample_info, thresholds, artifacts, run.polarity, feature_meta=run.feature_meta)
+    corrected = _rsd_filter(corrected, sample_info, artifacts, run.polarity, feature_meta=run.feature_meta)
     _snap("after Step 17 (QC RSD filter, post-ComBat)", corrected, sample_info)
 
     # ── Step 18: IQR filter within-timepoint (SOP v4 new step) ───────────────
-    corrected = _iqr_filter(corrected, sample_info, thresholds, artifacts, run.polarity, feature_meta=run.feature_meta)
+    corrected = _iqr_filter(corrected, sample_info, artifacts, run.polarity, feature_meta=run.feature_meta)
     _snap("after Step 18 (IQR filter, within-timepoint)", corrected, sample_info)
 
     named_kept, unnamed = _resolve_named_groups(
-        run, corrected, thresholds, modifications, artifacts
+        run, corrected, modifications, artifacts
     )
     n_bio = int((sample_info["sample_type"] == "biological").sum())
     # Step 35 count: features remaining after Part 3A = named survivors + all unnamed (not yet processed)
-    artifacts.step_counts.append({
-        "polarity": pol,
-        "label": "after Part 3A (named-compound dedup)",
-        "n_features": len(named_kept) + len(unnamed),
-        "n_samples": n_bio,
-    })
+    artifacts.step_counts.append(
+        {
+            "polarity": pol,
+            "label": "after Part 3A (named-compound dedup)",
+            "n_features": len(named_kept) + len(unnamed),
+            "n_samples": n_bio,
+        }
+    )
 
     unnamed_kept = _resolve_unnamed_groups(
-        run, unnamed, corrected, thresholds, modifications, artifacts
+        run, unnamed, corrected, modifications, artifacts
     )
     retained_meta = pd.concat([named_kept, unnamed_kept], axis=0)
     retained_meta = retained_meta[~retained_meta.index.duplicated(keep="first")]
@@ -3083,20 +3908,18 @@ def _process_polarity(
     run.retained_expression = retained_expression
     return retained_expression, retained_meta, sample_info, missingness_report, confounding_rows
 
-
 def run_dataset(
     config: DatasetConfig,
     meta_path: Path,
-    thresholds: Thresholds,
 ) -> None:
     artifacts = PipelineArtifacts()
     _ensure_dir(config.output_dir)
     sample_metadata = _load_metadata(meta_path, config)
-    modifications = _default_modifications()
+    modifications = _load_modifications(config)
     ref_batch = ""
 
-    pos_run = _load_polarity_run(config.input_dir, "pos", config.positive_istd_names, config)
-    neg_run = _load_polarity_run(config.input_dir, "neg", config.negative_istd_names, config)
+    pos_run = _load_polarity_run(config.input_dir, "pos", get_istd_names(config.modality,"POS"), config)
+    neg_run = _load_polarity_run(config.input_dir, "neg", get_istd_names(config.modality,"NEG"), config)
     artifacts.method_log.append(
         f"POS injection-order source: {pos_run.injection_order_source}."
     )
@@ -3123,7 +3946,6 @@ def run_dataset(
         pos_run,
         sample_metadata,
         ref_batch,
-        thresholds,
         modifications,
         config.output_dir,
         artifacts,
@@ -3132,7 +3954,6 @@ def run_dataset(
         neg_run,
         sample_metadata,
         ref_batch,
-        thresholds,
         modifications,
         config.output_dir,
         artifacts,
@@ -3145,7 +3966,6 @@ def run_dataset(
         ],
         sample_metadata,
         config,
-        thresholds,
         artifacts,
     )
     # Step 35 count: features after POS/NEG merge (Step 30)
@@ -3219,93 +4039,6 @@ def run_dataset(
         feature_path,
     )
 
-
-def _build_configs(repo_root: Path, kayla_root: Path, output_root: Path) -> dict[str, DatasetConfig]:
-    return {
-        "MTBL_plasma": DatasetConfig(
-            dataset_id="MTBL_plasma",
-            database="HMDB",
-            tissue="plasma",
-            meta_sheet="n=133 metabolomics",
-            meta_sample_col="Sample ID",
-            input_dir=kayla_root / "data" / "MTBL_plasma",
-            output_dir=output_root / "MTBL_plasma",
-            positive_istd_names=("D3-Alanine-ISTD", "D3-Creatinine-ISTD"),
-            negative_istd_names=("D4-Taurine-ISTD", "D3-Lactate-ISTD"),
-            raw_workbook=repo_root / "data" / "metabolomics_raw" / "050725_Sadovsky DP3 Plasma Polar Untargeted_ALL copy.xlsx",
-            raw_sheet_pos="POS Compounds",
-            raw_sheet_neg="NEG Compounds",
-            raw_sample_row=2,
-            raw_file_row=3,
-        ),
-        "MTBL_placenta": DatasetConfig(
-            dataset_id="MTBL_placenta",
-            database="HMDB",
-            tissue="placenta",
-            meta_sheet="n=133 placenta",
-            meta_sample_col="ID",
-            input_dir=kayla_root / "data" / "MTBL_placenta",
-            output_dir=output_root / "MTBL_placenta",
-            positive_istd_names=("D3-Alanine-ISTD", "D3-Creatinine-ISTD"),
-            negative_istd_names=("D4-Taurine-ISTD", "D3-Lactate-ISTD"),
-        ),
-        "LIPD_plasma": DatasetConfig(
-            dataset_id="LIPD_plasma",
-            database="LIPID_MAPS",
-            tissue="plasma",
-            meta_sheet="n=133 metabolomics",
-            meta_sample_col="Sample ID",
-            input_dir=kayla_root / "data" / "LIPD_plasma",
-            output_dir=output_root / "LIPD_plasma",
-            positive_istd_names=("18:1_LPC-d7", "18:1_SM-d9"),
-            negative_istd_names=("15:0-18:1(d7)-PC", "18:1-18:1(d9)-PE"),
-            raw_workbook=repo_root / "data" / "lipids" / "072925 Sadovsky Plasma Lipids Untargeted ALL.xlsx",
-            raw_sheet_pos="Plasma POS Lipids",
-            raw_sheet_neg="Plasma NEG Lipids",
-            raw_sample_row=3,
-            raw_file_row=4,
-        ),
-        "LIPD_placenta": DatasetConfig(
-            dataset_id="LIPD_placenta",
-            database="LIPID_MAPS",
-            tissue="placenta",
-            meta_sheet="n=133 placenta",
-            meta_sample_col="ID",
-            input_dir=kayla_root / "data" / "LIPD_placenta",
-            output_dir=output_root / "LIPD_placenta",
-            positive_istd_names=("18:1_LPC-d7", "18:1_SM-d9"),
-            negative_istd_names=("15:0-18:1(d7)-PC", "18:1-18:1(d9)-PE"),
-        ),
-    }
-
-
-def _build_parser() -> argparse.ArgumentParser:
-    root = Path(__file__).resolve().parents[1]
-    parser = argparse.ArgumentParser(description="DP3 SOP-native omics preprocessing pipeline.")
-    parser.add_argument(
-        "--kayla-root",
-        default=str(root.parent / "kaylaxu"),
-        help="Path to the Kayla Xu raw-export repository root.",
-    )
-    parser.add_argument(
-        "--metadata",
-        default=str(root / "data" / "dp3 master table v2.xlsx"),
-        help="Path to the master metadata workbook.",
-    )
-    parser.add_argument(
-        "--output-root",
-        default=str(root / "data" / "cleaned" / "sop_omics_pipeline"),
-        help="Root directory for SOP-native outputs.",
-    )
-    parser.add_argument(
-        "--datasets",
-        nargs="+",
-        default=["MTBL_plasma", "MTBL_placenta", "LIPD_plasma", "LIPD_placenta"],
-        help="Datasets to process.",
-    )
-    return parser
-
-
 def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
@@ -3316,14 +4049,13 @@ def main() -> None:
     output_root = Path(args.output_root).resolve()
     metadata = Path(args.metadata).resolve()
     configs = _build_configs(repo_root, kayla_root, output_root)
-    thresholds = Thresholds()
 
     for dataset_id in args.datasets:
         if dataset_id not in configs:
             raise SystemExit(f"Unknown dataset '{dataset_id}'.")
         config = configs[dataset_id]
         LOGGER.info("Starting SOP pipeline for %s", dataset_id)
-        run_dataset(config, metadata, thresholds)
+        run_dataset(config, metadata)
 
 
 if __name__ == "__main__":
