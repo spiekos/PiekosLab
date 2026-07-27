@@ -143,7 +143,7 @@ def get_stratified_race_counts(df):
     eth_col = "hispanic/latino"
 
     race_rows = [
-        {"Variable / Category": "Race / Ethnicity Combinations", "Control": "", "Adverse Outcomes": ""}
+        {"Variable / Category": "Race / Ethnicity Combinations", "Control": "", "Adverse Outcomes": "", "SMD": ""}
     ]
 
     for r_col in race_cols:
@@ -165,11 +165,22 @@ def get_stratified_race_counts(df):
                 adv_pct = (adv_count / total_adv * 100) if total_adv > 0 else 0.0
                 adv_stat = f"{adv_count} ({adv_pct:.1f}%)" if adv_count > 0 else "0 (0.0%)"
 
+                # calculate SMD for this race/ethnicity intersection
+                p1 = (ctrl_count / total_ctrl) if total_ctrl > 0 else 0.0
+                p2 = (adv_count / total_adv) if total_adv > 0 else 0.0
+                pooled_var = (p1 * (1 - p1) + p2 * (1 - p2)) / 2
+                if pooled_var > 0:
+                    smd = abs(p1 - p2) / np.sqrt(pooled_var)
+                    smd_str = f"{smd:.2f}"
+                else:
+                    smd_str = "0.00"
+
                 if ctrl_count > 0 or adv_count > 0:
                     race_rows.append({
                         "Variable / Category": f"    {group_name}",
                         "Control": ctrl_stat,
-                        "Adverse Outcomes": adv_stat
+                        "Adverse Outcomes": adv_stat,
+                        "SMD": smd_str
                     })
 
     return pd.DataFrame(race_rows)
@@ -615,7 +626,6 @@ def build_summary(df, variables):
                 df_control[var] = df_control[var].map({1: "Yes", 0: "No", 1.0: "Yes", 0.0: "No", "1": "Yes", "0": "No"})
                 df_adverse[var] = df_adverse[var].map({1: "Yes", 0: "No", 1.0: "Yes", 0.0: "No", "1": "Yes", "0": "No"})
 
-            # format display name
             formatted_var_name = str(var).replace("_", " ").title()
             
             if df[var].dtype == bool:
@@ -647,18 +657,31 @@ def build_summary(df, variables):
                     adv_yes = (df_adverse[var] == "Yes").sum()
                     adv_pct = (adv_yes / adv_total * 100) if adv_total > 0 else 0.0
                     adv_stat = f"{adv_yes} ({adv_pct:.1f}%)"
+
+                    # calculate SMD for binary variables (using proportion formula)
+                    p1 = (ctrl_yes / ctrl_total) if ctrl_total > 0 else 0.0
+                    p2 = (adv_yes / adv_total) if adv_total > 0 else 0.0
+                    pooled_var = (p1 * (1 - p1) + p2 * (1 - p2)) / 2
+                    if pooled_var > 0:
+                        binary_smd = abs(p1 - p2) / np.sqrt(pooled_var)
+                    else:
+                        binary_smd = 0.0
                     
                     summary_rows.append(
                         {
                             "Variable / Category": formatted_var_name,
                             "Control": ctrl_stat,
-                            "Adverse Outcomes": adv_stat
+                            "Adverse Outcomes": adv_stat,
+                            "SMD": f"{binary_smd:.2f}"
                         }
                     )
                 else:
-                    summary_rows.append(
-                        {"Variable / Category": formatted_var_name, "Control": "", "Adverse Outcomes": ""}
-                    )
+                    summary_rows.append({
+                        "Variable / Category": formatted_var_name,
+                        "Control": "",
+                        "Adverse Outcomes": "",
+                        "SMD": ""
+                    })
 
                     all_cats = df[var].dropna().unique()
 
@@ -680,11 +703,23 @@ def build_summary(df, variables):
                         a_pct = adv_percents.get(cat, 0.0)
                         adv_stat = f"{a_count} ({a_pct:.1f}%)"
 
+                        # compute SMD for each category for the categorical variables
+                        total_c = len(df_control)
+                        total_a = len(df_adverse)
+                        p1 = (c_count / total_c) if total_c > 0 else 0.0
+                        p2 = (a_count / total_a) if total_a > 0 else 0.0
+                        pooled_var = (p1 * (1 - p1) + p2 * (1 - p2)) / 2
+                        if pooled_var > 0:
+                            cat_smd = abs(p1 - p2) / np.sqrt(pooled_var)
+                        else:
+                            cat_smd = 0.0
+
                         summary_rows.append(
                             {
                                 "Variable / Category": f"    {formatted_cat}",
                                 "Control": ctrl_stat,
-                                "Adverse Outcomes": adv_stat
+                                "Adverse Outcomes": adv_stat,
+                                "SMD": f"{cat_smd:.2f}"
                             }
                         )
 
@@ -705,13 +740,28 @@ def build_summary(df, variables):
                 else:
                     adv_stat = "N/A"
 
-                    summary_rows.append(
-                        {
-                            "Variable / Category": formatted_var_name,
-                            "Control": ctrl_stat,
-                            "Adverse Outcomes": adv_stat
-                        }
-                    )
+                # calculate SMD for continuous variable (using means and pooled standard deviation)
+                if not ctrl_data.empty and not adv_data.empty:
+                    mean1, mean2 = ctrl_data.mean(), adv_data.mean()
+                    var1, var2 = ctrl_data.var(ddof=1), adv_data.var(ddof=1)
+                    n1, n2 = len(ctrl_data), len(adv_data)
+                    pooled_sd = np.sqrt(((n1 - 1) * var1 + (n2 - 1) * var2) / (n1 + n2 - 2)) if (n1 + n2 > 2) else 0
+                    if pooled_sd > 0:
+                        smd = abs(mean1 - mean2) / pooled_sd
+                    else:
+                        smd = 0.0
+                    smd_str = f"{smd:.2f}"
+                else:
+                    smd_str = "N/A"
+
+                summary_rows.append(
+                    {
+                        "Variable / Category": formatted_var_name,
+                        "Control": ctrl_stat,
+                        "Adverse Outcomes": adv_stat,
+                        "SMD": smd_str
+                    }
+                )
 
     result_df = pd.DataFrame(summary_rows)
 
@@ -727,7 +777,7 @@ def build_summary(df, variables):
         "Apgar 1": "APGAR 1",
         "Apgar 5": "APGAR 5",
         "Nicu Days": "NICU Days",
-        "Route Of Delivery 1-Vag, 2-Cs": "Route Of Delivery 0-Vag, 1-Cs",
+        "Route Of Delivery 1-Vag, 2-Cs": "Route Of Delivery 0-Did Not Deliver, 1-Vag, 2-Cs",
         "Birthweight": "Birthweight - Continuous",
         "Birthweight Binned": "Birthweight - Categorical"
     }
@@ -747,26 +797,28 @@ def export_formatted_tables_to_file(
         lines = []
         header_col1 = "Variable / Category".ljust(50)
         header_col2 = "Control".ljust(25)
-        header_col3 = "Adverse Outcomes"
-        lines.append(f"{header_col1} {header_col2} {header_col3}")
-        lines.append("-" * 95)
+        header_col3 = "Adverse Outcomes".ljust(25)
+        header_col4 = "SMD"
+        lines.append(f"{header_col1} {header_col2} {header_col3} {header_col4}")
+        lines.append("-" * 120)
 
         for _, row in df.iterrows():
             col1_val = str(row["Variable / Category"]).ljust(50)
             col2_val = str(row["Control"]).ljust(25)
-            col3_val = str(row["Adverse Outcomes"])
-            lines.append(f"{col1_val} {col2_val} {col3_val}")
+            col3_val = str(row["Adverse Outcomes"]).ljust(25)
+            col4_val = str(row["SMD"])
+            lines.append(f"{col1_val} {col2_val} {col3_val} {col4_val}")
         return "\n".join(lines)
 
     with open(output_filename, "w") as f:
         f.write("Table 1: Demographic Characteristics\n")
-        f.write("-" * 95 + "\n")
+        f.write("-" * 120 + "\n")
         f.write(format_df_to_string(table1_df))
 
         f.write("\n\n\n")
 
         f.write("Outcomes Table\n")
-        f.write("-" * 95 + "\n")
+        f.write("-" * 120 + "\n")
         f.write(format_df_to_string(outcomes_df))
 
 

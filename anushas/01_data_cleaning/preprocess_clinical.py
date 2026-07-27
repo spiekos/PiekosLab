@@ -4,8 +4,8 @@ import numpy as np
 
 # load and return the clinical dataset
 def load_sheet():
-    sheet = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - variables of interest.csv")
-    return sheet
+    clinical_sheet = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - variables of interest.csv")
+    return clinical_sheet
 
 
 # standardizes all values to lowercase (except the values in the "id" column)
@@ -237,9 +237,9 @@ def one_hot_encode_demographics(sheet):
 
 
 def main():
-    sheet = load_sheet()
+    clinical_sheet = load_sheet()
 
-    sheet_cleaned = standardize_sheet(sheet)
+    sheet_cleaned = standardize_sheet(clinical_sheet)
     sheet_cleaned = fix_typos(sheet_cleaned)
     sheet_cleaned = filter_sheet(sheet_cleaned)
     sheet_cleaned = unmask_missing_data(sheet_cleaned)
