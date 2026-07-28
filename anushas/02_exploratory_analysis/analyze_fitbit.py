@@ -48,8 +48,8 @@ def bucket_data(sheet):
 def get_total_patients(sheet):
     # filter for rows for which record id starts with "dp3-"
     # this ensures we only count actual patients
-    dp3_patients = sheet[sheet["record_id"].astype(str).str.startswith("dp3-")]
-    return dp3_patients["record_id"].nunique()
+    dp3_patients = sheet[sheet["id"].astype(str).str.startswith("dp3-")]
+    return dp3_patients["id"].nunique()
 
 
 # returns the total number of missing (aka "na") values in the dataset across all columns. excludes the "na" values corresponding to the general information 
@@ -68,10 +68,10 @@ def get_missing_per_patient(sheet, feature_cols):
 
     # sum the true values by patient id
     result = (
-        local_sheet.groupby("record_id")["is_missing"]
+        local_sheet.groupby("id")["is_missing"]
         .sum()
         .reset_index()
-        .rename(columns = {"record_id": "id", "is_missing": "missing_days"})
+        .rename(columns = {"is_missing": "missing_days"})
     )
 
     return result
@@ -82,7 +82,7 @@ def get_max_consecutive_missing(sheet, feature_cols):
     feature_results = {}
 
     # ensure the dataframe is sorted chronologically per patient
-    sorted_sheet = sheet.sort_values(by = ["record_id", "date"]).reset_index(drop = True)
+    sorted_sheet = sheet.sort_values(by = ["id", "date"]).reset_index(drop = True)
 
     for col in feature_cols:
         is_missing = sorted_sheet[col].isna()
@@ -95,16 +95,15 @@ def get_max_consecutive_missing(sheet, feature_cols):
         # group is_missing by (patient id, block id). since block_id only changes when a non-nan value is seen, these groups will each contain streaks of nan 
         # values, organized in chronological order, for each patient.
         # then sum the true values (by groups) in is_missing. this gives the lengths of every missing streak for that patient
-        streak_lengths = is_missing.groupby([sorted_sheet["record_id"], block_id]).sum()
+        streak_lengths = is_missing.groupby([sorted_sheet["id"], block_id]).sum()
 
         # find the maximum streak length for each patient
-        max_streak = streak_lengths.groupby("record_id").max()
+        max_streak = streak_lengths.groupby("id").max()
 
         feature_results[col] = max_streak
 
     # combine results for all features into a table
     final_table = pd.DataFrame(feature_results).reset_index()
-    final_table = final_table.rename(columns = {"record_id": "id"})
 
     return final_table
 
@@ -146,7 +145,7 @@ def get_patients_per_timeframe(sheets, feature_cols, timeframe_names):
         # drop rows for which all metric columns are missing
         df_cleaned = df.dropna(subset = feature_cols, how = "all")
 
-        patient_count = df_cleaned["record_id"].nunique()
+        patient_count = df_cleaned["id"].nunique()
 
         summary_data.append({
             "Timeframe": timeframe,
@@ -160,15 +159,15 @@ def get_patients_per_timeframe(sheets, feature_cols, timeframe_names):
 # also returns a table containing the number of metrics with 80+% of valid data, per patient
 # also returns a table containing the number of patients with 80+% of valid data, per metric
 def get_metric_representation_matrices(sheet, feature_cols):
-    df = sheet.sort_values(by = ["record_id", "timepoint"]).copy()
+    df = sheet.sort_values(by = ["id", "timepoint"]).copy()
 
     # extract start and end dates per patient
     # start date marks the day the patient enrolled/started data collection
     # end data marks delivery
-    enrollment_days = df.groupby("record_id")["timepoint"].min()
-    max_recorded_days = df.groupby("record_id")["timepoint"].max()
+    enrollment_days = df.groupby("id")["timepoint"].min()
+    max_recorded_days = df.groupby("id")["timepoint"].max()
 
-    delivery_weeks = df.groupby("record_id")["gest_age_del"].first()
+    delivery_weeks = df.groupby("id")["gest_age_del"].first()
     delivery_days = delivery_weeks * 7
 
     # apply fallback logic for the end of the tracking window:
@@ -179,17 +178,17 @@ def get_metric_representation_matrices(sheet, feature_cols):
     recorded_data_lengths = recorded_data_lengths.clip(lower = 1) # ensure values are positive
 
     # count how many days of valid data exist per metric per patient
-    active_days_per_metric = df.groupby("record_id")[feature_cols].agg(lambda x: x.notna().sum())
+    active_days_per_metric = df.groupby("id")[feature_cols].agg(lambda x: x.notna().sum())
 
     # contains percent of data that is valid per metric per patient
-    representation_matrix = active_days_per_metric.div(active_days_per_metric, axis = 0)
+    representation_matrix = active_days_per_metric.div(recorded_data_lengths, axis = 0)
     
     final_table = representation_matrix >= 0.80
-    final_table = final_table.reset_index().rename(columns = {"record_id": "patient_id"})
+    final_table = final_table.reset_index()
 
     # contains the number of metrics with 80+% of valid data, per patient
     pt_summary = pd.DataFrame({
-        "Patient ID": final_table["patient_id"],
+        "Patient ID": final_table["id"],
         "Compliant Metrics Count": final_table[feature_cols].sum(axis = 1)
     })
     pt_summary = pt_summary.sort_values(by = "Compliant Metrics Count", ascending = False).reset_index(drop = True)

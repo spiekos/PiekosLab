@@ -5,7 +5,8 @@ import numpy as np
 # load and return the clinical dataset
 def load_sheet():
     clinical_sheet = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - variables of interest.csv")
-    return clinical_sheet
+    dp3_sheet = pd.read_csv("00_raw_data/DP3_playset.csv")
+    return clinical_sheet, dp3_sheet
 
 
 # standardizes all values to lowercase (except the values in the "id" column)
@@ -37,13 +38,18 @@ def fix_typos(sheet):
 
 
 # include only patients with "delivered" in their "status" column
-def filter_sheet(sheet):
+# limit dataset to the 347 patients from the DP3 playset
+def filter_sheet(sheet, dp3_sheet):
     sheet_copy = sheet.copy()
 
     if "status" in sheet_copy.columns:
         status_clean = sheet_copy["status"].astype(str).str.strip()
         keep_mask = status_clean == "delivered"
         sheet_copy = sheet_copy[keep_mask].reset_index(drop=True)
+
+    # limit dataset to the 347 patients from the DP3 playset
+    filtered_patients = dp3_sheet["Record.ID"].unique().tolist()    
+    sheet_copy = sheet_copy[sheet_copy["id"].isin(filtered_patients)]
       
     return sheet_copy
 
@@ -237,17 +243,16 @@ def one_hot_encode_demographics(sheet):
 
 
 def main():
-    clinical_sheet = load_sheet()
-
+    clinical_sheet, dp3_sheet = load_sheet()
+    
     sheet_cleaned = standardize_sheet(clinical_sheet)
     sheet_cleaned = fix_typos(sheet_cleaned)
-    sheet_cleaned = filter_sheet(sheet_cleaned)
+    sheet_cleaned = filter_sheet(sheet_cleaned, dp3_sheet)
     sheet_cleaned = unmask_missing_data(sheet_cleaned)
     sheet_cleaned = add_missingness_indicators(sheet_cleaned)
     sheet_cleaned = encode_smoking_status(sheet_cleaned)
     sheet_cleaned = impute_bmi_median(sheet_cleaned)
     sheet_encoded = one_hot_encode_demographics(sheet_cleaned)
-    sheet_encoded = sheet_encoded[sheet_encoded["race_is_missing"] != 1].copy() # questionable line, get rid of this??
     sheet_encoded.rename(columns={sheet_encoded.columns[-1]: "aspirin"}, inplace=True)
 
     if not sheet_encoded.empty:

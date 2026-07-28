@@ -7,7 +7,8 @@ def load_sheets():
     sheet1 = pd.read_csv("00_raw_data/dp3 3rd set gest age for Tony assessed final.xlsx - Sheet1.csv")
     sheet2 = pd.read_csv("00_raw_data/DP3 slides Tony's analysis batches 1-2.xlsx - Sheet2.csv")
     sheet3 = pd.read_csv("01_data_cleaning/processed_data/processed_clinical_data.csv")
-    return sheet1, sheet2, sheet3
+    sheet4 = pd.read_csv("00_raw_data/DP3_playset.csv")
+    return sheet1, sheet2, sheet3, sheet4
 
 
 # standardizes all values to lowercase (except the values in the "id" column)
@@ -72,12 +73,17 @@ def rename_columns(sheet1, sheet2):
 
 
 # drop patients with no slides and patients with all x's in the columns "slide a", "slide b", and "slide membrane roll"
-def delete_patients(sheet):
+# limit dataset to the 347 patients from the DP3 playset
+def delete_patients(sheet, dp3_sheet):
     # drop patients with no slides
     sheet = sheet[sheet["not_in_file"] != "no_slides"]
 
     # drop patients with all x's
     sheet = sheet[~((sheet["slide_a"] == "x") & (sheet["slide_b"] == "x") & (sheet["slide_membrane_roll"] == "x"))]
+    
+    # limit dataset to the 347 patients from the DP3 playset
+    filtered_patients = dp3_sheet["Record.ID"].unique().tolist()
+    sheet = sheet[sheet["id"].isin(filtered_patients)]
 
     return sheet
 
@@ -203,11 +209,11 @@ def print_totals(sheet):
 
 
 def main():
-    sheet1, sheet2, clinical_sheet = load_sheets()
+    sheet1, sheet2, clinical_sheet, dp3_sheet = load_sheets()
     sheet1 = standardize_sheet(sheet1)
     sheet2 = standardize_sheet(sheet2)
     merged = merge_sheets(sheet1, sheet2)
-    merged = delete_patients(merged)
+    merged = delete_patients(merged, dp3_sheet)
     merged = delete_columns(merged)
     merged = encode(merged)
     merged = add_sptb_column(merged, clinical_sheet)

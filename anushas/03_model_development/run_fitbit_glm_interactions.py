@@ -78,7 +78,7 @@ def run_glm_fitbit(dat, fitbit_metrics, outcomes):
             # subset the data to include the outcome (y), the predictor (x), and all covariates
             sub = dat[
                 [
-                    "record_id",
+                    "id",
                     y,
                     x,
                     "maternal_age",
@@ -194,33 +194,15 @@ def main():
 
     print(fitbit_sheet.columns)
 
-    merged = fitbit_sheet.merge(placental_sheet, left_on='record_id', right_on='id', how='inner')
-    merged = merged.merge(clinical_sheet, left_on='record_id', right_on='id', how='inner')
+    merged = fitbit_sheet.merge(placental_sheet, on='id', how='inner')
+    merged = merged.merge(clinical_sheet, on='id', how='inner')
 
     fitbit_metrics = [
-        'activities_summary_activescore', 'activities_summary_activitycalories',
-       'activities_summary_caloriesbmr', 'activities_summary_caloriesout',
-       'activities_summary_fairlyactiveminutes',
-       'activities_summary_lightlyactiveminutes',
-       'activities_summary_marginalcalories',
-       'activities_summary_sedentaryminutes', 'heart_rate_resting_heart_rate',
-       'heart_rate_zone:_out_of_range_caloriesout',
-       'heart_rate_zone:_out_of_range_min',
-       'heart_rate_zone:_out_of_range_max',
-       'heart_rate_zone:_out_of_range_minutes',
-       'heart_rate_zone:_fat_burn_caloriesout',
-       'heart_rate_zone:_fat_burn_min', 'heart_rate_zone:_fat_burn_max',
-       'heart_rate_zone:_fat_burn_minutes',
-       'heart_rate_zone:_cardio_caloriesout', 'heart_rate_zone:_cardio_min',
-       'heart_rate_zone:_cardio_max', 'heart_rate_zone:_cardio_minutes',
-       'heart_rate_zone:_peak_caloriesout', 'heart_rate_zone:_peak_min',
-       'heart_rate_zone:_peak_max', 'heart_rate_zone:_peak_minutes',
-       'sleep_summary_stages_deep', 'sleep_summary_stages_light',
-       'sleep_summary_stages_rem', 'sleep_summary_stages_wake',
-       'sleep_summary_total_sleep_records', 'sleep_summary_total_time_in_bed',
-       'activities_summary_steps', 'activities_summary_totaldistances',
-       'activities_summary_veryactiveminutes',
-       'sleep_summary_total_minutes_asleep'
+        'activities_summary_activitycalories', 'activities_summary_caloriesout', 'activities_summary_fairlyactiveminutes', 
+        'activities_summary_lightlyactiveminutes', 'activities_summary_sedentaryminutes', 'heart_rate_resting_heart_rate', 'heart_rate_zone:_fat_burn_minutes',
+        'heart_rate_zone:_cardio_minutes', 'heart_rate_zone:_peak_minutes', 'sleep_summary_stages_deep', 'sleep_summary_stages_light', 'sleep_summary_stages_rem', 
+        'sleep_summary_stages_wake', 'sleep_summary_total_sleep_records', 'sleep_summary_total_time_in_bed', 'activities_summary_steps', 
+        'activities_summary_totaldistances', 'activities_summary_veryactiveminutes', 'sleep_summary_total_minutes_asleep'
     ]
 
     # filter your fitbit_metrics list dynamically to only include columns with actual valid data
@@ -234,13 +216,13 @@ def main():
 
     print("Length of fitbit_metrics list: ", len(valid_fitbit_metrics))
 
-    for metric in valid_fitbit_metrics:
+    '''for metric in valid_fitbit_metrics:
         print(merged[metric].value_counts())
-        print("\n")
+        print("\n")'''
 
     # Returns non-null, non-zero counts for all metrics at once
-    non_zero_counts = (merged[valid_fitbit_metrics].notna() & (merged[valid_fitbit_metrics] != 0)).sum()
-    print(non_zero_counts)
+    '''non_zero_counts = (merged[valid_fitbit_metrics].notna() & (merged[valid_fitbit_metrics] != 0)).sum()
+    print(non_zero_counts)'''
     
     outcomes = [
         'distal_villous_hypoplasia_focal/diffuse', 'accelerated_villous_maturation', 'increased_syncytial_knots',

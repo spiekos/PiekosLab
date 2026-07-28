@@ -27,7 +27,7 @@ def prepare_pregnancy_counts(df):
 
     # construct dataset 1: all valid Fitbit updates
     all_data_counts = (
-        df_clean.groupby("current_weeks")["record_id"]
+        df_clean.groupby("current_weeks")["id"]
         .nunique()
         .reset_index(name = "patient_count")
     )
@@ -36,7 +36,7 @@ def prepare_pregnancy_counts(df):
     pregnancy_only_df = df_clean[df_clean["current_weeks"] <= df_clean["gest_age_del"]]
 
     pregnancy_counts = (
-        pregnancy_only_df.groupby("current_weeks")["record_id"]
+        pregnancy_only_df.groupby("current_weeks")["id"]
         .nunique()
         .reset_index(name = "patient_count")
     )
