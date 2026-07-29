@@ -1,10 +1,10 @@
-This file contains a table consisting of the number of patients whose data was nulled out, organized
-per metric. Patients had their data nulled out for a certain metric if they had more than 7 consecutive
-days of data missing for that metric.
+This file contains a list of all patients who were dropped from the dataset, along with the reasons for the drop.
 
+The following patients had their data nulled out for more than 7 consecutive days of missing data:
 
 Metric                                        | Patients Excluded
 activities_summary_activitycalories           | 133
+activities_summary_caloriesbmr                | 0
 activities_summary_caloriesout                | 133
 activities_summary_fairlyactiveminutes        | 133
 activities_summary_lightlyactiveminutes       | 133
@@ -13,9 +13,9 @@ heart_rate_resting_heart_rate                 | 184
 heart_rate_zone:_fat_burn_minutes             | 168
 heart_rate_zone:_cardio_minutes               | 168
 heart_rate_zone:_peak_minutes                 | 168
-sleep_summary_stages_deep                     | 183
-sleep_summary_stages_light                    | 183
-sleep_summary_stages_rem                      | 183
+sleep_summary_stages_deep                     | 203
+sleep_summary_stages_light                    | 203
+sleep_summary_stages_rem                      | 203
 sleep_summary_stages_wake                     | 183
 sleep_summary_total_sleep_records             | 180
 sleep_summary_total_time_in_bed               | 180

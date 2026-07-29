@@ -89,14 +89,16 @@ def merge_sheets(sheet1, sheet2):
 
 
 # deletes certain Fitbit metric columns from the sheet if they are deprecated, uninformative, redundant, etc.
+# note that we are supposed to delete the column "activities_summary_caloriesbmr", but we are leaving it in for now (as it's used in the function
+# check_consistency() later on). this column will be deleted after check_consistency() runs
 def delete_columns(sheet):
     columns_to_delete = [
         "activities_goals_steps", "activities_goals_distance", "activities_goals_activeminutes", "activities_goals_caloriesout", 
-        "activities_summary_activescore", "activities_summary_caloriesbmr", "activities_summary_marginalcalories", 
-        "heart_rate_zone:_out_of_range_min", "heart_rate_zone:_fat_burn_min", "heart_rate_zone:_cardio_min", "heart_rate_zone:_peak_min",
-        "heart_rate_zone:_out_of_range_max", "heart_rate_zone:_fat_burn_max", "heart_rate_zone:_cardio_max", "heart_rate_zone:_peak_max",
-        "heart_rate_zone:_out_of_range_caloriesout", "heart_rate_zone:_fat_burn_caloriesout", "heart_rate_zone:_cardio_caloriesout", 
-        "heart_rate_zone:_peak_caloriesout", "heart_rate_zone:_out_of_range_minutes"
+        "activities_summary_activescore", "activities_summary_marginalcalories", "heart_rate_zone:_out_of_range_min", 
+        "heart_rate_zone:_fat_burn_min", "heart_rate_zone:_cardio_min", "heart_rate_zone:_peak_min", "heart_rate_zone:_out_of_range_max", 
+        "heart_rate_zone:_fat_burn_max", "heart_rate_zone:_cardio_max", "heart_rate_zone:_peak_max", "heart_rate_zone:_out_of_range_caloriesout", 
+        "heart_rate_zone:_fat_burn_caloriesout", "heart_rate_zone:_cardio_caloriesout", "heart_rate_zone:_peak_caloriesout", 
+        "heart_rate_zone:_out_of_range_minutes"
     ]
 
     sheet = sheet.drop(columns=columns_to_delete, errors="ignore")
@@ -245,7 +247,160 @@ def null_implausible_values(df, metric_cols, bounds):
         df_cleaned.loc[zero_mask, col] = np.nan
 
     return df_cleaned
+
+
+# performs consistency checks on the Fitbit dataset to ensure that all values are reasonable
+# flags or nulls values inconsistent values
+# checks performed:
+# 1. Minutes budget: veryActive + fairlyActive + lightlyActive + sedentary <= 1440
+# 2. Sleep containment: total minutes asleep <= total time in bed
+# 3. Stage sum: deep + light + rem ~= total minutes asleep
+# 4. Total EE vs basal: caloriesOut >= caloriesBMR
+# 5. Distance-steps coherence: distance ~= steps * stride
+# outputs:
+# df: the cleaned and checked dataset, with appropriate values nulled out
+# flagged_records: a list of all flagged records
+def check_consistency(df):
+    df_checked = df.copy()
+    flagged_records = []
+
+    id_col = "id"
+    date_col = "date"
+
+    # rule 1: minutes budget: veryActive + fairlyActive + lightlyActive + sedentary <= 1440
+    minutes_cols = [
+        "activities_summary_veryactiveminutes",
+        "activities_summary_fairlyactiveminutes",
+        "activities_summary_lightlyactiveminutes",
+        "activities_summary_sedentaryminutes",
+    ]
+    for col in minutes_cols:
+        df_checked[col] = pd.to_numeric(df_checked[col], errors="coerce")
+
+    total_minutes = df_checked[minutes_cols].sum(axis=1, min_count=1)
+    budget_mask = total_minutes > 1440
+
+    if budget_mask.sum() > 0:
+        subset = df_checked.loc[budget_mask].copy()
+        for idx, row in subset.iterrows():
+            flagged_records.append(
+                {
+                    "index": idx,
+                    "id": row[id_col],
+                    "date": row[date_col],
+                    "Rule_Violated": "Minutes budget",
+                    "Description": f"Total active+sedentary minutes ({total_minutes.loc[idx]}) > 1440",
+                }
+            )
+
+    # rule 2: sleep containment: total minutes asleep <= total time in bed
+    asleep_col = "sleep_summary_total_minutes_asleep"
+    bed_col = "sleep_summary_total_time_in_bed"
+
+    df_checked[asleep_col] = pd.to_numeric(df_checked[asleep_col], errors="coerce")
+    df_checked[bed_col] = pd.to_numeric(df_checked[bed_col], errors="coerce")
+
+    containment_mask = df_checked[asleep_col] > df_checked[bed_col]
+
+    if containment_mask.sum() > 0:
+        subset = df_checked.loc[containment_mask].copy()
+        for idx, row in subset.iterrows():
+            flagged_records.append(
+                {
+                    "index": idx,
+                    "id": row[id_col],
+                    "date": row[date_col],
+                    "Rule_Violated": "Sleep containment",
+                    "Description": f"Asleep ({row[asleep_col]}) > In bed ({row[bed_col]})",
+                }
+            )
+        df_checked.loc[containment_mask, asleep_col] = np.nan
+        df_checked.loc[containment_mask, bed_col] = np.nan
+
+    # rule 3: stage sum: deep + light + rem ~= total minutes asleep
+    stage_cols = [
+        "sleep_summary_stages_deep",
+        "sleep_summary_stages_light",
+        "sleep_summary_stages_rem",
+    ]
+
+    for col in stage_cols:
+        df_checked[col] = pd.to_numeric(df_checked[col], errors="coerce")
+
+    stage_total = df_checked[stage_cols].sum(axis=1, min_count=1)
+    stage_mismatch_mask = (
+        ((stage_total - df_checked[asleep_col]).abs() > 30)
+        & stage_total.notna()
+        & df_checked[asleep_col].notna()
+    )
+
+    if stage_mismatch_mask.sum() > 0:
+        subset = df_checked.loc[stage_mismatch_mask].copy()
+        for idx, row in subset.iterrows():
+            flagged_records.append(
+                {
+                    "index": idx,
+                    "id": row[id_col],
+                    "date": row[date_col],
+                    "Rule_Violated": "Stage sum mismatch",
+                    "Description": f"Stage total ({stage_total.loc[idx]}) differs from asleep ({row[asleep_col]}) by > 30 mins",
+                }
+            )
+        for col in stage_cols:
+            df_checked.loc[stage_mismatch_mask, col] = np.nan
+
+    # rule 4: total EE vs basal: caloriesOut >= caloriesBMR
+    ee_col = "activities_summary_caloriesout"
+    bmr_col = "activities_summary_caloriesbmr"
     
+    df_checked[ee_col] = pd.to_numeric(df_checked[ee_col], errors="coerce")
+    df_checked[bmr_col] = pd.to_numeric(df_checked[bmr_col], errors="coerce")
+
+    ee_mask = df_checked[ee_col] < df_checked[bmr_col]
+    
+    if ee_mask.sum() > 0:
+        subset = df_checked.loc[ee_mask].copy()
+        for idx, row in subset.iterrows():
+            flagged_records.append(
+                {
+                    "index": idx,
+                    "id": row[id_col],
+                    "date": row[date_col],
+                    "Rule_Violated": "Total EE vs basal",
+                    "Description": f"CaloriesOut ({row[ee_col]}) < CaloriesBMR ({row[bmr_col]})",
+                }
+            )
+
+    # rule 5: distance-steps coherence: distance ~= steps * stride
+    dist_col = "activities_summary_totaldistances"
+    steps_col = "activities_summary_steps"
+
+    df_checked[dist_col] = pd.to_numeric(df_checked[dist_col], errors="coerce")
+    df_checked[steps_col] = pd.to_numeric(df_checked[steps_col], errors="coerce")
+
+    implied_stride = df_checked[dist_col] / df_checked[steps_col]
+    stride_mask = (
+        (df_checked[steps_col] > 0)
+        & ((implied_stride < 0.0005) | (implied_stride > 0.0015))
+    )
+
+    if stride_mask.sum() > 0:
+        subset = df_checked.loc[stride_mask].copy()
+        for idx, row in subset.iterrows():
+            flagged_records.append(
+                {
+                    "index": idx,
+                    "id": row[id_col],
+                    "date": row[date_col],
+                    "Rule_Violated": "Distance-steps coherence",
+                    "Description": f"Implied stride ({implied_stride.loc[idx]:.5f} km/step) out of bounds",
+                }
+            )
+
+
+    report_df = pd.DataFrame(flagged_records)
+    return df_checked, report_df
+
 
 # for patients with no recording of 7+ days in a row for a certain feature, null out their data for that feature only
 # inputs:
@@ -308,14 +463,65 @@ def drop_patients(sheet, metric_cols):
     return sheet_clean, exclusion_counts
 
 
-# print to a log file explaining why you dropped each patient from the dataset
+# print to a log file explaining which patients were flagged during consistency checks and why
+# print to another log file explaining why you dropped each patient from the dataset
 # i.e. creates a table containing each patient that was dropped and the maximum consecutive number of days their data was missing
-def print_log(exclusion_counts):
-    log_path = "04_results_and_figures/data_analysis/fitbit/dropped_patients_fitbit_log.txt"
-    with open(log_path, "w") as f:
-        f.write("This file contains a table consisting of the number of patients whose data was nulled out, organized\n")
-        f.write("per metric. Patients had their data nulled out for a certain metric if they had more than 7 consecutive\n")
-        f.write("days of data missing for that metric.\n\n\n")
+def print_log(flags, exclusion_counts):
+    log_path1 = "04_results_and_figures/data_analysis/fitbit/consistency_check_flags_fitbit_log.txt"
+    log_path2 = "04_results_and_figures/data_analysis/fitbit/dropped_patients_fitbit_log.txt"
+    
+    with open(log_path1, "w") as f:
+        f.write("This file contains a list of all patients who were flagged during the consistency checks, along with the reasons for the flags.\n\n")
+
+        # define column widths
+        w_idx = 10
+        w_id = 20
+        w_date = 15
+        w_rule = 28
+        w_desc = 50
+
+        header = (
+            f"{'index'.ljust(w_idx)}"
+            f"{'id'.ljust(w_id)}"
+            f"{'date'.ljust(w_date)}"
+            f"{'Rule_Violated'.ljust(w_rule)}"
+            f"{'Description'.ljust(w_desc)}"
+        )
+
+        separator = "-" * len(header)
+
+        rows_formatted = []
+        for _, row in flags.iterrows():
+            line = (
+                f"{str(row["index"]).ljust(w_idx)}"
+                f"{str(row["id"]).ljust(w_id)}"
+                f"{str(row["date"]).ljust(w_date)}"
+                f"{str(row["Rule_Violated"]).ljust(w_rule)}"
+                f"{str(row["Description"]).ljust(w_desc)}"
+            )
+            rows_formatted.append(line)
+
+        table_string = "\n".join([header, separator] + rows_formatted)
+
+        if not flags.empty:
+            f.write(
+                "=" * len(header)
+                + "\n"
+                + " FITBIT DATA CONSISTENCY VIOLATION LOG\n"
+                + "=" * len(header)
+                + "\n\n"
+                + f"Total violations found: {len(flags)}\n\n"
+                + table_string
+                + "\n\n"
+                + "=" * len(header)
+                + "\n"
+            )
+        else:
+            f.write("FITBIT DATA CONSISTENCY CHECK: No rule violations found. All records passed.")
+
+    with open(log_path2, "w") as f:
+        f.write("This file contains a list of all patients who were dropped from the dataset, along with the reasons for the drop.\n\n")
+        f.write("The following patients had their data nulled out for more than 7 consecutive days of missing data:\n\n")
 
         f.write(f"{'Metric':<45} | {'Patients Excluded'}\n")
         for metric, count in exclusion_counts.items():
@@ -333,10 +539,15 @@ def main():
     metric_cols = [col for col in merged.columns if col.startswith(("activities", "sleep", "heart_rate"))]
 
     merged = null_implausible_values(merged, metric_cols, improbable_value_bounds)
+    merged, flags = check_consistency(merged)
+
+    # this column should have been dropped earlier, as it's insignificant and won't be needed in the future. however, it's used in the function
+    # check_consistency(), so we drop it now instead of with the other columns that were dropped earlier.
+    merged = merged.drop(columns=["activities_summary_caloriesbmr"], errors="ignore")
 
     merged_clean, exclusion_counts = drop_patients(merged, metric_cols)
 
-    print_log(exclusion_counts)
+    print_log(flags, exclusion_counts)
 
     # write sheet to an output file
     merged_clean.to_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv", index = False)
