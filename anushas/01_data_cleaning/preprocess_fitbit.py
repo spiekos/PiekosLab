@@ -216,7 +216,7 @@ def filter_person_level_sleep(df):
 
 # filter for day and person validity
 # null out and/or exclude all improbable values in the dataset
-# CUTOFFS SUBJECT TO CHANGE
+# CUTOFFS IN THE BOUNDS SHEET ARE SUBJECT TO CHANGE
 def null_implausible_values(df, metric_cols, bounds):
     # day and person validity
     df_cleaned = wear_time_day_validity(df, metric_cols)
@@ -235,55 +235,6 @@ def null_implausible_values(df, metric_cols, bounds):
         max_mask = df_cleaned[metric] > keep_max
         bounds_mask = min_mask | max_mask
 
-        # DEBUG
-        total_excluded = bounds_mask.sum()
-        if total_excluded > 0:
-            print(f"--- Metric: {metric} (Bounds Filtering) ---")
-            print(f"Total cells: {df_cleaned[metric].count()}")
-            print(f"Total cells excluded: {total_excluded}")
-            print(f"keep_min: {keep_min}")
-            print(f"keep_max: {keep_max}")
-
-            dropped_positions = np.where(bounds_mask)[0]
-            sample_positions = dropped_positions[:5]
-
-            cols_to_show = [
-                c for c in ["id", "date", metric] if c and c in df_cleaned.columns
-            ]
-            if not cols_to_show:
-                cols_to_show = [metric]
-
-            print(f"  - Sample of dropped rows (showing up to 5):")
-            sample_df = df_cleaned.iloc[sample_positions][cols_to_show].copy()
-
-            reasons = []
-            for pos in sample_positions:
-                val = df_cleaned.iloc[pos][metric]
-                try:
-                    val_float = (
-                        float(val)
-                        if pd.notna(val) and str(val).strip() != ""
-                        else None
-                    )
-                except (ValueError, TypeError):
-                    val_float = None
-
-                if val_float is not None:
-                    if pd.notna(keep_min) and val_float < keep_min:
-                        reasons.append(f"Below min ({keep_min})")
-                    elif pd.notna(keep_max) and val_float > keep_max:
-                        reasons.append(f"Above max ({keep_max})")
-                    else:
-                        reasons.append("Within bounds")
-                else:
-                    reasons.append("Invalid/Non-numeric value")
-
-            sample_df["Exclusion_Reason"] = reasons
-            if sample_df.shape[0] > 0:
-                print(sample_df.to_string(index=True))
-            print("\n" + "=" * 50 + "\n")
-    # END DEBUG
-
     # nullify all values out of bounds for this metric
     df_cleaned.loc[bounds_mask, metric] = np.nan
 
@@ -293,42 +244,8 @@ def null_implausible_values(df, metric_cols, bounds):
         zero_mask = df_cleaned[col] == 0
         df_cleaned.loc[zero_mask, col] = np.nan
 
-        # DEBUG
-        total_excluded = zero_mask.sum()
-        print(f"--- Metric: {col} (Zero-Value Filtering) ---")
-        print(f"Total cells: {df_cleaned[col].count()}")
-        print(f"Total cells excluded: {total_excluded}")
-        dropped_positions = np.where(zero_mask)[0]
-        sample_positions = dropped_positions[:5]
-        cols_to_show = [
-            c for c in ["id", "date", col] if c and c in df_cleaned.columns
-        ]
-        if not cols_to_show:
-            cols_to_show = [col]
-        print(f"  - Sample of dropped rows (showing up to {5}):")
-        sample_df = df_cleaned.iloc[sample_positions][cols_to_show].copy()
-        sample_df["Exclusion_Reason"] = "Value equals 0"
-        print(sample_df.to_string(index=True))
-        print("\n" + "=" * 50 + "\n")
-        # END DEBUG
-
-
-
-
-
-
-
-
-
     return df_cleaned
     
-
-
-
-
-
-
-
 
 # for patients with no recording of 7+ days in a row for a certain feature, null out their data for that feature only
 # inputs:
