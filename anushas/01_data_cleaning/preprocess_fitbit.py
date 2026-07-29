@@ -7,7 +7,8 @@ import numpy as np
 def load_sheets():
     sheet1 = pd.read_csv("00_raw_data/DP3_playset.csv", index_col = 0)
     sheet2 = pd.read_csv("00_raw_data/DP3-FitbitFullReport_DATA_LABELS_2025-02-18_1356.csv")
-    return sheet1, sheet2
+    sheet3 = pd.read_csv("00_raw_data/implausible_value_bounds.csv")
+    return sheet1, sheet2, sheet3
 
 
 # standardizes all values to lowercase (except the values in the "id" column)
@@ -61,6 +62,7 @@ def rename_columns(sheet1, sheet2):
 
 # merges the two input sheets on ID and date
 # ensures that no columns are duplicated and all column names are consistent
+# only includes "Fitbit Data" events
 def merge_sheets(sheet1, sheet2):
     sheet1, sheet2 = rename_columns(sheet1, sheet2)
 
@@ -80,6 +82,8 @@ def merge_sheets(sheet1, sheet2):
             merged[base_name] = merged[x_col].fillna(merged[y_col])
             # drop the original suffix columns
             merged.drop(columns=[x_col, y_col], inplace=True)
+
+    merged = merged[merged["event_name"] == "fitbit data"]
 
     return merged
 
@@ -116,47 +120,28 @@ def sort_columns(sheet):
 
 
 # helper function of null_implausible_values()
-# excludes the whole day if the following conditions aren't met:
-# >=10 hours/day wear time (or HR-wear minutes / 1440 >= 0.3-0.4)
-def wear_time_day_validity(df):
-    df_filtered = df.copy()
+# excludes the day for that metric + patient (i.e. just that cell) if the following conditions aren't met:
+# that metric's own stream flag = yes (i.e. 'Fitbit Activity/Heart Rate/Sleep Data Uploaded')
+# that metric's field is populated (non-blank, Resting Heart Rate isn't 'No Value')
+def wear_time_day_validity(df, metric_cols):
+    df_copy = df.copy()
 
-    wear_time_col=None
-    hr_wear_minutes_col=None
+    for metric in metric_cols:
+        if metric.startswith("activities"):
+            flag_col = "fitbit_activity_data_uploaded"
+        elif metric.startswith("heart_rate"):
+            flag_col = "fitbit_heart_rate_data_uploaded"
+        elif metric.startswith("sleep"):
+            flag_col = "fitbit_sleep_data_uploaded"
 
-    # Automatically identify potential column names if not explicitly provided
-    if wear_time_col is None:
-        matches = [c for c in df.columns if "wear" in c.lower() and "time" in c.lower() and "min" not in c.lower() and "hr" not in c.lower()]
-        wear_time_col = matches[0] if matches else None
-        
-    if hr_wear_minutes_col is None:
-        matches_hr = [c for c in df.columns if "hr" in c.lower() and "wear" in c.lower()]
-        hr_wear_minutes_col = matches_hr[0] if matches_hr else None
+        is_blank_or_no_value = df_copy[metric].isnull() | (df_copy[metric] == "No Value")
+        is_stream_yes = df_copy[flag_col].astype(str).str.strip().str.lower() == "yes"
 
-    print(wear_time_col)
-    print(hr_wear_minutes_col)
+        exclude_day = is_blank_or_no_value | ~is_stream_yes
+
+        df_copy.loc[exclude_day, metric] = np.nan
     
-    # Check primary wear time column (assuming hours or minutes; standard is typically hours or minutes >= 10 hours)
-    if wear_time_col and wear_time_col in df_filtered.columns:
-        wt = pd.to_numeric(df_filtered[wear_time_col], errors="coerce")
-        # If wear time is recorded in hours (< 24), threshold is >= 10. If in minutes, threshold is >= 600.
-        # Here we assume standard hours based on ">=10 h/day" rule, but handle cleanly:
-        valid_mask = (wt >= 10) | (wt >= 600) # handles both hour and minute formats safely
-        
-        # If AoU HR-wear minutes proxy is available, apply alternative proxy condition (HR-wear minutes / 1440 >= 0.3)
-        if hr_wear_minutes_col and hr_wear_minutes_col in df_filtered.columns:
-            hr_min = pd.to_numeric(df_filtered[hr_wear_minutes_col], errors="coerce")
-            proxy_mask = (hr_min / 1440.0) >= 0.3
-            valid_mask = valid_mask | proxy_mask
-            
-        # Exclude the whole day (drop row) if the condition is not met
-        df_filtered = df_filtered[valid_mask].copy()
-    elif hr_wear_minutes_col and hr_wear_minutes_col in df_filtered.columns:
-        hr_min = pd.to_numeric(df_filtered[hr_wear_minutes_col], errors="coerce")
-        valid_mask = (hr_min / 1440.0) >= 0.3
-        df_filtered = df_filtered[valid_mask].copy()
-
-    return df_filtered
+    return df_copy
 
 
 # helper function of null_implausible_values()
@@ -225,18 +210,109 @@ def filter_person_level_sleep(df):
     # null out only the sleep columns for these participants
     mask = df_filtered[id_col].isin(invalid_ids)
     df_filtered.loc[mask, sleep_cols] = None
-    
+
     return df_filtered
 
 
-# null out and/or exclude all implausible values in the dataset
-# CUTOFFS SUBJECT TO CHANGE. keep in mind that these may not be the final cutoff values; they may be adjusted in the future
-def null_implausible_values(df):
+# filter for day and person validity
+# null out and/or exclude all improbable values in the dataset
+# CUTOFFS SUBJECT TO CHANGE
+def null_implausible_values(df, metric_cols, bounds):
     # day and person validity
-    df_cleaned = df # DELETE
-    # df_cleaned = wear_time_day_validity(df) # FUNCTION NOT PROOFREAD YET
+    df_cleaned = wear_time_day_validity(df, metric_cols)
     df_cleaned = non_wear_signature(df_cleaned)
     df_cleaned = filter_person_level_sleep(df_cleaned)
+
+    # filter for improbable values
+    for metric in bounds["Source column(s)"]:
+        df_cleaned[metric] = pd.to_numeric(df_cleaned[metric], errors="coerce")
+
+        metric_row = bounds[bounds["Source column(s)"] == metric]
+        keep_min = metric_row["Keep min"].values[0]
+        keep_max = metric_row["Keep max"].values[0]
+
+        min_mask = df_cleaned[metric] < keep_min
+        max_mask = df_cleaned[metric] > keep_max
+        bounds_mask = min_mask | max_mask
+
+        # DEBUG
+        total_excluded = bounds_mask.sum()
+        if total_excluded > 0:
+            print(f"--- Metric: {metric} (Bounds Filtering) ---")
+            print(f"Total cells: {df_cleaned[metric].count()}")
+            print(f"Total cells excluded: {total_excluded}")
+            print(f"keep_min: {keep_min}")
+            print(f"keep_max: {keep_max}")
+
+            dropped_positions = np.where(bounds_mask)[0]
+            sample_positions = dropped_positions[:5]
+
+            cols_to_show = [
+                c for c in ["id", "date", metric] if c and c in df_cleaned.columns
+            ]
+            if not cols_to_show:
+                cols_to_show = [metric]
+
+            print(f"  - Sample of dropped rows (showing up to 5):")
+            sample_df = df_cleaned.iloc[sample_positions][cols_to_show].copy()
+
+            reasons = []
+            for pos in sample_positions:
+                val = df_cleaned.iloc[pos][metric]
+                try:
+                    val_float = (
+                        float(val)
+                        if pd.notna(val) and str(val).strip() != ""
+                        else None
+                    )
+                except (ValueError, TypeError):
+                    val_float = None
+
+                if val_float is not None:
+                    if pd.notna(keep_min) and val_float < keep_min:
+                        reasons.append(f"Below min ({keep_min})")
+                    elif pd.notna(keep_max) and val_float > keep_max:
+                        reasons.append(f"Above max ({keep_max})")
+                    else:
+                        reasons.append("Within bounds")
+                else:
+                    reasons.append("Invalid/Non-numeric value")
+
+            sample_df["Exclusion_Reason"] = reasons
+            if sample_df.shape[0] > 0:
+                print(sample_df.to_string(index=True))
+            print("\n" + "=" * 50 + "\n")
+    # END DEBUG
+
+    # nullify all values out of bounds for this metric
+    df_cleaned.loc[bounds_mask, metric] = np.nan
+
+    # address inclusive bounds for sleep summaries (0 values)
+    sleep_cols = ["sleep_summary_total_minutes_asleep", "sleep_summary_total_time_in_bed"]
+    for col in sleep_cols:
+        zero_mask = df_cleaned[col] == 0
+        df_cleaned.loc[zero_mask, col] = np.nan
+
+        # DEBUG
+        total_excluded = zero_mask.sum()
+        print(f"--- Metric: {col} (Zero-Value Filtering) ---")
+        print(f"Total cells: {df_cleaned[col].count()}")
+        print(f"Total cells excluded: {total_excluded}")
+        dropped_positions = np.where(zero_mask)[0]
+        sample_positions = dropped_positions[:5]
+        cols_to_show = [
+            c for c in ["id", "date", col] if c and c in df_cleaned.columns
+        ]
+        if not cols_to_show:
+            cols_to_show = [col]
+        print(f"  - Sample of dropped rows (showing up to {5}):")
+        sample_df = df_cleaned.iloc[sample_positions][cols_to_show].copy()
+        sample_df["Exclusion_Reason"] = "Value equals 0"
+        print(sample_df.to_string(index=True))
+        print("\n" + "=" * 50 + "\n")
+        # END DEBUG
+
+
 
 
 
@@ -260,9 +336,7 @@ def null_implausible_values(df):
 # outputs:
 # sheet_clean: the input sheet cleaned, i.e. after the appropriate data has been nulled
 # exclusion_counts: a table containing the number of patients whose data has been nulled, per metric
-def drop_patients(sheet):
-    metric_cols = [col for col in sheet.columns if col.startswith(("activities", "sleep", "heart_rate"))]
-
+def drop_patients(sheet, metric_cols):
     sheet_clean = sheet.copy()
     
     exclusion_counts = {metric: 0 for metric in metric_cols}
@@ -332,15 +406,18 @@ def print_log(exclusion_counts):
 
 
 def main():
-    sheet1, sheet2 = load_sheets()
+    sheet1, sheet2, improbable_value_bounds = load_sheets()
     sheet1 = standardize_sheet(sheet1)
     sheet2 = standardize_sheet(sheet2)
     merged = merge_sheets(sheet1, sheet2)
     merged = delete_columns(merged)
     merged = sort_columns(merged)
-    merged = null_implausible_values(merged)
 
-    merged_clean, exclusion_counts = drop_patients(merged)
+    metric_cols = [col for col in merged.columns if col.startswith(("activities", "sleep", "heart_rate"))]
+
+    merged = null_implausible_values(merged, metric_cols, improbable_value_bounds)
+
+    merged_clean, exclusion_counts = drop_patients(merged, metric_cols)
 
     print_log(exclusion_counts)
 

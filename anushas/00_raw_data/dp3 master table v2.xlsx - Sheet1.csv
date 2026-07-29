@@ -341,7 +341,7 @@ DP3-0339,Delivered,,,,25.6,,sPTB,sPTB,none,610,F,1,Hx sPTB,yes,0,0,#N/A,#N/A,#N/
 DP3-0340,Delivered,,,,40.1,,Control,Control,none,3820,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,1,1,1,1
 DP3-0341,Loss to follow-up,,,,39.1,,Control,Control,none,3590,M,0,none,yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,0,0,0
 DP3-0342,Delivered,,,,34.1,,HDP,EO severe PE,none,2290,F,1,Hx HDP,yes,1,3,1,1,1,1,1,0,1,1,1,1
-DP3-0343,Delivered,,,,36.9,,sptb,FGR <5+sptb,none,2090,F,0,"none, 1st pregnancy",yes,1,3,1,0,0,1,1,0,0,1,1,1
+DP3-0343,Delivered,,,,36.9,,FGR,FGR <5+sptb,none,2090,F,0,"none, 1st pregnancy",yes,1,3,1,0,0,1,1,0,0,1,1,1
 DP3-0344,Delivered,,,,37.0,,Control,Control,none,2890,M,0,"none, 1st pregnancy",yes,0,0,#N/A,#N/A,#N/A,#N/A,#N/A,0,0,1,1,1
 DP3-0345,Early miscarriage,,,,SAB,,SAB,SAB,none,SAB,SAB,SAB,SAB,no,0,SAB,SAB,SAB,SAB,SAB,SAB,0,0,0,0,0
 DP3-0346,Delivered,,,,40.4,,Control,Control,none,3940,F,0,"none, 1st pregnancy",yes,1,3,1,1,1,1,1,0,0,1,1,1

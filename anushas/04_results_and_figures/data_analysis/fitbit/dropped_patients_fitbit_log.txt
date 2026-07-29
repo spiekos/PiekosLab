@@ -9,7 +9,7 @@ activities_summary_caloriesout                | 133
 activities_summary_fairlyactiveminutes        | 133
 activities_summary_lightlyactiveminutes       | 133
 activities_summary_sedentaryminutes           | 133
-heart_rate_resting_heart_rate                 | 168
+heart_rate_resting_heart_rate                 | 184
 heart_rate_zone:_fat_burn_minutes             | 168
 heart_rate_zone:_cardio_minutes               | 168
 heart_rate_zone:_peak_minutes                 | 168

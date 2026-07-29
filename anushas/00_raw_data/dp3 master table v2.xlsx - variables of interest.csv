@@ -1,4 +1,4 @@
-"ID",status,omics set#,group,subgroup,maternal age,height (cm),weight (kg),delivery bmi,prepregnancy weight self or record,prepregnancy BMI self or record,race,ethnicity,smoking,gravida,parity,diabetes,chtn,labor onset,"Route of delivery 1-vag, 2-cs",gest age del,birthweight,infant sex,apgar 1,apgar 5,nicu days,
+ID,status,omics set#,group,subgroup,maternal age,height (cm),weight (kg),delivery bmi,prepregnancy weight self or record,prepregnancy BMI self or record,race,ethnicity,smoking,gravida,parity,diabetes,chtn,labor onset,"Route of delivery 1-vag, 2-cs",gest age del,birthweight,infant sex,apgar 1,apgar 5,nicu days,
 #N/A,,,,,MOM_AGE,DMOMHGT,MOBADMWT,,,,MOTHER_RACE,EthniciEthnicityDescriptionty,,MHXGRAV,MHXPARA,MENDDIAB,MCVDHTN,LABOR_ONSET,FDELTYPE,,BIRTHWEIGHT,BabySex,APGARSCORE1MINUTE,APGARSCORE5MINUTE,INICUDAY,aspirin
 DP3-0001,Delivered,0,Control,Control,30,163,74,27.9,67.6,25.4,WHITE,NOT HISPANIC OR LATINO,Never,3,2,0,0,Spontaneous,1,39.9,3390,M,8,9,0,no
 DP3-0002,Delivered,0,Control,Control,37,168,80.3,28.5,68.5,24.3,WHITE,NOT HISPANIC OR LATINO,Never,1,0,0,0,?,1,39.3,3150,M,9,9,0,no
@@ -342,7 +342,7 @@ DP3-0339,Delivered,0,sPTB,sPTB,37,158,77,30.8,73.9,29.6,AFRICIAN AMERICAN,NOT HI
 DP3-0340,Delivered,0,Control,Control,31,168,92.5,32.8,78.9,28.0,WHITE,NOT HISPANIC OR LATINO,Never,2,0,0,0,Spontaneous,1,40.1,3820,M,9,9,0,no
 DP3-0341,Loss to follow-up,0,Control,Control,27,163,75.8,28.5,62.1,23.4,AMERICAN INDIAN OR ALASKA NATIVE,NOT HISPANIC OR LATINO,Never,5,0,0,0,?,1,39.1,3590,M,6,9,0,no
 DP3-0342,Delivered,3,HDP,EO severe PE,31,163,109.2,41.1,98.0,36.9,WHITE,NOT HISPANIC OR LATINO,Never,3,4,0,0,Induced (does not include PROM,1,34.1,2290,F,8,9,0,no
-DP3-0343,Delivered,3,sptb,FGR <5+sptb,22,157,69.7,28.3,65.3,26.5,AFRICIAN AMERICAN,NOT HISPANIC OR LATINO,Quit,2,0,0,0,PROM,1,36.9,2090,F,8,9,0,<14
+DP3-0343,Delivered,3,FGR,FGR <5+sptb,22,157,69.7,28.3,65.3,26.5,AFRICIAN AMERICAN,NOT HISPANIC OR LATINO,Quit,2,0,0,0,PROM,1,36.9,2090,F,8,9,0,<14
 DP3-0344,Delivered,0,Control,Control,29,163,81.5,30.7,67.1,25.3,WHITE,NOT HISPANIC OR LATINO,Never,1,3,0,0,Spontaneous,1,37.0,2890,M,9,9,0,no
 DP3-0345,Early miscarriage,SAB,SAB,SAB,0,na,na,na,na,na,na,na,na,1,4,na,na,na,na,SAB,na,na,na,na,na,no
 DP3-0346,Delivered,3,Control,Control,29,165.1,80.6,29.6,65.3,24.0,WHITE,NOT HISPANIC OR LATINO,Never,1,1,0,0,Spontaneous,1,40.4,3940,F,9,9,0,<14
