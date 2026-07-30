@@ -381,7 +381,7 @@ def check_consistency(df):
     implied_stride = df_checked[dist_col] / df_checked[steps_col]
     stride_mask = (
         (df_checked[steps_col] > 0)
-        & ((implied_stride < 0.0005) | (implied_stride > 0.0015))
+        & ((implied_stride < 0.0007) | (implied_stride > 0.0013))
     )
 
     if stride_mask.sum() > 0:
@@ -402,24 +402,24 @@ def check_consistency(df):
     return df_checked, report_df
 
 
-# for patients with no recording of 7+ days in a row for a certain feature, null out their data for that feature only
+# for patients with no recording of 7+ days in a row for a certain feature, flag their data for that feature only
 # inputs:
 # sheet: the fitbit data sheet, which contains patient information and all collected metrics
 # outputs:
-# sheet_clean: the input sheet cleaned, i.e. after the appropriate data has been nulled
-# exclusion_counts: a table containing the number of patients whose data has been nulled, per metric
-def drop_patients(sheet, metric_cols):
-    sheet_clean = sheet.copy()
+# flagged_counts: a table containing the number of patients whose data has been flagged, per metric
+# flag_map: a dictionary mapping patient IDs to lists of metrics that have been flagged for that patient
+def flag_patients(sheet, metric_cols):
+    sheet_flagged = sheet.copy()
     
-    exclusion_counts = {metric: 0 for metric in metric_cols}
+    flag_counts = {metric: 0 for metric in metric_cols}
     
-    sheet_clean["date"] = pd.to_datetime(sheet_clean["date"], errors = "coerce")
-    sheet_clean = sheet_clean.dropna(subset = ["date", "id"])
+    sheet_flagged["date"] = pd.to_datetime(sheet_flagged["date"], errors = "coerce")
+    sheet_flagged = sheet_flagged.dropna(subset = ["date", "id"])
 
-    # dictionary: {pt_id: [list of metrics to nullify for this patient]}
-    nullification_map = {}
+    # dictionary: {pt_id: [list of metrics to flag for this patient]}
+    flag_map = {}
 
-    for pt_id, pt_df in sheet_clean.groupby("id"):
+    for pt_id, pt_df in sheet_flagged.groupby("id"):
         if pt_df["date"].isna().all():
             continue
 
@@ -447,28 +447,23 @@ def drop_patients(sheet, metric_cols):
             consecutive_missing = is_null.groupby((~is_null).cumsum()).cumsum()
             max_gap = consecutive_missing.max()
 
-            # if the patient passed the 7-day limit, null out this metric for this patient
+            # if the patient passed the 7-day limit, flag this metric for this patient
             if max_gap >= 7:
-                if pt_id not in nullification_map:
-                    nullification_map[pt_id] = []
-                nullification_map[pt_id].append(metric)
+                if pt_id not in flag_map:
+                    flag_map[pt_id] = []
+                flag_map[pt_id].append(metric)
+                flag_counts[metric] += 1
 
-                exclusion_counts[metric] += 1
-
-    # nullify all appropriate data
-    if nullification_map:
-        for pt_id, metrics_to_null in nullification_map.items():
-            sheet_clean.loc[sheet_clean["id"] == pt_id, metrics_to_null] = np.nan
-
-    return sheet_clean, exclusion_counts
+    return flag_counts, flag_map
 
 
 # print to a log file explaining which patients were flagged during consistency checks and why
-# print to another log file explaining why you dropped each patient from the dataset
-# i.e. creates a table containing each patient that was dropped and the maximum consecutive number of days their data was missing
-def print_log(flags, exclusion_counts):
+# print to another log file explaining why you flagged each patient in the dataset
+# i.e. creates a table containing the total number of flagged patients per metric
+# also creates a table containing each patient that was flagged and the metrics for which the maximum consecutive missing days > 7
+def print_log(flags, flag_counts, flag_map):
     log_path1 = "04_results_and_figures/data_analysis/fitbit/consistency_check_flags_fitbit_log.txt"
-    log_path2 = "04_results_and_figures/data_analysis/fitbit/dropped_patients_fitbit_log.txt"
+    log_path2 = "04_results_and_figures/data_analysis/fitbit/flagged_patients_fitbit_log.txt"
     
     with open(log_path1, "w") as f:
         f.write("This file contains a list of all patients who were flagged during the consistency checks, along with the reasons for the flags.\n\n")
@@ -519,13 +514,43 @@ def print_log(flags, exclusion_counts):
         else:
             f.write("FITBIT DATA CONSISTENCY CHECK: No rule violations found. All records passed.")
 
-    with open(log_path2, "w") as f:
-        f.write("This file contains a list of all patients who were dropped from the dataset, along with the reasons for the drop.\n\n")
-        f.write("The following patients had their data nulled out for more than 7 consecutive days of missing data:\n\n")
+    counts_df = pd.DataFrame(list(flag_counts.items()), columns=["Metric", "Total_Flagged_Patients"])
 
-        f.write(f"{'Metric':<45} | {'Patients Excluded'}\n")
-        for metric, count in exclusion_counts.items():
-            f.write(f"{str(metric).strip():<45} | {count}\n")
+    with open(log_path2, "w") as f:
+        # format flag map table
+        w_id = 25
+        w_metrics_list = 60
+        header_2 = f"{'Patient_ID'.ljust(w_id)}{'Flagged_Metrics'.ljust(w_metrics_list)}"
+        sep_2 = "-" * len(header_2)
+
+        rows_2 = []
+        if not flag_map.empty:
+            for _, row in flag_map.iterrows():
+                rows_2.append(
+                    f"{str(row['Patient_ID']).ljust(w_id)}{str(row['Flagged_Metrics']).ljust(w_metrics_list)}"
+                )
+            table_2 = "\n".join([header_2, sep_2] + rows_2)
+        else:
+            table_2 = "No patient metrics exceeded the gap threshold."
+
+        # print to log file
+        f.write(
+            "=" * 80
+            + "\n"
+            + " PATIENT GAP THRESHOLD FLAG REPORT\n"
+            + "=" * 80
+            + "\n\n"
+            + "--- Summary: Flag Counts per Metric ---\n"
+            + flag_counts.to_string(index=False)
+            + "\n\n"
+            + "=" * 80
+            + "\n\n"
+            + "--- Details: Flagged Metrics per Patient ---\n"
+            + table_2
+            + "\n\n"
+            + "=" * 80
+            + "\n"
+        )
 
 
 def main():
@@ -537,6 +562,7 @@ def main():
     merged = sort_columns(merged)
 
     metric_cols = [col for col in merged.columns if col.startswith(("activities", "sleep", "heart_rate"))]
+    metric_cols.remove("activities_summary_caloriesbmr") # we don't need to analyze this column
 
     merged = null_implausible_values(merged, metric_cols, improbable_value_bounds)
     merged, flags = check_consistency(merged)
@@ -545,12 +571,26 @@ def main():
     # check_consistency(), so we drop it now instead of with the other columns that were dropped earlier.
     merged = merged.drop(columns=["activities_summary_caloriesbmr"], errors="ignore")
 
-    merged_clean, exclusion_counts = drop_patients(merged, metric_cols)
+    flag_counts, flag_map = flag_patients(merged, metric_cols)
 
-    print_log(flags, exclusion_counts)
+    # convert flag_counts and flag_map to DataFrames so they can be easily printed to the log file
+    counts_df = pd.DataFrame(list(flag_counts.items()), columns=["Metric", "Total_Flagged_Patients"])
+    map_rows = []
+    for pt_id, metrics in flag_map.items():
+        map_rows.append(
+            {
+                "Patient_ID": pt_id,
+                "Flagged_Metrics": ", ".join(metrics)
+                if isinstance(metrics, list)
+                else str(metrics),
+            }
+        )
+    map_df = pd.DataFrame(map_rows)
+
+    print_log(flags, counts_df, map_df)
 
     # write sheet to an output file
-    merged_clean.to_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv", index = False)
+    merged.to_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv", index = False)
 
 
 if __name__ == "__main__":
