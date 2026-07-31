@@ -29,6 +29,7 @@ def load_sheet():
 
     placental_sheet = pd.read_csv("01_data_cleaning/processed_data/processed_placental_data.csv")
     master_main = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - Sheet1.csv")
+    fitbit_sheet = pd.read_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv")
     
     # normalize ID column and lowercase all headers across all sheets
     for df in [clinical_sheet, master_clinical, placental_sheet, master_main]:
@@ -38,7 +39,7 @@ def load_sheet():
                     df.rename(columns={col: "id"}, inplace=True)
             df.columns = [str(c).strip().lower() for c in df.columns]
 
-    return clinical_sheet, master_clinical, placental_sheet, master_main
+    return clinical_sheet, master_clinical, placental_sheet, master_main, fitbit_sheet
 
 
 # returns a diagnostic summary of data missingness across all patients for the following information:
@@ -481,7 +482,7 @@ def bin_features(df):
 
 # generates a table ("Table 1") that introduces our cohort by providing statistics for various demographic features
 # categorical variables: count (%). continuous variables: median (IQR).
-def generate_table_one(clinical_sheet, master_clinical, master_main):
+def generate_table_one(clinical_sheet, master_clinical, master_main, fitbit_sheet):
     mc = master_clinical.copy()
     mm = master_main.copy()
     cs = clinical_sheet.copy()
@@ -510,6 +511,15 @@ def generate_table_one(clinical_sheet, master_clinical, master_main):
             numeric_col = pd.to_numeric(df[col], errors="coerce")
             df[col] = numeric_col.map({1: "Yes", 0: "No", 1.0: "Yes", 0.0: "No"})
 
+    # filter cohort to only include patients who have valid data in at least one feature across any bin
+    bin_valid_ids = set()
+    feature_cols = [col for col in fitbit_sheet.columns if col.startswith(("activities", "sleep", "heart_rate"))]
+    # check which patients have non-null data for at least one feature in this sheet
+    valid_mask = fitbit_sheet[feature_cols].notna().any(axis=1)
+    bin_valid_ids.update(fitbit_sheet.loc[valid_mask, "id"].dropna())
+    # restrict dataframe to only those patients
+    df = df[df["id"].isin(bin_valid_ids)].copy()
+    
     table1_vars = [
         "para_pre_term",
         "hosp_insurance_grping",
@@ -859,7 +869,7 @@ def print_log(missing_report, missing_ids, race_table, total_patients, cont_summ
 
 
 def main():
-    clinical_sheet, master_clinical, placental_sheet, master_main = load_sheet()
+    clinical_sheet, master_clinical, placental_sheet, master_main, fitbit_sheet = load_sheet()
     
     # filter master_clinical and master_main to only contain the 337 patient IDs we want
     valid_patient_ids = clinical_sheet['id'].unique()
@@ -870,7 +880,7 @@ def main():
     race_table, total_patients = get_race_counts(clinical_sheet)
     cont_summary_table, cat_summary_table = calc_demographic_stats(clinical_sheet)
 
-    table_1 = generate_table_one(clinical_sheet, master_clinical_filtered, master_main_filtered)
+    table_1 = generate_table_one(clinical_sheet, master_clinical_filtered, master_main_filtered, fitbit_sheet)
     outcomes_table = generate_outcomes_table(clinical_sheet, master_clinical_filtered, placental_sheet)
     export_formatted_tables_to_file(table_1, outcomes_table)
 

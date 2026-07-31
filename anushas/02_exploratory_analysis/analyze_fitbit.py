@@ -4,8 +4,9 @@ import numpy as np
 
 # load and return the fitbit dataset
 def load_sheet():
-    sheet = pd.read_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv", low_memory = False)
-    return sheet
+    sheet1 = pd.read_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv", low_memory = False)
+    sheet2 = pd.read_csv("01_data_cleaning/processed_data/processed_clinical_data.csv")
+    return sheet1, sheet2
 
 
 # filters the sheet to only include "fitbit data" events and only include events during pregnancy
@@ -33,12 +34,12 @@ def bucket_data(sheet):
     bins = [float("-inf"), 14, 22, 32, float("inf")]
     labels = ["first", "early_second", "late_second_early_third", "late_third"]
 
-    local_sheet["group"] = pd.cut(local_sheet["current_weeks"], bins = bins, labels = labels, right = False)
+    local_sheet["bin"] = pd.cut(local_sheet["current_weeks"], bins = bins, labels = labels, right = False)
 
     outputs = []
     
     for label in labels:
-        group_sheet = local_sheet[local_sheet["group"] == label].drop(columns = ["group"])
+        group_sheet = local_sheet[local_sheet["bin"] == label].drop(columns = ["bin"])
         outputs.append(group_sheet)
 
     return outputs
@@ -46,9 +47,9 @@ def bucket_data(sheet):
 
 # returns the total number of unique patients, after data has been filtered
 def get_total_patients(sheet):
-    # filter for rows for which record id starts with "dp3-"
+    # filter for rows for which record id starts with "DP3-"
     # this ensures we only count actual patients
-    dp3_patients = sheet[sheet["id"].astype(str).str.startswith("dp3-")]
+    dp3_patients = sheet[sheet["id"].astype(str).str.startswith("DP3-")]
     return dp3_patients["id"].nunique()
 
 
@@ -75,6 +76,32 @@ def get_missing_per_patient(sheet, feature_cols):
     )
 
     return result
+
+
+def get_missing_patients_per_feature_per_timeframe(sheets, feature_cols, timeframe_names):
+    summary_data = []
+
+    for df, timeframe in zip(sheets, timeframe_names):
+        df_cleaned = df.copy()
+
+        total_patients_in_timeframe = df_cleaned["id"].nunique()
+
+        for feature in feature_cols:
+            # calculate number of patients who have valid (non-missing) data for this specific feature
+            sub_df = df_cleaned.dropna(subset=["id", feature])
+            valid_patients = sub_df["id"].nunique()
+
+            missing_patients = total_patients_in_timeframe - valid_patients
+
+            summary_data.append(
+                {
+                    "Timeframe": timeframe,
+                    "Feature": feature,
+                    "Total_Missing_Patients": missing_patients,
+                }
+            )
+
+    return pd.DataFrame(summary_data)
 
 
 # returns a table containing the maximum consecutive number of days missing per feature per patient
@@ -155,6 +182,78 @@ def get_patients_per_timeframe(sheets, feature_cols, timeframe_names):
     return pd.DataFrame(summary_data)
 
 
+# returns a table of unique patient counts per feature per bin, split by control and adverse outcomes
+def get_patients_per_feature_per_bin(sheets, feature_cols, timeframe_names):
+    summary_data = []
+
+    for df, timeframe in zip(sheets, timeframe_names):
+        df_cleaned = df.copy()
+
+        df_cleaned["is_control"] = (df_cleaned["group"].astype(str).str.strip().str.lower() == "control")
+
+        for feature in feature_cols:
+            sub_df = df_cleaned.dropna(subset=["id", feature, "group"])
+
+            if sub_df.empty:
+                continue
+
+            # count unique patients per control status for this feature in this bin
+            grouped = (sub_df.groupby("is_control")["id"].nunique().to_dict())
+
+            control_count = grouped.get(True, 0)
+            adverse_count = grouped.get(False, 0)
+
+            summary_data.append(
+                {
+                    "Timeframe": timeframe,
+                    "Feature": feature,
+                    "Control": control_count,
+                    "Adverse_Outcome": adverse_count,
+                }
+            )
+
+    return pd.DataFrame(summary_data)
+
+
+def get_omics_patients_per_feature_per_bin(sheets, feature_cols, timeframe_names, clinical_sheet):
+    summary_data = []
+
+    valid_omics_patients = set(clinical_sheet.loc[clinical_sheet["omics_set#"] > 0, "id"].dropna())
+
+    for df, timeframe in zip(sheets, timeframe_names):
+        df_cleaned = df.copy()
+
+        df_cleaned = df_cleaned[df_cleaned["id"].isin(valid_omics_patients)]
+
+        if df_cleaned.empty:
+            continue
+
+        df_cleaned["is_control"] = (df_cleaned["group"].astype(str).str.strip().str.lower() == "control")
+
+        for feature in feature_cols:
+            sub_df = df_cleaned.dropna(subset=["id", feature, "group"])
+
+            if sub_df.empty:
+                continue
+
+            # count unique patients per control status for this feature in this bin
+            grouped = (sub_df.groupby("is_control")["id"].nunique().to_dict())
+
+            control_count = grouped.get(True, 0)
+            adverse_count = grouped.get(False, 0)
+
+            summary_data.append(
+                {
+                    "Timeframe": timeframe,
+                    "Feature": feature,
+                    "Control": control_count,
+                    "Adverse_Outcome": adverse_count,
+                }
+            )
+
+    return pd.DataFrame(summary_data)
+
+
 # returns a true/false matrix (patients x metrics) showing whether each patient has non-missing data for at least 80% of their valid pregnancy tracking days
 # also returns a table containing the number of metrics with 80+% of valid data, per patient
 # also returns a table containing the number of patients with 80+% of valid data, per metric
@@ -205,9 +304,17 @@ def get_metric_representation_matrices(sheet, feature_cols):
 
 
 # print all calculated data into a log file
-def print_log(total_patients, total_missing, per_patient, max_con_missing, unique_dates, summary_stats, 
-              patients_per_timeframe, metric_matrix, pt_summary, metric_summary, num_metrics):
+def print_log(total_patients, total_missing, per_patient, missing_per_feature_per_bin, max_con_missing, unique_dates, summary_stats, patients_per_timeframe, 
+              patients_per_feature_per_bin, omics_patients_per_feature_per_bin, metric_matrix, pt_summary, metric_summary, num_metrics):
     log_path = "04_results_and_figures/data_analysis/fitbit/fitbit_data_analysis.txt"
+
+    # formats table by applying a mask to hide duplicate label rows
+    def get_clean_markdown(table):
+        if table.empty:
+            return "--- No Rows Passed Selection ---"
+        sorted_t = table.copy()
+        sorted_t["Timeframe"] = sorted_t["Timeframe"].mask(sorted_t["Timeframe"].duplicated(), "")
+        return sorted_t.to_markdown(index = False)
 
     with open(log_path, "w") as f:
         f.write("Following are various statistics about the Fitbit dataset. \n")
@@ -221,6 +328,10 @@ def print_log(total_patients, total_missing, per_patient, max_con_missing, uniqu
 
         f.write("Number of missing days per patient:\n")
         f.write(per_patient.to_string(index = False))
+        f.write("\n\n\n")
+
+        f.write("Number of missing patients per feature per timeframe:\n")
+        f.write(get_clean_markdown(missing_per_feature_per_bin))
         f.write("\n\n\n")
 
         f.write("Maximum consecutive number of days missing per feature per patient:\n")
@@ -238,6 +349,14 @@ def print_log(total_patients, total_missing, per_patient, max_con_missing, uniqu
         f.write(patients_per_timeframe.to_string(index = False))
         f.write("\n\n\n")
 
+        f.write("Number of unique patients per feature per timeframe:\n")
+        f.write(get_clean_markdown(patients_per_feature_per_bin))
+        f.write("\n\n\n")
+
+        f.write("Number of unique patients with omics data per feature per timeframe:\n")
+        f.write(get_clean_markdown(omics_patients_per_feature_per_bin))
+        f.write("\n\n\n")
+
         f.write("Which patients contributed valid data for at least 80% of their pregnancy, per feature:\n")
         f.write(metric_matrix.to_string(index = False))
         f.write("\n\n\n")
@@ -252,7 +371,7 @@ def print_log(total_patients, total_missing, per_patient, max_con_missing, uniqu
 
 
 def main():
-    fitbit_sheet = load_sheet()
+    fitbit_sheet, clinical_sheet = load_sheet()
 
     sheet_filtered = filter_sheet(fitbit_sheet)
 
@@ -262,21 +381,24 @@ def main():
     # forcefully convert all feature columns + gest age columns into numeric types
     sheet_filtered[numeric_cols] = sheet_filtered[numeric_cols].apply(pd.to_numeric, errors = "coerce")
     
-    sheet_bucketed = bucket_data(sheet_filtered)
+    sheets_bucketed = bucket_data(sheet_filtered)
 
     timeframe_names = ["First Trimester", "Early Second Trimester", "Late Second and Early Third Trimester", "Late Third Trimester"]
 
     total_patients = get_total_patients(sheet_filtered)
     total_missing = count_total_missing(sheet_filtered)
     per_patient = get_missing_per_patient(sheet_filtered, feature_cols)
+    missing_per_feature_per_bin = get_missing_patients_per_feature_per_timeframe(sheets_bucketed, feature_cols, timeframe_names)
     max_con_missing = get_max_consecutive_missing(sheet_filtered, feature_cols)
     unique_dates = count_unique_dates(sheet_filtered)
     summary_stats = calc_summary_stats(sheet_filtered, feature_cols)
-    patients_per_timeframe = get_patients_per_timeframe(sheet_bucketed, feature_cols, timeframe_names)
+    patients_per_timeframe = get_patients_per_timeframe(sheets_bucketed, feature_cols, timeframe_names)
+    patients_per_feature_per_bin = get_patients_per_feature_per_bin(sheets_bucketed, feature_cols, timeframe_names)
+    omics_patients_per_feature_per_bin = get_omics_patients_per_feature_per_bin(sheets_bucketed, feature_cols, timeframe_names, clinical_sheet)
     metric_matrix, pt_summary, metric_summary = get_metric_representation_matrices(sheet_filtered, feature_cols)
 
-    print_log(total_patients, total_missing, per_patient, max_con_missing, unique_dates, summary_stats, 
-              patients_per_timeframe, metric_matrix, pt_summary, metric_summary, len(feature_cols))
+    print_log(total_patients, total_missing, per_patient, missing_per_feature_per_bin, max_con_missing, unique_dates, summary_stats, patients_per_timeframe, 
+              patients_per_feature_per_bin, omics_patients_per_feature_per_bin, metric_matrix, pt_summary, metric_summary, len(feature_cols))
 
 
 if __name__ == "__main__":

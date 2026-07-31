@@ -1,5 +1,5 @@
 Clinical Sheet Demographics Summary Report
-Total Patient Records Analyzed: 337
+Total Patient Records Analyzed: 346
 
 
 Patient missingness summary report:
@@ -7,70 +7,72 @@ Patient missingness summary report:
 However, median imputation has been performed on this feature, so 0 missing values are displayed
 to accurately reflect the current status of the dataset.)
                Feature / Metric  Missing Count (NaNs) Percent Missing
-                   maternal_age                     5           1.48%
-                     infant_sex                     0           0.00%
+                   maternal_age                     7           2.02%
+                     infant_sex                     1           0.29%
 prepregnancy_bmi_self_or_record                     0           0.00%
-                           race                     0           0.00%
-                      ethnicity                    20           5.93%
-                        smoking                     0           0.00%
+                           race                     9           2.60%
+                      ethnicity                    25           7.23%
+                        smoking                     2           0.58%
 
 
 Patient IDs of patients with missing data per feature:
-maternal_age: DP3-0057, DP3-0111, DP3-0143, DP3-0188, DP3-0387
-infant_sex: None
+maternal_age: DP3-0057, DP3-0111, DP3-0143, DP3-0188, DP3-0242, DP3-0387, DP3-0393E
+infant_sex: DP3-0393E
 prepregnancy_bmi_self_or_record: None
-race: None
-ethnicity: DP3-0024, DP3-0041E, DP3-0057, DP3-0070, DP3-0118E, DP3-0120, DP3-0125, DP3-0127, DP3-0196E, DP3-0222, DP3-0264, DP3-0292, DP3-0320, DP3-0355, DP3-0362E, DP3-0379, DP3-0388, DP3-0392, DP3-0405, DP3-0434
-smoking: None
+race: DP3-0072, DP3-0128, DP3-0202, DP3-0217, DP3-0242, DP3-0256, DP3-0334, DP3-0368, DP3-0393E
+ethnicity: DP3-0024, DP3-0041E, DP3-0057, DP3-0070, DP3-0118E, DP3-0120, DP3-0125, DP3-0127, DP3-0128, DP3-0196E, DP3-0217, DP3-0222, DP3-0242, DP3-0256, DP3-0264, DP3-0292, DP3-0320, DP3-0355, DP3-0362E, DP3-0379, DP3-0388, DP3-0392, DP3-0393E, DP3-0405, DP3-0434
+smoking: DP3-0242, DP3-0393E
 
 
 Counts for race/ethnicity intersections:
 Demographic Group Subtype                          | Count  | Percentage
 ---------------------------------------------------------------------------
-Asian / Non-Hispanic                               | 5      |    1.5%
-Black / Non-Hispanic                               | 40     |   11.9%
-White / Hispanic                                   | 6      |    1.8%
-White / Non-Hispanic                               | 286    |   84.9%
+Asian / Non-Hispanic                               | 5      |    1.4%
+Black / Non-Hispanic                               | 40     |   11.6%
+White / Hispanic                                   | 6      |    1.7%
+White / Non-Hispanic                               | 286    |   82.7%
 
 
 Summary statistics for clinical demographic features:
 
 --- Continuous Features (Median, IQR) ---
 Feature                                  | Median               | IQR                 
-prepregnancy_bmi_self_or_record          | 27.70                | 10.50               
+prepregnancy_bmi_self_or_record          | 27.70                | 10.48               
 
 --- Categorical/Binary Features (Count, %) ---
 Feature                   | Category                  | Count      | %         
 ---------------------------------------------------------------------------
-infant_sex                | m                         | 182        | 54.0%     
-infant_sex                | f                         | 155        | 46.0%     
-race                      | white                     | 292        | 86.6%     
-race                      | black                     | 40         | 11.9%     
-race                      | asian                     | 5          | 1.5%      
-ethnicity                 | not hispanic or latino    | 311        | 92.3%     
-ethnicity                 | nan                       | 20         | 5.9%      
-ethnicity                 | hispanic or latino        | 6          | 1.8%      
-smoking_encoded           | 0                         | 316        | 93.8%     
-smoking_encoded           | 1                         | 21         | 6.2%      
-maternal_age              | 31                        | 29         | 8.6%      
-maternal_age              | 30                        | 27         | 8.0%      
-maternal_age              | 33                        | 27         | 8.0%      
-maternal_age              | 36                        | 26         | 7.7%      
-maternal_age              | 32                        | 25         | 7.4%      
-maternal_age              | 35                        | 24         | 7.1%      
-maternal_age              | 37                        | 22         | 6.5%      
-maternal_age              | 34                        | 22         | 6.5%      
-maternal_age              | 38                        | 18         | 5.3%      
-maternal_age              | 27                        | 15         | 4.5%      
-maternal_age              | 29                        | 14         | 4.2%      
-maternal_age              | 28                        | 12         | 3.6%      
-maternal_age              | 26                        | 11         | 3.3%      
-maternal_age              | 24                        | 9          | 2.7%      
-maternal_age              | 39                        | 8          | 2.4%      
-maternal_age              | 40                        | 8          | 2.4%      
-maternal_age              | 23                        | 7          | 2.1%      
-maternal_age              | 25                        | 6          | 1.8%      
-maternal_age              | 0                         | 5          | 1.5%      
+infant_sex                | m                         | 188        | 54.3%     
+infant_sex                | f                         | 157        | 45.4%     
+infant_sex                | nan                       | 1          | 0.3%      
+race                      | white                     | 292        | 84.4%     
+race                      | black                     | 40         | 11.6%     
+race                      | nan                       | 9          | 2.6%      
+race                      | asian                     | 5          | 1.4%      
+ethnicity                 | not hispanic or latino    | 314        | 90.8%     
+ethnicity                 | nan                       | 25         | 7.2%      
+ethnicity                 | hispanic or latino        | 7          | 2.0%      
+smoking_encoded           | 0                         | 325        | 93.9%     
+smoking_encoded           | 1                         | 21         | 6.1%      
+maternal_age              | 31                        | 31         | 9.0%      
+maternal_age              | 30                        | 28         | 8.1%      
+maternal_age              | 33                        | 27         | 7.8%      
+maternal_age              | 36                        | 26         | 7.5%      
+maternal_age              | 32                        | 26         | 7.5%      
+maternal_age              | 35                        | 24         | 6.9%      
+maternal_age              | 37                        | 22         | 6.4%      
+maternal_age              | 34                        | 22         | 6.4%      
+maternal_age              | 38                        | 18         | 5.2%      
+maternal_age              | 29                        | 15         | 4.3%      
+maternal_age              | 27                        | 15         | 4.3%      
+maternal_age              | 26                        | 13         | 3.8%      
+maternal_age              | 28                        | 12         | 3.5%      
+maternal_age              | 24                        | 9          | 2.6%      
+maternal_age              | 39                        | 8          | 2.3%      
+maternal_age              | 40                        | 8          | 2.3%      
+maternal_age              | 23                        | 7          | 2.0%      
+maternal_age              | 0                         | 7          | 2.0%      
+maternal_age              | 25                        | 6          | 1.7%      
 maternal_age              | 41                        | 4          | 1.2%      
 maternal_age              | 20                        | 4          | 1.2%      
 maternal_age              | 22                        | 3          | 0.9%      
