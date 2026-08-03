@@ -17,8 +17,8 @@ def filter_sheet(sheet):
     # only include events during pregnancy
     # if gestational age at delivery is not in the dataset, assume that delivery occurred at 40 weeks
     sheet_filtered["current_weeks"] = sheet_filtered["timepoint"] / 7
-    sheet_filtered = sheet_filtered[(sheet_filtered["current_weeks"] <= sheet_filtered["gest_age_del"]) | 
-                                    (sheet_filtered["gest_age_del"].isna() & sheet_filtered["current_weeks"] <= 40)]
+    sheet_filtered = sheet_filtered[(sheet_filtered["current_weeks"] < sheet_filtered["gest_age_del"]) | 
+                                    (sheet_filtered["gest_age_del"].isna() & sheet_filtered["current_weeks"] < 40)]
     return sheet_filtered
 
 
@@ -31,8 +31,8 @@ def bucket_data(sheet):
 
     local_sheet["current_weeks"] = pd.to_numeric(local_sheet["current_weeks"], errors="coerce")
 
-    bins = [float("-inf"), 14, 22, 32, float("inf")]
-    labels = ["first", "early_second", "late_second_early_third", "late_third"]
+    bins = [float("-inf"), 14, 22, 32, 37, float("inf")]
+    labels = ["first", "early_second", "late_second_early_third", "mid_third", "late_third"]
 
     local_sheet["bin"] = pd.cut(local_sheet["current_weeks"], bins = bins, labels = labels, right = False)
 
@@ -363,7 +363,7 @@ def main():
     
     sheets_bucketed = bucket_data(sheet_filtered)
 
-    timeframe_names = ["First Trimester", "Early Second Trimester", "Late Second and Early Third Trimester", "Late Third Trimester"]
+    timeframe_names = ["First Trimester", "Early Second Trimester", "Late Second and Early Third Trimester", "Mid Third Trimester", "Late Third Trimester"]
 
     total_patients = get_total_patients(sheet_filtered)
     total_missing = count_total_missing(sheet_filtered)

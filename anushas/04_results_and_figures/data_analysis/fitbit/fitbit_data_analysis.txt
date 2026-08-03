@@ -743,7 +743,8 @@ Number of unique patients per timeframe:
                       First Trimester            287
                Early Second Trimester            325
 Late Second and Early Third Trimester            279
-                 Late Third Trimester            207
+                  Mid Third Trimester            207
+                 Late Third Trimester            127
 
 
 Which patients contributed valid data for at least 80% of their pregnancy, per feature:
