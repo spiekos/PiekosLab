@@ -1,0 +1,150 @@
+========================================================================
+DP3 SOP Preprocessing Log  —  MTBL_plasma
+Generated : 2026-08-03 12:44:19
+Database  : HMDB
+========================================================================
+
+INTERNAL STANDARDS USED
+----------------------------------------
+  NEG: c1, c2
+  POS: c1, c2
+
+NORMALIZATION SUMMARY (Steps 1–6)
+----------------------------------------
+  POS injection-order source: raw_workbook_f_number.
+  NEG injection-order source: raw_workbook_f_number.
+  MTBL_plasma: resolved 7 sample IDs via metadata aliases before normalization.
+  POS: filled missing sample-level ISTD geometric means for 22 rows using batch/global medians.
+  POS: ISTD normalization (Step 4(ai)) used geometric mean of ['c1', 'c2'].
+  pycombat without ref.batch, protected=['Subgroup', 'SampleGestAge', 'GestAgeDelivery'], bridge_samples=20
+  POS: batch correction method=pycombat_standard, reference batch=51223.
+  NEG: filled missing sample-level ISTD geometric means for 22 rows using batch/global medians.
+  NEG: ISTD normalization (Step 4(ai)) used geometric mean of ['c1', 'c2'].
+  pycombat without ref.batch, protected=['Subgroup', 'SampleGestAge', 'GestAgeDelivery'], bridge_samples=20
+  NEG: batch correction method=pycombat_standard, reference batch=51223.
+
+  Post-normalization drift flags:
+    ! POS_pre batch 110123: ISTD concordance is weak (minimum pairwise r=0.13).
+    ! POS_pre batch 112524: ISTD concordance is weak (minimum pairwise r=0.25).
+    ! POS_pre batch 51223: ISTD concordance is weak (minimum pairwise r=0.19).
+    ! NEG_pre batch 110123: ISTD concordance is weak (minimum pairwise r=0.24).
+    ! NEG_pre batch 112524: ISTD concordance is weak (minimum pairwise r=0.31).
+    ! NEG_pre batch 51223: ISTD concordance is weak (minimum pairwise r=0.10).
+
+INITIAL BIOLOGICAL SAMPLE COUNTS BY BATCH (before filtering)
+----------------------------------------
+  NEG:
+    Batch 51223: 128 samples
+    Batch 110123: 164 samples
+    Batch 112524: 258 samples
+    Total: 550 samples
+  POS:
+    Batch 51223: 128 samples
+    Batch 110123: 164 samples
+    Batch 112524: 258 samples
+    Total: 550 samples
+
+PER-STEP FEATURE AND SAMPLE COUNTS (Steps 7–18, Parts 3A–3B, Step 30)
+----------------------------------------
+  MERGED:
+    Step                                         Features  Bio Samples
+    ------------------------------------------ ---------- ------------
+    after POS/NEG merge (Step 30)                     565          530
+  NEG:
+    Step                                         Features  Bio Samples
+    ------------------------------------------ ---------- ------------
+    entry (post-ISTD removal)                       3,942          550
+    after Step 7 (feature missingness)              3,940          550
+    after Step 8 (sample missingness)               3,940          550
+    after Step 16 (sample ISTD MAD, post-ComBat)      3,940          550
+    after Step 17 (QC RSD filter, post-ComBat)        590          550
+    after Step 18 (IQR filter, within-timepoint)        560          550
+    after Part 3A (named-compound dedup)              522          550
+    after Part 3B (unnamed dedup)                     136          550
+  POS:
+    Step                                         Features  Bio Samples
+    ------------------------------------------ ---------- ------------
+    entry (post-ISTD removal)                       5,806          550
+    after Step 7 (feature missingness)              5,804          550
+    after Step 8 (sample missingness)               5,804          550
+    after Step 16 (sample ISTD MAD, post-ComBat)      5,804          550
+    after Step 17 (QC RSD filter, post-ComBat)      1,654          550
+    after Step 18 (IQR filter, within-timepoint)      1,571          550
+    after Part 3A (named-compound dedup)            1,453          550
+    after Part 3B (unnamed dedup)                     429          550
+
+  Final (post-dedup) feature count: 565
+  Final biological sample count   : 530
+
+SAMPLES FLAGGED BY FILTER STEP
+----------------------------------------
+  No samples were removed during filtering.
+
+FEATURE FILTER SUMMARY BY STEP
+----------------------------------------
+  NEG Step 17 — QC RSD (per-batch, post-ComBat): 3,350 feature(s) removed
+  NEG Step 18 — IQR filter (within-timepoint): 30 feature(s) removed
+  POS Step 17 — QC RSD (per-batch, post-ComBat): 4,150 feature(s) removed
+  POS Step 18 — IQR filter (within-timepoint): 83 feature(s) removed
+
+DEDUPLICATION (Steps 20–28)
+----------------------------------------
+  Total deduplication drop events: 1,566
+
+BATCH CORRECTION (Step 13)
+----------------------------------------
+  POS: batch correction method=pycombat_standard, reference batch=51223.
+  NEG: batch correction method=pycombat_standard, reference batch=51223.
+
+  Bridge samples used for ComBat anchor:
+    NEG: 20 unique bridge sample(s)
+    POS: 20 unique bridge sample(s)
+
+BATCH-CONFOUNDING CHECKS (Step 12)
+----------------------------------------
+  Group via chi_square: p=0.004285 *** SIGNIFICANT
+  Subgroup via chi_square: p=3.322e-12 *** SIGNIFICANT
+  SampleGestAge via anova: p=0.3436
+  GestAgeDelivery via anova: p=0.009707 *** SIGNIFICANT
+  Group via chi_square: p=0.004285 *** SIGNIFICANT
+  Subgroup via chi_square: p=3.322e-12 *** SIGNIFICANT
+  SampleGestAge via anova: p=0.3436
+  GestAgeDelivery via anova: p=0.009707 *** SIGNIFICANT
+
+SCHYMANSKI ANNOTATION TIER BREAKDOWN
+----------------------------------------
+  Level 1:      0  (  0.0%)
+  Level 2:    179  ( 31.7%)
+  Level 3:    281  ( 49.7%)
+  Level 4:     82  ( 14.5%)
+  Level 5:     23  (  4.1%)
+  Total   :    565
+
+FEATURE MISSINGNESS DETAIL (Step 7)
+----------------------------------------
+  POS: 0 feature(s) removed for missingness.
+  NEG: 0 feature(s) removed for missingness.
+
+QC WARNINGS
+----------------------------------------
+  ! Batch confounding warning: Group is associated with batch (chi-square p=0.004285).
+  ! Batch confounding warning: Subgroup is associated with batch (chi-square p=3.322e-12).
+  ! Batch confounding warning: GestAgeDelivery differs by batch (ANOVA p=0.009707).
+  ! R ref.batch ComBat failed (Command '['Rscript', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-t1zd71eq/combat_ref_batch.R', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-t1zd71eq/matrix.csv', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-t1zd71eq/batch.csv', '51223', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-t1zd71eq/covariates.csv', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-t1zd71eq/corrected.csv']' returned non-zero exit status 1.); trying Python pycombat without ref.batch.
+  ! Python pycombat does not support ref.batch; used standard empirical-Bayes ComBat.
+  ! POS Step 16 skipped: ISTD MAD sample QC is not implemented for metabolomics.
+  ! POS Step 18 IQR filter: 5.0th pct IQR = 0.0007 (floor = 0.1; filter active = True), 95.0th pct IQR = 0.3121 (ceiling = 5.0; filter active = False).
+  ! Batch confounding warning: Group is associated with batch (chi-square p=0.004285).
+  ! Batch confounding warning: Subgroup is associated with batch (chi-square p=3.322e-12).
+  ! Batch confounding warning: GestAgeDelivery differs by batch (ANOVA p=0.009707).
+  ! R ref.batch ComBat failed (Command '['Rscript', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-ru7cq2u3/combat_ref_batch.R', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-ru7cq2u3/matrix.csv', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-ru7cq2u3/batch.csv', '51223', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-ru7cq2u3/covariates.csv', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-ru7cq2u3/corrected.csv']' returned non-zero exit status 1.); trying Python pycombat without ref.batch.
+  ! Python pycombat does not support ref.batch; used standard empirical-Bayes ComBat.
+  ! NEG Step 16 skipped: ISTD MAD sample QC is not implemented for metabolomics.
+  ! NEG Step 18 IQR filter: 5.0th pct IQR = 0.0052 (floor = 0.1; filter active = True), 95.0th pct IQR = 0.3957 (ceiling = 5.0; filter active = False).
+  ! MTBL_plasma POS: averaged 20 biological bridge samples.
+  ! MTBL_plasma NEG: averaged 20 biological bridge samples.
+  ! MTBL_plasma: no curated pregnancy-trajectory metabolites were retained.
+
+========================================================================
+END OF LOG
+========================================================================
