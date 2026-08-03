@@ -1,8 +1,8 @@
 """
 SOP-native untargeted metabolomics and lipidomics preprocessing pipeline.
 
-This module implements the April 2026 DP3 SOP starting from the raw
-Compound Discoverer style exports stored under ../kaylaxu/data/.
+This module implements the August 2026 DP3 SOP starting from the raw
+Compound Discoverer style exports
 
 Does NOT overwrite the older collaborator-integrated scripts. Provides a
 clean replacement entrypoint that follows the SOP ordering:
@@ -437,10 +437,10 @@ def _build_parser() -> argparse.ArgumentParser:
     root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description="DP3 SOP-native omics preprocessing pipeline.")
     parser.add_argument(
-        "--source-root",
+        "--inputs-root",
         type=Path,
-        default=str(root.parent / "source"),
-        help="Path to the source data root.",
+        default=str(root.parent / "inputs"),
+        help="Path to the inputs data root.",
     )
     parser.add_argument(
         "--metadata",
@@ -462,7 +462,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     return parser
 
-def _build_configs(repo_root: Path, source_root: Path, output_root: Path) -> dict[str, DatasetConfig]:
+def _build_configs(repo_root: Path, inputs_root: Path, output_root: Path) -> dict[str, DatasetConfig]:
     return {
         "MTBL_plasma": DatasetConfig(
             dataset_id="MTBL_plasma",
@@ -470,7 +470,7 @@ def _build_configs(repo_root: Path, source_root: Path, output_root: Path) -> dic
             tissue="plasma",
             meta_sheet="n=133 metabolomics",
             meta_sample_col="Sample ID",
-            input_dir=source_root / "data" / "MTBL_plasma",
+            input_dir=inputs_root / "data" / "MTBL_plasma",
             output_dir=output_root / "MTBL_plasma",
             raw_workbook=repo_root / "data" / "metabolomics_raw" / "050725_Sadovsky DP3 Plasma Polar Untargeted_ALL copy.xlsx",
             raw_sheet_pos="POS Compounds",
@@ -484,7 +484,7 @@ def _build_configs(repo_root: Path, source_root: Path, output_root: Path) -> dic
             tissue="placenta",
             meta_sheet="n=133 placenta",
             meta_sample_col="ID",
-            input_dir=source_root / "data" / "MTBL_placenta",
+            input_dir=inputs_root / "data" / "MTBL_placenta",
             output_dir=output_root / "MTBL_placenta",
         ),
         "LIPD_plasma": DatasetConfig(
@@ -493,7 +493,7 @@ def _build_configs(repo_root: Path, source_root: Path, output_root: Path) -> dic
             tissue="plasma",
             meta_sheet="n=133 metabolomics",
             meta_sample_col="Sample ID",
-            input_dir=source_root / "data" / "LIPD_plasma",
+            input_dir=inputs_root / "data" / "LIPD_plasma",
             output_dir=output_root / "LIPD_plasma",
             raw_workbook=repo_root / "data" / "lipids" / "072925 Sadovsky Plasma Lipids Untargeted ALL.xlsx",
             raw_sheet_pos="Plasma POS Lipids",
@@ -507,7 +507,7 @@ def _build_configs(repo_root: Path, source_root: Path, output_root: Path) -> dic
             tissue="placenta",
             meta_sheet="n=133 placenta",
             meta_sample_col="ID",
-            input_dir=source_root / "data" / "LIPD_placenta",
+            input_dir=inputs_root / "data" / "LIPD_placenta",
             output_dir=output_root / "LIPD_placenta",
         ),
     }
@@ -4078,10 +4078,10 @@ def main() -> None:
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     repo_root = Path(__file__).resolve().parents[1]
-    source_root = Path(args.source_root).resolve()
+    inputs_root = Path(args.inputs_root).resolve()
     output_root = Path(args.output_root).resolve()
     metadata = Path(args.metadata).resolve()
-    configs = _build_configs(repo_root, source_root, output_root)
+    configs = _build_configs(repo_root, inputs_root, output_root)
 
     for dataset_id in args.datasets:
         if dataset_id not in configs:

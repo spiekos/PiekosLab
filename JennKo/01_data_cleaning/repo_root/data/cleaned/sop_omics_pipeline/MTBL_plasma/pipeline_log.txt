@@ -1,6 +1,6 @@
 ========================================================================
 DP3 SOP Preprocessing Log  —  MTBL_plasma
-Generated : 2026-08-03 12:44:19
+Generated : 2026-08-03 15:08:26
 Database  : HMDB
 ========================================================================
 
@@ -130,20 +130,19 @@ QC WARNINGS
   ! Batch confounding warning: Group is associated with batch (chi-square p=0.004285).
   ! Batch confounding warning: Subgroup is associated with batch (chi-square p=3.322e-12).
   ! Batch confounding warning: GestAgeDelivery differs by batch (ANOVA p=0.009707).
-  ! R ref.batch ComBat failed (Command '['Rscript', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-t1zd71eq/combat_ref_batch.R', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-t1zd71eq/matrix.csv', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-t1zd71eq/batch.csv', '51223', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-t1zd71eq/covariates.csv', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-t1zd71eq/corrected.csv']' returned non-zero exit status 1.); trying Python pycombat without ref.batch.
+  ! R ref.batch ComBat failed (Command '['Rscript', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-opo3z35p/combat_ref_batch.R', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-opo3z35p/matrix.csv', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-opo3z35p/batch.csv', '51223', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-opo3z35p/covariates.csv', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-opo3z35p/corrected.csv']' returned non-zero exit status 1.); trying Python pycombat without ref.batch.
   ! Python pycombat does not support ref.batch; used standard empirical-Bayes ComBat.
   ! POS Step 16 skipped: ISTD MAD sample QC is not implemented for metabolomics.
   ! POS Step 18 IQR filter: 5.0th pct IQR = 0.0007 (floor = 0.1; filter active = True), 95.0th pct IQR = 0.3121 (ceiling = 5.0; filter active = False).
   ! Batch confounding warning: Group is associated with batch (chi-square p=0.004285).
   ! Batch confounding warning: Subgroup is associated with batch (chi-square p=3.322e-12).
   ! Batch confounding warning: GestAgeDelivery differs by batch (ANOVA p=0.009707).
-  ! R ref.batch ComBat failed (Command '['Rscript', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-ru7cq2u3/combat_ref_batch.R', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-ru7cq2u3/matrix.csv', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-ru7cq2u3/batch.csv', '51223', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-ru7cq2u3/covariates.csv', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-ru7cq2u3/corrected.csv']' returned non-zero exit status 1.); trying Python pycombat without ref.batch.
+  ! R ref.batch ComBat failed (Command '['Rscript', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-29ay2_4p/combat_ref_batch.R', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-29ay2_4p/matrix.csv', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-29ay2_4p/batch.csv', '51223', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-29ay2_4p/covariates.csv', '/var/folders/qy/2gjxdj4107n_yv90bslgrsv80000gp/T/dp3-combat-29ay2_4p/corrected.csv']' returned non-zero exit status 1.); trying Python pycombat without ref.batch.
   ! Python pycombat does not support ref.batch; used standard empirical-Bayes ComBat.
   ! NEG Step 16 skipped: ISTD MAD sample QC is not implemented for metabolomics.
   ! NEG Step 18 IQR filter: 5.0th pct IQR = 0.0052 (floor = 0.1; filter active = True), 95.0th pct IQR = 0.3957 (ceiling = 5.0; filter active = False).
   ! MTBL_plasma POS: averaged 20 biological bridge samples.
   ! MTBL_plasma NEG: averaged 20 biological bridge samples.
-  ! MTBL_plasma: no curated pregnancy-trajectory metabolites were retained.
 
 ========================================================================
 END OF LOG
