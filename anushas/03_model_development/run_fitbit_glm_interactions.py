@@ -6,11 +6,16 @@ import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from statsmodels.genmod.families import links
 from statsmodels.genmod.families import family
+import scipy
 
 
 # set up basic logger configuration
-logging.basicConfig(level=logging.INFO)
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+if logger.hasHandlers():
+    logger.handlers.clear()
 
 
 # loads the fitbit and placental sheets
@@ -37,7 +42,7 @@ def detect_outliers(series):
 def run_glm_fitbit(dat, fitbit_metrics, outcomes):
     # set up a file handler to log model outputs and progress
     fhandler = logging.FileHandler(
-        filename="04_results_and_figures/models/glm_fitbit_analysis.log", mode="a"
+        filename = "04_results_and_figures/models/glm_fitbit_analysis.log", mode="w"
     )
     logger.addHandler(fhandler)
 
@@ -56,10 +61,7 @@ def run_glm_fitbit(dat, fitbit_metrics, outcomes):
 
             # safety checks before running GLM
             if len(data_subset) < 15:  # too few samples to model reliably
-                print(
-                    f"Skipping {x}: Insufficient overlapping data ({len(data_subset)}"
-                    " rows)"
-                )
+                print(f"Skipping {x}: Insufficient overlapping data ({len(data_subset)} rows)")
                 continue
             if data_subset[x].nunique() <= 1:
                 print(f"Skipping {x}: Zero variance (constant values)")
@@ -68,12 +70,34 @@ def run_glm_fitbit(dat, fitbit_metrics, outcomes):
                 print(f"Skipping {x}: Near-zero variance in aligned cohort")
                 continue
 
+            is_binary_outcome = set(data_subset[y].dropna().unique()).issubset({0, 1})
 
-            # 1. Force Gaussian distribution as requested
-            family_type = family.Gaussian()
-            family_type.link = links.Identity()  # identity link function for Gaussian
-            family_name = "Gaussian"
-            family_link = "Identity"
+            if is_binary_outcome:
+                family_type = sm.families.Binomial()
+                family_type.link = sm.families.links.Logit()
+                family_name = "Binomial (Logistic)"
+                family_link = "Logit"
+            else:
+                family_type = sm.families.Gaussian()
+                family_type.link = sm.families.links.Identity()
+                family_name = "Gaussian"
+                family_link = "Identity"
+
+                # evaluate data normality using a Kolmogorov-Smirnov test
+                _, ks_p_value = scipy.stats.kstest(data_subset[x], "norm")
+
+                # if data is heavily skewed or fails normality, use a Gamma test with a log link
+                if (abs(data_subset[x].skew()) > 1.5 or ks_p_value < 0.05):
+                    # handle potential zero values if Gamma is chosen (Gamma requires strictly positive values)
+                    if (data_subset[x] == 0).any():
+                        min_val = data_subset.loc[data_subset[x] > 0, x].min()
+                        min_val = (min_val / 2.0 if pd.notna(min_val) else 1e-6)
+                        data_subset.loc[data_subset[x] == 0, x] = min_val
+
+                    family_type = sm.families.Gamma()
+                    family_type.link = sm.families.links.Log()
+                    family_name = "Gamma"
+                    family_link = "Log"
 
             # subset the data to include the outcome (y), the predictor (x), and all covariates
             sub = dat[
@@ -86,6 +110,7 @@ def run_glm_fitbit(dat, fitbit_metrics, outcomes):
                     "race",
                     "infant_sex",
                     "smoking",
+                    "parity"
                 ]
             ].copy()
 
@@ -97,6 +122,7 @@ def run_glm_fitbit(dat, fitbit_metrics, outcomes):
             sub['X_Metric'] = pd.to_numeric(sub['X_Metric'], errors='coerce')
             sub['maternal_age'] = pd.to_numeric(sub['maternal_age'], errors='coerce')
             sub['prepregnancy_bmi_self_or_record'] = pd.to_numeric(sub['prepregnancy_bmi_self_or_record'], errors='coerce')
+            sub['parity'] = pd.to_numeric(sub['parity'], errors='coerce')
 
             # check for extreme outliers in the outcome variable to decide on robust covariance
             extreme_outliers = detect_outliers(sub["Y_Outcome"])
@@ -109,7 +135,8 @@ def run_glm_fitbit(dat, fitbit_metrics, outcomes):
                     "X_Metric * prepregnancy_bmi_self_or_record + "
                     "X_Metric * C(race) + "
                     "C(infant_sex) + "
-                    "C(smoking)"
+                    "C(smoking) + "
+                    "parity"
                 )
 
                 # initialize the GLM model using statsmodels formula API (smf)
@@ -143,7 +170,7 @@ def run_glm_fitbit(dat, fitbit_metrics, outcomes):
                         fitted_model.converged,
                         *fitted_model.params,
                         *fitted_model.pvalues,
-                        pseudo_r_squared,
+                        pseudo_r_squared
                     )
                 )
                 completed += 1
@@ -154,8 +181,6 @@ def run_glm_fitbit(dat, fitbit_metrics, outcomes):
                 )
 
             count += 1
-
-            break # DEBUGGING. DELETE
 
     # convert results into a structured Pandas DataFrame for downstream analysis
     if results:
@@ -169,7 +194,7 @@ def run_glm_fitbit(dat, fitbit_metrics, outcomes):
             "Converged",
             *fitted_model.params.index,
             *[str(col) + "_p" for col in fitted_model.pvalues.index],
-            "Pseudo_R_Squared",
+            "Pseudo_R_Squared"
         ]
         df_results = pd.DataFrame(results, columns=res_columns)
         return df_results
@@ -186,13 +211,11 @@ def main():
         errors="coerce"
     )
 
-    # if -1.0 is an invalid placeholder for activity score, convert it to NaN:
+    # if -1.0 is an invalid placeholder for activity score, convert it to NaN
     if "activities_summary_activescore" in fitbit_sheet.columns:
         fitbit_sheet["activities_summary_activescore"] = fitbit_sheet[
             "activities_summary_activescore"
         ].replace(-1.0, np.nan)
-
-    print(fitbit_sheet.columns)
 
     merged = fitbit_sheet.merge(placental_sheet, on='id', how='inner')
     merged = merged.merge(clinical_sheet, on='id', how='inner')
@@ -214,16 +237,6 @@ def main():
             if clean_series.dropna().shape[0] > 10:  # ensure there's a minimum threshold of data
                 valid_fitbit_metrics.append(metric)
 
-    print("Length of fitbit_metrics list: ", len(valid_fitbit_metrics))
-
-    '''for metric in valid_fitbit_metrics:
-        print(merged[metric].value_counts())
-        print("\n")'''
-
-    # Returns non-null, non-zero counts for all metrics at once
-    '''non_zero_counts = (merged[valid_fitbit_metrics].notna() & (merged[valid_fitbit_metrics] != 0)).sum()
-    print(non_zero_counts)'''
-    
     outcomes = [
         'distal_villous_hypoplasia_focal/diffuse', 'accelerated_villous_maturation', 'increased_syncytial_knots',
         'decidual_arteriopathy_membrane_role/basal_plate/both', 'segmental_avascular_villi_small/intermediate/large', 'delayed_villous_maturation',

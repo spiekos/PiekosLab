@@ -107,11 +107,11 @@ def run_test_2_fitbit_vs_all_outcomes(master_fitbit_path, clinical_vars, placent
     master_df.columns = master_df.columns.str.strip()
 
     # compile the two lists we are comparing
-    fitbit_features = [col for col in master_df.columns if "Trimester" in col]
+    fitbit_features = [col for col in master_df.columns if any(prefix in col for prefix in ["activities", "heart_rate", "sleep"])]
     all_outcome_targets = [v for v in (clinical_vars + placental_vars) if v in master_df.columns]
 
     if not fitbit_features:
-        print("Warning: No columns prefixed with 'Trimester' found in the master Fitbit file.")
+        print("Warning: No columns containing 'activities', 'heart_rate', or 'sleep' found in the master Fitbit file.")
         return {"master_results": pd.DataFrame(), "pos_dependent_vars": [], "neg_dependent_vars": []}
 
     return run_spearman_core(master_df, fitbit_features, all_outcome_targets, id_col="id", fdr_threshold=fdr_threshold)

@@ -304,17 +304,9 @@ def get_metric_representation_matrices(sheet, feature_cols):
 
 
 # print all calculated data into a log file
-def print_log(total_patients, total_missing, per_patient, missing_per_feature_per_bin, max_con_missing, unique_dates, summary_stats, patients_per_timeframe, 
-              patients_per_feature_per_bin, omics_patients_per_feature_per_bin, metric_matrix, pt_summary, metric_summary, num_metrics):
+def print_log(total_patients, total_missing, per_patient, max_con_missing, unique_dates, summary_stats, patients_per_timeframe, metric_matrix, 
+              pt_summary, metric_summary, num_metrics):
     log_path = "04_results_and_figures/data_analysis/fitbit/fitbit_data_analysis.txt"
-
-    # formats table by applying a mask to hide duplicate label rows
-    def get_clean_markdown(table):
-        if table.empty:
-            return "--- No Rows Passed Selection ---"
-        sorted_t = table.copy()
-        sorted_t["Timeframe"] = sorted_t["Timeframe"].mask(sorted_t["Timeframe"].duplicated(), "")
-        return sorted_t.to_markdown(index = False)
 
     with open(log_path, "w") as f:
         f.write("Following are various statistics about the Fitbit dataset. \n")
@@ -330,10 +322,6 @@ def print_log(total_patients, total_missing, per_patient, missing_per_feature_pe
         f.write(per_patient.to_string(index = False))
         f.write("\n\n\n")
 
-        f.write("Number of missing patients per feature per timeframe:\n")
-        f.write(get_clean_markdown(missing_per_feature_per_bin))
-        f.write("\n\n\n")
-
         f.write("Maximum consecutive number of days missing per feature per patient:\n")
         f.write(max_con_missing.to_string(index = False))
         f.write("\n\n\n")
@@ -347,14 +335,6 @@ def print_log(total_patients, total_missing, per_patient, missing_per_feature_pe
 
         f.write("Number of unique patients per timeframe:\n")
         f.write(patients_per_timeframe.to_string(index = False))
-        f.write("\n\n\n")
-
-        f.write("Number of unique patients per feature per timeframe:\n")
-        f.write(get_clean_markdown(patients_per_feature_per_bin))
-        f.write("\n\n\n")
-
-        f.write("Number of unique patients with omics data per feature per timeframe:\n")
-        f.write(get_clean_markdown(omics_patients_per_feature_per_bin))
         f.write("\n\n\n")
 
         f.write("Which patients contributed valid data for at least 80% of their pregnancy, per feature:\n")
@@ -397,8 +377,12 @@ def main():
     omics_patients_per_feature_per_bin = get_omics_patients_per_feature_per_bin(sheets_bucketed, feature_cols, timeframe_names, clinical_sheet)
     metric_matrix, pt_summary, metric_summary = get_metric_representation_matrices(sheet_filtered, feature_cols)
 
-    print_log(total_patients, total_missing, per_patient, missing_per_feature_per_bin, max_con_missing, unique_dates, summary_stats, patients_per_timeframe, 
-              patients_per_feature_per_bin, omics_patients_per_feature_per_bin, metric_matrix, pt_summary, metric_summary, len(feature_cols))
+    print_log(total_patients, total_missing, per_patient, max_con_missing, unique_dates, summary_stats, patients_per_timeframe, metric_matrix, pt_summary, 
+              metric_summary, len(feature_cols))
+
+    patients_per_feature_per_bin.to_csv("04_results_and_figures/data_analysis/fitbit/patients_per_feature_per_bin.csv", index=False)
+    omics_patients_per_feature_per_bin.to_csv("04_results_and_figures/data_analysis/fitbit/omics_patients_per_feature_per_bin.csv", index=False)
+    missing_per_feature_per_bin.to_csv("04_results_and_figures/data_analysis/fitbit/missing_per_feature_per_bin.csv", index=False)
 
 
 if __name__ == "__main__":
