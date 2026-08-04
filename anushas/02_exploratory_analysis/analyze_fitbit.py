@@ -1,6 +1,7 @@
+import math
 import pandas as pd
-import numpy as np
-
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # load and return the fitbit dataset
 def load_sheet():
@@ -357,6 +358,84 @@ def get_metric_representation_matrices(sheet, feature_cols):
     return final_table, pt_summary, metric_summary
 
 
+# generates violin/box plots (split by control vs complications) for each metric for the first trimester
+def plot_metric_distribution(sheets, feature_cols):
+    first_trimester_sheet = sheets[0]
+
+    sns.set_theme(style="whitegrid")
+
+    # map the group_bin column labels
+    first_trimester_sheet["cohort_group"] = first_trimester_sheet["group_bin"].map({0: "Control", 1: "Complications"})
+
+    # reshape (melt) the dataframe so every feature becomes a row entry
+    id_vars = ["id", "cohort_group"]
+    valid_features = [f for f in feature_cols if f in first_trimester_sheet.columns]
+
+    df_melted = pd.melt(
+        first_trimester_sheet,
+        id_vars=id_vars,
+        value_vars=valid_features,
+        var_name="feature",
+        value_name="value",
+    )
+
+    # drop missing values to avoid plotting errors
+    df_melted = df_melted.dropna(
+        subset=["value", "cohort_group", "feature"]
+    )
+
+    palette_dict = {"Control": "#2b5c8f", "Complications": "#e84731"}
+
+    n_cols = 3
+    n_rows = math.ceil(len(valid_features) / n_cols)
+    fig, axes = plt.subplots(
+        n_rows, n_cols, figsize=(n_cols * 4.5, n_rows * 4), sharey=False
+    )
+
+    # flatten axes array for easy iteration
+    axes_flat = axes.flatten() if n_rows > 1 or n_cols > 1 else [axes]
+
+    for i, feature in enumerate(valid_features):
+        ax = axes_flat[i]
+        feature_data = df_melted[df_melted["feature"] == feature]
+
+        # only show legend on the first subplot
+        show_legend = i == 0
+
+        sns.violinplot(
+            data=feature_data,
+            x="cohort_group",
+            y="value",
+            hue="cohort_group",
+            palette=palette_dict,
+            split=True,
+            inner="box",
+            ax=ax,
+            saturation=1.0,
+            legend=show_legend
+        )
+
+        ax.set_title(f"{feature}", fontsize=12, fontweight="bold")
+        ax.set_xlabel("")
+        ax.set_ylabel("Metric Value", fontsize=10)
+
+        if show_legend and ax.get_legend():
+            ax.get_legend().set_title("Group")
+
+    # hide any unused empty subplot panels if total features don't fill the grid
+    for j in range(i + 1, len(axes_flat)):
+        fig.delaxes(axes_flat[j])
+
+    fig.suptitle(
+        "Metric Distributions by Trimester and Pregnancy Group",
+        fontsize=16,
+        y=1.02,
+    )
+    fig.tight_layout()
+
+    return fig
+
+
 # print all calculated data into a log file
 def print_log(total_patients, total_missing, per_patient, consistently_missing_patients, consistently_missing_with_omics, max_con_missing, 
               unique_dates, summary_stats, patients_per_timeframe, metric_matrix, pt_summary, metric_summary, num_metrics):
@@ -418,6 +497,7 @@ def main():
     sheet_filtered = filter_sheet(fitbit_sheet)
 
     feature_cols = [col for col in sheet_filtered.columns if col.startswith(("activities", "sleep", "heart_rate"))]
+    print(feature_cols)
     numeric_cols = feature_cols + ["gestational_age_by_reported_lmp", "gest_age_del"]
 
     # forcefully convert all feature columns + gest age columns into numeric types
@@ -441,6 +521,10 @@ def main():
     patients_per_feature_per_bin = get_patients_per_feature_per_bin(sheets_bucketed, feature_cols, timeframe_names)
     omics_patients_per_feature_per_bin = get_omics_patients_per_feature_per_bin(sheets_bucketed, feature_cols, timeframe_names, clinical_sheet)
     metric_matrix, pt_summary, metric_summary = get_metric_representation_matrices(sheet_filtered, feature_cols)
+
+    violin_box_plot = plot_metric_distribution(sheets_bucketed, feature_cols)
+    violin_box_plot.savefig("04_results_and_figures/data_analysis/fitbit/violin_box_metric_plot.png", bbox_inches="tight", dpi=300)
+    plt.close(violin_box_plot)
 
     print_log(total_patients, total_missing, per_patient, consistently_missing_patients, consistently_missing_with_omics, max_con_missing, 
               unique_dates, summary_stats, patients_per_timeframe, metric_matrix, pt_summary, metric_summary, len(feature_cols))

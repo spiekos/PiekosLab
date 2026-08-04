@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import spearmanr
 from statsmodels.stats.multitest import multipletests
 from statsmodels.stats.outliers_influence import variance_inflation_factor
+from scipy.stats import ks_2samp, anderson_ksamp
 
 
 # loads sheets (sheet1 contains the placental histopathology data, sheet2 contains the variables of interest data, sheet3 contains the cleaned clinical data)
@@ -12,8 +13,9 @@ def load_sheets():
     sheet1 = pd.read_csv("01_data_cleaning/processed_data/processed_placental_data.csv")
     sheet2 = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - variables of interest.csv")
     sheet3 = pd.read_csv("01_data_cleaning/processed_data/processed_clinical_data.csv")
+    sheet4 = pd.read_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv")
 
-    return sheet1, sheet2, sheet3
+    return sheet1, sheet2, sheet3, sheet4
 
 
 # runs vectorized Spearman tests across given sets of independent and dependent variables
@@ -198,6 +200,66 @@ def run_test_3_demographics_collinearity(df):
     return corr_matrix
 
 
+# compares distributions of metrics between control and complications across timepoints
+# @param: test_type: 'ks' for Kolmogorov-Smirnov or 'ad' for Anderson-Darling
+def run_test_4_compare_populations(df, feature_cols, test_type='ks'):
+    records = []
+    
+    df['pregnancy_week'] = (df['timepoint'] // 7) + 1
+    weeks = df["pregnancy_week"].unique()
+    # filter to only include timepoints during the first trimester
+    weeks = weeks[weeks < 14]
+    
+    for wk in weeks:
+        df_tp = df[df["pregnancy_week"] == wk]
+        
+        control_data = df_tp[df_tp["group_bin"] == 1]
+        comp_data = df_tp[df_tp["group_bin"] == 0]
+        
+        for feature in feature_cols:
+            x = control_data[feature].dropna()
+            y = comp_data[feature].dropna()
+            
+            if len(x) < 2 or len(y) < 2 or x.nunique() <= 1 or y.nunique() <= 1:
+                continue
+                
+            if test_type == 'ks':
+                # two-sample Kolmogorov-Smirnov test
+                stat, p_val = ks_2samp(x, y)
+            elif test_type == 'ad':
+                # two-sample Anderson-Darling test
+                res = anderson_ksamp([x, y], variant='midrank')
+                stat = res.statistic
+                p_val = res.pvalue
+            else:
+                raise ValueError("test_type must be 'ks' or 'ad'")
+                
+            records.append({
+                'week': wk,
+                'feature': feature,
+                'test_statistic': stat,
+                'p_value': p_val
+            })
+            
+    results_df = pd.DataFrame(records)
+    
+    if results_df.empty:
+        print("No valid comparisons made. Check data formatting and column names.")
+        return results_df
+
+    # apply Benjamini-Hochberg multiple hypothesis correction
+    reject, pvals_corrected, _, _ = multipletests(
+        results_df['p_value'], 
+        alpha=0.05, 
+        method='fdr_bh'
+    )
+    
+    results_df['p_value_adjusted'] = pvals_corrected
+    results_df['is_differentially_distributed'] = reject
+    
+    return results_df
+
+
 # print calculated correlation data into respective file destinations
 def print_log(df_assets, fdr_threshold, prefix=""):
     # if master results came back empty, break early
@@ -244,6 +306,8 @@ def print_log(df_assets, fdr_threshold, prefix=""):
 
 
 def main():
+    placental_df, delivery_df, clinical_df, fitbit_df = load_sheets()
+
     placental_metrics = [
         "placental_infarction", "distal_villous_hypoplasia_focal/diffuse", "accelerated_villous_maturation", "increased_syncytial_knots", 
         "decidual_arteriopathy_membrane_role/basal_plate/both", "segmental_avascular_villi_small/intermediate/large", "delayed_villous_maturation", 
@@ -256,9 +320,8 @@ def main():
     strict_delivery_metrics = [
         "gest_age_del", "birthweight", "apgar_1", "apgar_5", "nicu_days"
     ]
+    fitbit_metrics = [col for col in fitbit_df.columns if col.startswith(("activities", "sleep", "heart_rate"))]
 
-    placental_df, delivery_df, clinical_df = load_sheets()
-    
     # run and log test 1: placental histopathology variables vs delivery variables
     test1_assets = run_test_1_placental_vs_delivery(
         df_placental = placental_df,
@@ -282,6 +345,11 @@ def main():
 
     test3_results = run_test_3_demographics_collinearity(clinical_df)
     test3_results.to_csv("04_results_and_figures/correlations/demographics_correlation_matrix.csv")
+
+    test4_results = run_test_4_compare_populations(fitbit_df, fitbit_metrics)
+    sig_test4_results = test4_results[test4_results['is_differentially_distributed'] == True].sort_values('p_value_adjusted')
+    test4_results.to_csv("04_results_and_figures/correlations/fitbit_differential_distribution.csv")
+    sig_test4_results.to_csv("04_results_and_figures/correlations/fitbit_differential_distribution_significant.csv")
 
 
 if __name__ == "__main__":
