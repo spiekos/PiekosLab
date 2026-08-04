@@ -131,9 +131,9 @@ def run_glm_fitbit(dat, fitbit_metrics, outcomes):
                 # define the GLM formula:
                 # y ~ x + age + x*age + bmi + x*bmi + race + x*race + infant_sex + smoking
                 ols_model = (
-                    "Y_Outcome ~ X_Metric * maternal_age + "
-                    "X_Metric * prepregnancy_bmi_self_or_record + "
-                    "X_Metric * C(race) + "
+                    "Y_Outcome ~ X_Metric + maternal_age + "
+                    "prepregnancy_bmi_self_or_record + "
+                    "C(race) + "
                     "C(infant_sex) + "
                     "C(smoking) + "
                     "parity"

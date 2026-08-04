@@ -104,6 +104,60 @@ def get_missing_patients_per_feature_per_timeframe(sheets, feature_cols, timefra
     return pd.DataFrame(summary_data)
 
 
+# finds all patients that have consistently missing data across all features and bins
+# also finds the patients with omics data that have consistently missing data across all features and bins
+def get_consistently_missing_patients(clinical_sheet, sheets, feature_cols, timeframe_names):
+    summary_data = []
+
+    for df, timeframe in zip(sheets, timeframe_names):
+        df_cleaned = df.copy()
+
+        for _, row in df_cleaned.iterrows():
+            patient_id = row["id"]
+
+            for feature in feature_cols:
+                if feature in df_cleaned.columns:
+                    val = row[feature]
+                    is_missing = pd.isna(val) or (str(val).strip() == "no value") or (val == -1.0)
+                else:
+                    is_missing = True
+
+                summary_data.append({
+                    "id": patient_id,
+                    "Feature_Bin": f"{feature} [{timeframe}]",
+                    "Missing": int(is_missing)
+                })
+
+    df_tracker = pd.DataFrame(summary_data)
+
+    if df_tracker.empty:
+        return [], []
+
+    # Use pivot_table to safely handle any duplicate id/Feature_Bin pairs
+    df_wide = df_tracker.pivot_table(
+        index="id", 
+        columns="Feature_Bin", 
+        values="Missing", 
+        aggfunc="max"
+    ).reset_index()
+    
+    # fill any missing ID-bin entries with 1
+    df_wide = df_wide.fillna(1)
+
+    # calculate how many present (0) values each participant has across all feature-bin columns
+    df_wide["total_present"] = (df_wide.iloc[:, 1:] == 0).sum(axis=1)
+
+    # filter for participants who have 0 valid data points across the entire dataset
+    consistently_missing = df_wide[df_wide["total_present"] == 0]
+    missing_ids = consistently_missing["id"].tolist()
+    
+    # filter for those where omics data exists
+    clinical_dropped = clinical_sheet[clinical_sheet["id"].isin(missing_ids)]
+    with_omics = clinical_dropped[clinical_dropped["omics_set#"] > 0]["id"].tolist()
+
+    return missing_ids, with_omics
+
+
 # returns a table containing the maximum consecutive number of days missing per feature per patient
 def get_max_consecutive_missing(sheet, feature_cols):
     feature_results = {}
@@ -304,8 +358,8 @@ def get_metric_representation_matrices(sheet, feature_cols):
 
 
 # print all calculated data into a log file
-def print_log(total_patients, total_missing, per_patient, max_con_missing, unique_dates, summary_stats, patients_per_timeframe, metric_matrix, 
-              pt_summary, metric_summary, num_metrics):
+def print_log(total_patients, total_missing, per_patient, consistently_missing_patients, consistently_missing_with_omics, max_con_missing, 
+              unique_dates, summary_stats, patients_per_timeframe, metric_matrix, pt_summary, metric_summary, num_metrics):
     log_path = "04_results_and_figures/data_analysis/fitbit/fitbit_data_analysis.txt"
 
     with open(log_path, "w") as f:
@@ -320,6 +374,14 @@ def print_log(total_patients, total_missing, per_patient, max_con_missing, uniqu
 
         f.write("Number of missing days per patient:\n")
         f.write(per_patient.to_string(index = False))
+        f.write("\n\n\n")
+
+        f.write(f"Patients with consistently missing data across features and bins: ({len(consistently_missing_patients)} patients total)\n")
+        f.write(str(consistently_missing_patients))
+        f.write("\n\n\n")
+
+        f.write(f"Patients with consistently missing data across features and bins AND omics data: ({len(consistently_missing_with_omics)} patients total)\n")
+        f.write(str(consistently_missing_with_omics))
         f.write("\n\n\n")
 
         f.write("Maximum consecutive number of days missing per feature per patient:\n")
@@ -369,6 +431,9 @@ def main():
     total_missing = count_total_missing(sheet_filtered)
     per_patient = get_missing_per_patient(sheet_filtered, feature_cols)
     missing_per_feature_per_bin = get_missing_patients_per_feature_per_timeframe(sheets_bucketed, feature_cols, timeframe_names)
+    consistently_missing_patients, consistently_missing_with_omics = get_consistently_missing_patients(
+        clinical_sheet, sheets_bucketed, feature_cols, timeframe_names
+    )
     max_con_missing = get_max_consecutive_missing(sheet_filtered, feature_cols)
     unique_dates = count_unique_dates(sheet_filtered)
     summary_stats = calc_summary_stats(sheet_filtered, feature_cols)
@@ -377,8 +442,8 @@ def main():
     omics_patients_per_feature_per_bin = get_omics_patients_per_feature_per_bin(sheets_bucketed, feature_cols, timeframe_names, clinical_sheet)
     metric_matrix, pt_summary, metric_summary = get_metric_representation_matrices(sheet_filtered, feature_cols)
 
-    print_log(total_patients, total_missing, per_patient, max_con_missing, unique_dates, summary_stats, patients_per_timeframe, metric_matrix, pt_summary, 
-              metric_summary, len(feature_cols))
+    print_log(total_patients, total_missing, per_patient, consistently_missing_patients, consistently_missing_with_omics, max_con_missing, 
+              unique_dates, summary_stats, patients_per_timeframe, metric_matrix, pt_summary, metric_summary, len(feature_cols))
 
     patients_per_feature_per_bin.to_csv("04_results_and_figures/data_analysis/fitbit/patients_per_feature_per_bin.csv", index=False)
     omics_patients_per_feature_per_bin.to_csv("04_results_and_figures/data_analysis/fitbit/omics_patients_per_feature_per_bin.csv", index=False)

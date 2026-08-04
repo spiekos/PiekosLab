@@ -359,6 +359,14 @@ DP3-0435E            12
  DP3-0436            14
 
 
+Patients with consistently missing data across features and bins: (30 patients total)
+['DP3-0002', 'DP3-0003', 'DP3-0005', 'DP3-0019', 'DP3-0030', 'DP3-0037', 'DP3-0044', 'DP3-0097', 'DP3-0102', 'DP3-0109', 'DP3-0136E', 'DP3-0158', 'DP3-0233E', 'DP3-0246', 'DP3-0265', 'DP3-0267', 'DP3-0281E', 'DP3-0301', 'DP3-0305', 'DP3-0319', 'DP3-0358E', 'DP3-0366', 'DP3-0368', 'DP3-0376E', 'DP3-0407', 'DP3-0408', 'DP3-0419', 'DP3-0421', 'DP3-0422E', 'DP3-0436']
+
+
+Patients with consistently missing data across features and bins AND omics data: (12 patients total)
+['DP3-0005', 'DP3-0037', 'DP3-0136E', 'DP3-0158', 'DP3-0233E', 'DP3-0265', 'DP3-0281E', 'DP3-0301', 'DP3-0305', 'DP3-0358E', 'DP3-0419', 'DP3-0436']
+
+
 Maximum consecutive number of days missing per feature per patient:
        id  activities_summary_activitycalories  activities_summary_caloriesout  activities_summary_fairlyactiveminutes  activities_summary_lightlyactiveminutes  activities_summary_sedentaryminutes  heart_rate_resting_heart_rate  heart_rate_zone:_fat_burn_minutes  heart_rate_zone:_cardio_minutes  heart_rate_zone:_peak_minutes  sleep_summary_stages_deep  sleep_summary_stages_light  sleep_summary_stages_rem  sleep_summary_stages_wake  sleep_summary_total_sleep_records  sleep_summary_total_time_in_bed  activities_summary_steps  activities_summary_totaldistances  activities_summary_veryactiveminutes  sleep_summary_total_minutes_asleep
  DP3-0001                                   12                              12                                      12                                       12                                   12                             13                                 12                               12                             12                         21                          21                        21                         20                                 20                               20                        12                                 12                                    12                                  20

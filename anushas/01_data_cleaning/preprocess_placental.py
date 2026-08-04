@@ -172,7 +172,7 @@ def add_sptb_column(placental_sheet, clinical_sheet):
             
         if "sptb" in group or "sptb" in subgroup:
             return 1
-        if (labor in ["spontaneous", "0"]) and (not np.isnan(gest_age) and gest_age < 37):
+        if (labor in ["spontaneous", "prom", "0"]) and (not np.isnan(gest_age) and gest_age < 37):
             return 1
         return 0
 
