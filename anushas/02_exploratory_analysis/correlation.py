@@ -176,7 +176,7 @@ def run_test_3_demographics_collinearity(df):
     )
     plt.title("Baseline Demographics Correlation Matrix (Spearman $\\rho$)", fontsize=14, pad=15)
     plt.tight_layout()
-    plt.savefig("04_results_and_figures/correlations/demographics_correlation_heatmap.png", dpi=300)
+    plt.savefig("04_results_and_figures/correlations/test3/demographics_correlation_heatmap.png", dpi=300)
     plt.close()
 
     # process Variance Inflation Factors (VIF)
@@ -192,7 +192,7 @@ def run_test_3_demographics_collinearity(df):
             vif_records.append({"Variable": col, "VIF": vif_val})
 
         vif_df = pd.DataFrame(vif_records).sort_values(by="VIF", ascending=False)
-        with open("04_results_and_figures/correlations/test3_demographics_vif.txt", "w") as vif_file:
+        with open("04_results_and_figures/correlations/test3/demographics_vif.txt", "w") as vif_file:
             vif_file.write(vif_df.to_markdown(index=False))
     else:
         print(f"VIF Warning: Too many missing values across columns (only {len(vif_df_clean)} complete rows). Skipping VIF calculation to avoid biased scores.")
@@ -261,17 +261,17 @@ def run_test_4_compare_populations(df, feature_cols, test_type='ks'):
 
 
 # print calculated correlation data into respective file destinations
-def print_log(df_assets, fdr_threshold, prefix=""):
+def print_log(df_assets, fdr_threshold, test, suffix):
     # if master results came back empty, break early
     if df_assets["master_results"].empty:
-        print(f"No results to write to log files for pass: {prefix}")
+        print(f"No results to write to log files for pass: {suffix}")
         return
 
-    # Add a unique file prefix (e.g., 'test1_' or 'test2_') so they do not overwrite each other
-    pos_log_path = f"04_results_and_figures/correlations/{prefix}positively_associated_vars.txt"
-    neg_log_path = f"04_results_and_figures/correlations/{prefix}negatively_associated_vars.txt"
-    full_table_log_path = f"04_results_and_figures/correlations/{prefix}full_correlation_table.txt"
-    filtered_table_log_path = f"04_results_and_figures/correlations/{prefix}filtered_correlation_table.txt"
+    # Add a unique file suffix so they do not overwrite each other
+    pos_log_path = f"04_results_and_figures/correlations/{test}/positively_associated_vars_{suffix}.txt"
+    neg_log_path = f"04_results_and_figures/correlations/{test}/negatively_associated_vars_{suffix}.txt"
+    full_table_log_path = f"04_results_and_figures/correlations/{test}/full_correlation_table_{suffix}.txt"
+    filtered_table_log_path = f"04_results_and_figures/correlations/{test}/filtered_correlation_table_{suffix}.txt"
 
     # write into the positively associated file
     with open(pos_log_path, "w") as pos_file:
@@ -330,7 +330,7 @@ def main():
         delivery_vars = delivery_metrics,
         fdr_threshold = 0.05
     )
-    print_log(test1_assets, fdr_threshold=0.05, prefix="placenta_")
+    print_log(test1_assets, fdr_threshold=0.05, test="test1", suffix="placental")
 
     # run and log test 2: fitbit data vs placental histopathology + delivery variables
     master_fitbit_csv = "01_data_cleaning/processed_data/master_fitbit_clinical_correlation_data.csv"
@@ -341,15 +341,15 @@ def main():
         placental_vars = placental_metrics,
         fdr_threshold = 0.05
     )
-    print_log(test2_assets, fdr_threshold = 0.05, prefix = "fitbit_")
+    print_log(test2_assets, fdr_threshold = 0.05, test="test2", suffix = "fitbit")
 
     test3_results = run_test_3_demographics_collinearity(clinical_df)
-    test3_results.to_csv("04_results_and_figures/correlations/demographics_correlation_matrix.csv")
+    test3_results.to_csv("04_results_and_figures/correlations/test3/demographics_correlation_matrix.csv")
 
     test4_results = run_test_4_compare_populations(fitbit_df, fitbit_metrics)
     sig_test4_results = test4_results[test4_results['is_differentially_distributed'] == True].sort_values('p_value_adjusted')
-    test4_results.to_csv("04_results_and_figures/correlations/fitbit_differential_distribution.csv")
-    sig_test4_results.to_csv("04_results_and_figures/correlations/fitbit_differential_distribution_significant.csv")
+    test4_results.to_csv("04_results_and_figures/correlations/test4/fitbit_differential_distribution.csv")
+    sig_test4_results.to_csv("04_results_and_figures/correlations/test4/fitbit_differential_distribution_significant.csv")
 
 
 if __name__ == "__main__":
