@@ -1,67 +1,99 @@
 ## 01_data_cleaning
 
-This directory houses the source code and resulting outputs for the data preprocessing pipeline. It handles data ingestion, schema harmonization, missing data filtration, and categorical encoding for both Fitbit and placental histopathology datasets.
+This directory contains the data preprocessing pipeline for the project. It produces cleaned and harmonized clinical, Fitbit, and placental datasets that feed downstream exploratory analysis and modeling.
 
 ## Directory Structure
 
 ```
 01_data_cleaning/
-├── README.md                          # This file
-├── preprocess_clinical.py             # Script to standardize and filter clinical metadata
-├── preprocess_fitbit.py               # Script to clean and filter Fitbit data
-├── preprocess_placental.py            # Script to clean and encode histopathology data
-├── preprocess_correlation.py          # Script to harmonize datasets for correlation analysis
-└── processed_data/                    # Output directory for cleaned datasets
+├── README.md
+├── preprocess_clinical.py
+├── preprocess_fitbit.py
+├── preprocess_placental.py
+├── preprocess_correlation.py
+└── processed_data/
     ├── master_fitbit_clinical_correlation_data.csv
     ├── processed_clinical_data.csv
     ├── processed_fitbit_data.csv
     └── processed_placental_data.csv
 ```
 
-## Scripts & Core Artifacts Overview
+## Scripts & Inputs
 
 ### `preprocess_clinical.py`
 
-* **Purpose:** Standardizes and validates clinical metadata prior to correlation analysis.
-* **Key Operations:** Loads the raw clinical variables table, standardizes all text to lowercase and replaces spaces with underscores, applies typo corrections (e.g., "africian american" → "african american"), and filters records to include only patients with "delivered" status.
-* **Output Destination:** `processed_data/processed_clinical_data.csv`
+* **Purpose:** Clean and encode clinical metadata for cohort-level analysis.
+* **Inputs:**
+  * `00_raw_data/dp3 master table v2.xlsx - variables of interest.csv`
+  * `00_raw_data/DP3_playset.csv`
+* **Key operations:**
+  * Standardizes column names and text values to lowercase with underscore separators.
+  * Fixes known typos (for example, `africian american` → `african american`).
+  * Keeps only patients with `status == delivered`.
+  * Restricts records to the DP3 playset patient IDs.
+  * Adds missingness indicator columns for `race`, `ethnicity`, and `smoking`.
+  * Encodes smoking status and imputes median prepregnancy BMI.
+  * One-hot encodes key demographic categories.
+* **Output:** `processed_data/processed_clinical_data.csv`
 
 ### `preprocess_fitbit.py`
 
-* **Purpose:** Cleans raw Fitbit tracking data and enforces quality control based on missingness thresholds.
-* **Key Operations:** Merges multiple raw data sheets on Record ID and Date, standardizes inconsistent column nomenclature, sorts non-metric columns to the front, and chronologically tracks consecutive missing days per patient.
-* **Quality Gate:** Rather than dropping full patient cohorts, the pipeline screens individual tracking features chronologically. If a patient has **7 or more consecutive days of missing data** for a specific activity, sleep, or heart rate feature, that specific metric is nulled out (**$\text{NaN}$**) for that patient.
-* **Output Destination:** `processed_data/processed_fitbit_data.csv`
+* **Purpose:** Clean Fitbit longitudinal tracking data and apply validity filters.
+* **Inputs:**
+  * `00_raw_data/DP3_playset.csv`
+  * `00_raw_data/DP3-FitbitFullReport_DATA_LABELS_2025-02-18_1356.csv`
+  * `00_raw_data/implausible_value_bounds.csv`
+* **Key operations:**
+  * Standardizes column names and text values.
+  * Merges Fitbit sheets on `id` and `date`.
+  * Filters to `fitbit data` events.
+  * Removes deprecated/redundant Fitbit metric columns.
+  * Applies day-level validity checks for wear time and implausible values.
+  * Flags or nulls invalid sleep and activity values.
+* **Output:** `processed_data/processed_fitbit_data.csv`
 
 ### `preprocess_placental.py`
 
-* **Purpose:** Prepares raw placental histopathology records for downstream statistical modeling.
-* **Key Operations:** Harmonizes column names to lowercase across multiple raw spreadsheet batches, screens out exclusions (patients with missing slides or fully empty slide reports), and drops zero-variance features where no patients tested positive.
-* **Dropped Features:** Specific clinical observations dropped due to zero-variance include: *retroplacental hemorrhage, vascular thrombosis, villous stromal vascular karyorrhexis, vascular intramural fibrin deposition, stem vessel obliteration/fibromuscular sclerosis, vascular ectasia, fetal inflammatory response stage/grade/location, diffuse villous edema,* and *placental hypoplasia*.
-* **Encoding:** Transforms qualitative clinical observations into discrete numerical labels (`0`, `1`, `2`, `3`, etc.), maps binary metrics, and fills unrecorded fields with a default baseline value of `0`.
-* **Output Destination:** `processed_data/processed_placental_data.csv`
+* **Purpose:** Clean, merge, and encode placental histopathology recordings.
+* **Inputs:**
+  * `00_raw_data/dp3 3rd set gest age for Tony assessed final.xlsx - Sheet1.csv`
+  * `00_raw_data/DP3 slides Tony's analysis batches 1-2.xlsx - Sheet2.csv`
+  * `01_data_cleaning/processed_data/processed_clinical_data.csv`
+  * `00_raw_data/DP3_playset.csv`
+* **Key operations:**
+  * Standardizes column names and merges the two placental source sheets.
+  * Drops patients with missing slides or with all slide indicators marked `x`.
+  * Restricts the data to the DP3 playset patient IDs.
+  * Drops empty and low-variance pathology features.
+  * Encodes text pathology labels into numeric values.
+  * Adds a `spontaneous_preterm_birth` indicator derived from the clinical sheet.
+* **Output:** `processed_data/processed_placental_data.csv`
+* **Additional log:** `04_results_and_figures/data_analysis/placental/sum_placental_histo_features.txt`
 
 ### `preprocess_correlation.py`
 
-* **Purpose:** Harmonizes and aligns clinical, Fitbit, and placental datasets to prepare integrated master tables for downstream correlation analysis.
-* **Key Operations:** Loads the three cleaned datasets (Fitbit, placental, and clinical), filters Fitbit data to include only "Fitbit Data" events recorded during pregnancy, partitions data into four trimester windows, and collapses multi-row tracking streams into single-row patient aggregates (medians/means). Merges aggregated Fitbit features with clinical variables and placental pathology data.
-* **Output Destination:** `processed_data/master_fitbit_clinical_correlation_data.csv`
-
-### Intermediate Cross-Set Datasets
-
-* **`processed_data/master_fitbit_clinical_correlation_data.csv`**
-  * **Generated By:** `01_data_cleaning/preprocess_correlation.py`
-  * **Description:** An integrated cross-set master table compiled during the exploratory profiling phase. It condenses multi-row longitudinal tracking streams from the cleaned Fitbit file into single-row patient means across 4 distinct pregnancy trimesters. These aggregated features are merged side-by-side with maternal clinical delivery records and the encoded placental dataset.
+* **Purpose:** Build the integrated Fitbit–clinical–placental correlation dataset.
+* **Inputs:**
+  * `01_data_cleaning/processed_data/processed_fitbit_data.csv`
+  * `01_data_cleaning/processed_data/processed_placental_data.csv`
+  * `01_data_cleaning/processed_data/processed_clinical_data.csv`
+* **Key operations:**
+  * Filters Fitbit rows to pregnancy-time `fitbit data` events.
+  * Buckets longitudinal Fitbit records into five pregnancy windows.
+  * Applies per-patient coverage thresholds and averages valid days by trimester.
+  * Merges aggregated Fitbit features with clinical delivery variables and placental features.
+  * Drops rows missing all placental metrics.
+* **Output:** `processed_data/master_fitbit_clinical_correlation_data.csv`
 
 ## Execution
 
-To re-run the entire data cleaning pipeline and refresh the primary files in `processed_data/`, execute the scripts from the root of the project directory:
+Run the full data cleaning pipeline from the repository root:
 
-```
+```bash
 python 01_data_cleaning/preprocess_clinical.py
 python 01_data_cleaning/preprocess_fitbit.py
 python 01_data_cleaning/preprocess_placental.py
 python 01_data_cleaning/preprocess_correlation.py
 ```
 
-> **Prerequisites & Dependencies:** Ensure all raw data dependencies (such as the `00_raw_data/` files) are placed in their expected input paths before running these scripts.
+> Note: Each script uses raw files from `00_raw_data/` and expects those files to exist in the repository before running.

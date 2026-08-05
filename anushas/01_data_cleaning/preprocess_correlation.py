@@ -23,17 +23,17 @@ def filter_sheet(sheet):
     return sheet_filtered
 
 
-# splits the filtered dataset into four smaller datasets, based on which trimester of the pregnancy each datapoint is in
-# the four datasets are: 1st trimester, early 2nd trimester, late 2nd/early 3rd trimester, late 3rd trimester
-# returns a list containing these four datasets
+# splits the filtered dataset into five smaller datasets, based on which trimester of the pregnancy each datapoint is in
+# the five datasets are: 1st trimester, early 2nd trimester, late 2nd/early 3rd trimester, mid 3rd trimester,late 3rd trimester
+# returns a list containing these five datasets
 # note that the input fitbit dataset has already been filtered and only includes events during pregnancy
 def bucket_data(sheet):
     local_sheet = sheet.copy()
 
     local_sheet["current_weeks"] = pd.to_numeric(local_sheet["current_weeks"], errors="coerce")
 
-    bins = [float("-inf"), 14, 22, 32, float("inf")]
-    labels = ["first", "early_second", "late_second_early_third", "late_third"]
+    bins = [float("-inf"), 14, 22, 32, 37, float("inf")]
+    labels = ["first", "early_second", "late_second_early_third", "mid_third", "late_third"]
 
     local_sheet["group"] = pd.cut(local_sheet["current_weeks"], bins = bins, labels = labels, right = False)
 
@@ -73,15 +73,11 @@ def apply_bucketed_coverage(df, prefix):
     
     results = []
 
-    print("df_filtered.columns:",df_filtered.columns)
-
     # identify metric columns belonging to this specific prefix
     metric_cols = [
         c for c in df_filtered.columns 
         if any(c.startswith(f"{prefix}_{m}") for m in ["activities", "heart_rate", "sleep"])
     ]
-
-    print("metric_cols:", metric_cols)
 
     for patient_id, group in df_filtered.groupby(id_col):
         patient_row = {id_col: patient_id}
@@ -171,18 +167,8 @@ def main():
 
     sheets_bucketed = bucket_data(fitbit_sheet)
 
-    for sheet in sheets_bucketed:
-        print(sheet.head())
-    for sheet in sheets_bucketed:
-        print(sheet.columns)
-
     labels = ["first", "early_second", "late_second_early_third", "late_third"]
     sheets_bucketed = [apply_bucketed_coverage(df, label) for df, label in zip(sheets_bucketed, labels)]
-
-    for sheet in sheets_bucketed:
-        print(sheet.head())
-    for sheet in sheets_bucketed:
-        print(sheet.columns)
 
     timeframe_names = ["First Trimester", "Early Second Trimester", "Late Second and Early Third Trimester", "Late Third Trimester"]
     correlation_ready_df = prepare_correlation_data(sheets_bucketed, timeframe_names, clinical_sheet, placental_sheet)

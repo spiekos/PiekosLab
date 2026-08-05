@@ -1,96 +1,101 @@
 ## 02_exploratory_analysis
 
-This directory contains the scripts responsible for performing exploratory data analysis on the filtered Fitbit data, placental histopathology features, and delivery variables. It manages data aggregation across pregnancy trimesters, missingness tracking, data quality filtering, and multi-hypothesis statistical testing.
+This directory contains the exploratory data analysis scripts for the cleaned Fitbit, clinical, and placental datasets. The folder currently includes analysis workflows for clinical missingness, Fitbit longitudinal data quality, correlation tests, and pregnancy timeline histograms.
 
 ## Directory Structure
 
 ```text
 02_exploratory_analysis/
+├── README.md
 ├── analyze_clinical.py
 ├── analyze_fitbit.py
-├── correlation.py
-├── histogram.py
-└── outputs/               # Subdirectory containing all generated results
+└── correlation.py
 ```
 
-## Script Overview & Functionality
+## Output Locations
 
-### 1. `analyze_clinical.py`
+The scripts in this folder write results into the project-level `04_results_and_figures/` directory.
 
-* **Purpose:** Generates diagnostic summaries of clinical data missingness patterns and provides insights into maternal demographic variables.
-* **Data Pipeline:**
-  1. Loads the processed clinical dataset.
-  2. Examines missing data patterns across key demographic and clinical features: *maternal age, infant sex, prepregnancy BMI, race, ethnicity, and smoking status*.
-  3. Generates missingness statistics (median, IQR, counts, and percentages) and identifies individual patient IDs with missing values for each feature.
-* **Outputs Generated:**
-  * Console-printed summary table showing missing value medians and IQRs for each continuous demographic feature, as well as counts and percentages for each categorical demographic feature.
-  * Detailed lists of patient IDs with missing data per feature for downstream validation.
+- `04_results_and_figures/data_analysis/clinical/`
+- `04_results_and_figures/data_analysis/fitbit/`
+- `04_results_and_figures/correlations/`
 
-### 2. `analyze_fitbit.py`
+## Script Overview
 
-* **Purpose:** Profiles missingness patterns, checks longitudinal cohort compliance, computes baseline summary statistics, and compiles an integrated trimester-level master dataset.
-* **Data Pipeline:**
-  1. Loads the processed Fitbit dataset, cleaned placental dataset, and the raw variables-of-interest table.
-  2. Filters rows to isolate events labeled `"Fitbit Data"` captured exclusively within the formal pregnancy window. If a patient's gestational age at delivery is missing, the window defaults to 40 weeks.
-  3. Sorts and splits the valid tracking timelines into four discrete trimesters:  *First Trimester*, *Early Second Trimester*, *Late Second and Early Third Trimester*, and *Late Third Trimester*.
-  4. Generates data compliance matrices determining whether each patient contributed non-missing data for at least 80% of their valid pregnancy tracking days across specific feature categories.
-* **Outputs Generated:**
-  * `outputs/fitbit_data_analysis.txt`: Comprehensive statistics log outlining total data gaps, missing days per ID, max consecutive missing day streaks per feature, metric summaries (Median and IQR), unique patients active per trimester, and detailed 80%+ data density compliance metrics.
+### `analyze_clinical.py`
 
-### 2. `analyze_fitbit.py`
+* **Purpose:** Summarize clinical demographic data and track missingness patterns.
+* **Inputs:**
+  * `01_data_cleaning/processed_data/processed_clinical_data.csv`
+  * `01_data_cleaning/processed_data/processed_placental_data.csv`
+  * `01_data_cleaning/processed_data/processed_fitbit_data.csv`
+  * `00_raw_data/dp3 master table v2.xlsx - clinical data.csv`
+  * `00_raw_data/dp3 master table v2.xlsx - Sheet1.csv`
+* **Key operations:**
+  * Normalizes split header structure from the raw clinical data file.
+  * Computes feature-level missingness for maternal age, infant sex, prepregnancy BMI, race, ethnicity, and smoking.
+  * Builds race/ethnicity intersection counts and stratified control/adverse tables.
+  * Generates summary tables for continuous and categorical clinical features.
+* **Outputs:**
+  * `04_results_and_figures/data_analysis/clinical/clinical_summary_tables.txt`
+  * `04_results_and_figures/data_analysis/clinical/clinical_data_analysis.txt`
 
-* **Purpose:** Profiles missingness patterns, checks longitudinal cohort compliance, computes baseline summary statistics, and compiles an integrated trimester-level master dataset.
-* **Data Pipeline:**
-  1. Loads the processed Fitbit dataset, cleaned placental dataset, and the raw variables-of-interest table.
-  2. Filters rows to isolate events labeled `"Fitbit Data"` captured exclusively within the formal pregnancy window. If a patient's gestational age at delivery is missing, the window defaults to 40 weeks.
-  3. Sorts and splits the valid tracking timelines into four discrete trimesters:  *First Trimester*, *Early Second Trimester*, *Late Second and Early Third Trimester*, and *Late Third Trimester*.
-  4. Generates data compliance matrices determining whether each patient contributed non-missing data for at least 80% of their valid pregnancy tracking days across specific feature categories.
-* **Outputs Generated:**
-  * `outputs/fitbit_data_analysis.txt`: Comprehensive statistics log outlining total data gaps, missing days per ID, max consecutive missing day streaks per feature, metric summaries (Median and IQR), unique patients active per trimester, and detailed 80%+ data density compliance metrics.
+### `analyze_fitbit.py`
 
-### 3. `correlation.py`
+* **Purpose:** Profile Fitbit data completeness, feature-level missingness, and per-patient data density.
+* **Inputs:**
+  * `01_data_cleaning/processed_data/processed_fitbit_data.csv`
+  * `01_data_cleaning/processed_data/processed_clinical_data.csv`
+* **Key operations:**
+  * Filters for pregnancy-period Fitbit data and excludes general metadata rows.
+  * Splits valid tracking days into five bins: `first`, `early_second`, `late_second_early_third`, `mid_third`, `late_third`.
+  * Computes per-patient missing-day counts, maximum consecutive missing streaks, and data coverage matrices.
+  * Creates pregnancy-week histograms of patient Fitbit data availability.
+  * Generates violin/box plot summaries for first-trimester Fitbit metrics by control status.
+* **Outputs:**
+  * `04_results_and_figures/data_analysis/fitbit/fitbit_data_analysis.txt`
+  * `04_results_and_figures/data_analysis/fitbit/pregnancy_plots_report.pdf`
+  * `04_results_and_figures/data_analysis/fitbit/violin_box_plots.pdf`
+  * `04_results_and_figures/data_analysis/fitbit/patients_per_feature_per_bin.csv`
+  * `04_results_and_figures/data_analysis/fitbit/omics_patients_per_feature_per_bin.csv`
+  * `04_results_and_figures/data_analysis/fitbit/missing_per_feature_per_bin.csv`
 
-* **Purpose:** Evaluates statistical relationships across clinical datasets using multi-hypothesis testing to identify meaningful biological associations.
-* **Data Pipeline:**
-  1. **Test 1 (Placental vs. Delivery):** Merges independent placental histopathology variables with dependent clinical delivery variables by matching patient identifiers.
-  2. **Test 2 (Fitbit vs. All Outcomes):** Sources data from the newly generated master Fitbit table, isolating metrics containing `"Trimester"` markers to compare individual trimester-level habits against all recorded clinical and placental endpoints.
-  3. **Core Testing Engine:** Runs a vectorized Spearman rank correlation protocol (**$\rho$**) across every valid cross-set pair. Pairs are excluded if variables are non-numeric, constant, or contain fewer than 10 overlapping patient datapoints.
-  4. **Multiple Testing Correction:** Applies the Benjamini-Hochberg False Discovery Rate (FDR) procedure to control for multiple comparisons, flagging relationships that satisfy the significance criteria (**$FDR \le 0.05$**).
-* **Outputs Generated:** To prevent file collision across separate evaluations, output names use descriptive testing prefixes (`placenta_` and `fitbit_`):
-  * `outputs/[prefix]full_correlation_table.txt`: Complete statistical matrix sorted by independent variables containing **$\rho$**, **$p$**-values, sample sizes (**$N$**), and computed FDR **$q$**-values formatted as a scannable Markdown table.
-  * `outputs/[prefix]filtered_correlation_table.txt`: Truncated statistical matrix showing only pairs that successfully passed the FDR significance threshold.
-  * `outputs/[prefix]positively_associated_vars.txt`: Flat list containing unique target dependent variables exhibiting significant positive relationships (**$\rho > 0$**, **$FDR \le 0.05$**).
-  * `outputs/[prefix]negatively_associated_vars.txt`: Flat list containing unique target dependent variables exhibiting significant negative relationships (**$\rho < 0$**, **$FDR \le 0.05$**).
+### `correlation.py`
 
-### 4. `histogram.py`
+* **Purpose:** Run correlation and distribution tests across placental, clinical, and Fitbit variables.
+* **Inputs:**
+  * `01_data_cleaning/processed_data/processed_placental_data.csv`
+  * `00_raw_data/dp3 master table v2.xlsx - variables of interest.csv`
+  * `01_data_cleaning/processed_data/processed_clinical_data.csv`
+  * `01_data_cleaning/processed_data/processed_fitbit_data.csv`
+  * `01_data_cleaning/processed_data/master_fitbit_clinical_correlation_data.csv`
+* **Key operations:**
+  * Test 1: Spearman correlations between placental histopathology and delivery features.
+  * Test 2: Spearman correlations between Fitbit metrics and delivery/placental outcomes.
+  * Test 3: Demographics collinearity analysis with a heatmap and VIF scores.
+  * Test 4: Distribution comparisons of Fitbit features between control and complication groups during pregnancy.
+* **Outputs:**
+  * `04_results_and_figures/correlations/test1/full_correlation_table_placental.txt`
+  * `04_results_and_figures/correlations/test1/filtered_correlation_table_placental.txt`
+  * `04_results_and_figures/correlations/test1/positively_associated_vars_placental.txt`
+  * `04_results_and_figures/correlations/test1/negatively_associated_vars_placental.txt`
+  * `04_results_and_figures/correlations/test2/full_correlation_table_fitbit.txt`
+  * `04_results_and_figures/correlations/test2/filtered_correlation_table_fitbit.txt`
+  * `04_results_and_figures/correlations/test2/positively_associated_vars_fitbit.txt`
+  * `04_results_and_figures/correlations/test2/negatively_associated_vars_fitbit.txt`
+  * `04_results_and_figures/correlations/test3/demographics_correlation_heatmap.png`
+  * `04_results_and_figures/correlations/test3/demographics_vif.txt`
+  * `04_results_and_figures/correlations/test3/demographics_correlation_matrix.csv`
+  * `04_results_and_figures/correlations/test4/fitbit_differential_distribution.csv`
+  * `04_results_and_figures/correlations/test4/fitbit_differential_distribution_significant.csv`
 
-* **Purpose:** Visualizes patient data density and longitudinal tracking over the course of pregnancy.
-* **Data Pipeline:**
+## Recommended Execution Order
 
-  1. Loads the master Fitbit dataset sheet.
-  2. Filters cohort to include only patients who have at least one non-null metric entry.
-  3. Generates comparative distributions plotted against time, complete with vertical dotted markers highlighting **pregnancy trimesters** and the **typical delivery date**.
-* **Outputs Generated:** Compiles a dual-plot PDF report saved to `outputs/pregnancy_plots_report.pdf`:
+1. Run the `01_data_cleaning` preprocessing pipeline first.
+2. Run `02_exploratory_analysis/analyze_clinical.py`.
+3. Run `02_exploratory_analysis/analyze_fitbit.py`.
+4. Run `02_exploratory_analysis/correlation.py`.
 
-  * **Plot 1 (All Valid Data):** Plots active patient counts per day across all available valid data updates.
-  * **Plot 2 (Pregnancy-Only Data):** Identical plot layout, but strictly truncated to data captured within the formal pregnancy timeline.
+## Notes
 
-## Dependency Graph & Pipeline Sequence
-
-For the exploratory data analysis pipeline to evaluate cleanly, scripts should be run in chronological sequence:
-
-```
-01_data_cleaning/ processed data outputs
-       │
-       ▼
-02_exploratory_analysis/
- ├── analyze_clinical.py  ──► Generates clinical missingness summary
- │     │
- │     ▼
- ├── analyze_fitbit.py    ──► Generates fitbit_data_analysis log
- │     │
- │     ▼
- ├── correlation.py       ──► Consumes master CSV; executes placenta_ and fitbit_ test logs
- │
- └── histogram.py         ──► Generates pregnancy_plots_report.pdf
-```
+* The exploratory scripts rely on cleaned files from `01_data_cleaning/processed_data/` and a few raw `00_raw_data/` sources.

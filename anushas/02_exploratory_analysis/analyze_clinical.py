@@ -871,7 +871,7 @@ def print_log(missing_report, missing_ids, race_table, total_patients, cont_summ
 def main():
     clinical_sheet, master_clinical, placental_sheet, master_main, fitbit_sheet = load_sheet()
     
-    # filter master_clinical and master_main to only contain the 337 patient IDs we want
+    # filter master_clinical and master_main to only contain the 347 patient IDs we want
     valid_patient_ids = clinical_sheet['id'].unique()
     master_clinical_filtered = master_clinical[master_clinical['id'].isin(valid_patient_ids)].copy()
     master_main_filtered = master_main[master_main['id'].isin(valid_patient_ids)].copy()
