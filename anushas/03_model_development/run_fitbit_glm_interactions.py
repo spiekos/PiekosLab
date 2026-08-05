@@ -1,11 +1,8 @@
 import logging
-from datetime import datetime
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
-from statsmodels.genmod.families import links
-from statsmodels.genmod.families import family
 import scipy
 
 
