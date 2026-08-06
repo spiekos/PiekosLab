@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 
 
 # load and return the fitbit dataset, the placental dataset, and the clinical dataset
