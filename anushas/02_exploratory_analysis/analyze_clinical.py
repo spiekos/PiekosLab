@@ -718,8 +718,8 @@ def calc_smd_categorical(dict_control, dict_experimental):
 
     # Sort both dicts by key so the two groups' vectors correspond to the
     # same categories position-by-position, independent of insertion order
-    dict_control = dict(sorted(dict_control.items()))
-    dict_experimental = dict(sorted(dict_experimental.items()))
+    dict_control = dict(sorted(dict_control.items(), key=lambda item: str(item[0])))
+    dict_experimental = dict(sorted(dict_experimental.items(), key=lambda item: str(item[0])))
 
     # Both must contain the same category labels (sorting fixes order, not
     # a genuine set mismatch, so this still guards against missing keys)

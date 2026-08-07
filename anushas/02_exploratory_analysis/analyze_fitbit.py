@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import matplotlib.patches as mpatches
+from scipy import stats
+from statsmodels.stats.multitest import multipletests
 from matplotlib.backends.backend_pdf import PdfPages
 
 # load and return the fitbit dataset
@@ -219,7 +221,7 @@ def calc_summary_stats_median(sheet, feature_cols):
     return summary
 
 
-# returns mean + standard deviation for each significant Fitbit metric, split by control vs complication groups
+# returns mean, standard deviation, and FDR for each significant Fitbit metric, split by control vs complication groups
 # only includes values in the first trimester
 def calc_summary_stats_mean(sheet, feature_cols):
     # filter metric list to only include differentially distributed metrics
@@ -227,9 +229,6 @@ def calc_summary_stats_mean(sheet, feature_cols):
     sig_metrics = diff_distribution_sheet["feature"].unique().tolist()
     metric_cols_adjusted = [c for c in feature_cols if c in sig_metrics]
 
-    def iqr(x):
-        return x.quantile(0.75) - x.quantile(0.25)
-    
     # force-convert to numeric
     summary_df = sheet[metric_cols_adjusted + ["group_bin"]].copy()
     for col in metric_cols_adjusted:
@@ -238,16 +237,36 @@ def calc_summary_stats_mean(sheet, feature_cols):
     df_control = summary_df[summary_df["group_bin"] == 0]
     df_complication = summary_df[summary_df["group_bin"] == 1]
 
-    ctrl_stats = df_control.agg(["mean", "std"]).T
+    ctrl_stats = df_control[metric_cols_adjusted].agg(["mean", "std"]).T
     ctrl_stats.columns = ["Control Mean", "Control SD"]
 
-    comp_stats = df_complication.agg(["mean", "std"]).T
+    comp_stats = df_complication[metric_cols_adjusted].agg(["mean", "std"]).T
     comp_stats.columns = ["Complications Mean", "Complications SD"]
 
     summary = pd.concat([ctrl_stats, comp_stats], axis=1).reset_index()
     summary.rename(columns={"index": "Feature"}, inplace=True)
 
-    summary = summary[summary["Feature"] != "group_bin"]
+    # calculate raw p-values per feature
+    p_values = []
+    for feature in summary["Feature"]:
+        ctrl_vals = df_control[feature].dropna()
+        comp_vals = df_complication[feature].dropna()
+        if len(ctrl_vals) > 1 and len(comp_vals) > 1:
+            _, p_val = stats.ttest_ind(ctrl_vals, comp_vals, equal_var=False)
+        else:
+            p_val = float("nan")
+        p_values.append(p_val)
+
+    summary["P-Value"] = p_values
+
+    # calculate FDR using Benjamini-Hochberg adjustment
+    valid_p_mask = ~summary["P-Value"].isna()
+    summary["FDR"] = float("nan")
+    if valid_p_mask.any():
+        _, fdr_vals, _, _ = multipletests(
+            summary.loc[valid_p_mask, "P-Value"], method="fdr_bh"
+        )
+        summary.loc[valid_p_mask, "FDR"] = fdr_vals
 
     return summary
 
