@@ -1,3 +1,5 @@
+import re
+
 import pandas as pd
 import numpy as np
 
@@ -331,8 +333,10 @@ def bin_features(df):
             val_str = str(val).strip().lower()
             if "commercial" in val_str:
                 return "Commercial"
+            elif ("medicaid" in val_str or "medicare" in val_str):
+                return "Medicaid"
             else:
-                return "Noncommercial (Medicaid/Uninsured/Self-pay)"
+                return "Self Pay"
 
         df["hosp_insurance_grping"] = df["hosp_insurance_grping"].apply(map_insurance)
     

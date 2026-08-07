@@ -225,7 +225,7 @@ def null_implausible_values(df, metric_cols, bounds):
     df_cleaned = filter_person_level_sleep(df_cleaned)
 
     # filter for improbable values
-    for metric in bounds["Source column(s)"]:
+    for metric in bounds["Source column(s)"].dropna().unique():
         df_cleaned[metric] = pd.to_numeric(df_cleaned[metric], errors="coerce")
 
         metric_row = bounds[bounds["Source column(s)"] == metric]
@@ -236,14 +236,14 @@ def null_implausible_values(df, metric_cols, bounds):
         max_mask = df_cleaned[metric] > keep_max
         bounds_mask = min_mask | max_mask
 
-    # nullify all values out of bounds for this metric
-    df_cleaned.loc[bounds_mask, metric] = np.nan
+        # nullify all values out of bounds for this metric
+        df_cleaned.loc[bounds_mask, metric] = np.nan
 
     # address inclusive bounds for sleep summaries (0 values)
     sleep_cols = ["sleep_summary_total_minutes_asleep", "sleep_summary_total_time_in_bed"]
     for col in sleep_cols:
-        zero_mask = df_cleaned[col] == 0
-        df_cleaned.loc[zero_mask, col] = np.nan
+        df_cleaned[col] = pd.to_numeric(df_cleaned[col], errors="coerce")
+        df_cleaned.loc[df_cleaned[col] == 0, col] = np.nan
 
     return df_cleaned
 

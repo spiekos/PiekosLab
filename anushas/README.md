@@ -2,66 +2,81 @@
 
 ## Pregnancy data pipeline and exploratory analysis
 
-This project contains an end-to-end workflow for cleaning and analyzing maternal Fitbit data, placental histopathology findings, and clinical delivery outcomes. The pipeline standardizes raw inputs, generates cleaned intermediate datasets, and produces summary tables and figures for downstream analysis.
+This project contains an end-to-end workflow for cleaning and analyzing maternal Fitbit data, placental histopathology findings, and clinical delivery outcomes. The pipeline standardizes raw inputs, builds analysis-ready datasets, and produces summary tables, figures, and model outputs.
 
 ## What this project does
 
 - Cleans and harmonizes clinical, Fitbit, and placental data
 - Applies quality-control rules for missingness and feature completeness
-- Builds analysis-ready datasets for correlation and exploratory work
-- Produces logs, plots, and summary files in the outputs folders
+- Builds integrated datasets for correlation and exploratory analysis
+- Generates visualizations and correlation tables
+- Runs GLM modeling of Fitbit metrics versus clinical and placental outcomes
 
 ## Project structure
 
 ```text
 anushas/
 ├── 00_raw_data/                      # Immutable source files
-├── 01_data_cleaning/                 # Data cleaning and preprocessing
+├── 01_data_cleaning/                 # Data preprocessing pipeline
+│   ├── README.md
 │   ├── preprocess_clinical.py
 │   ├── preprocess_fitbit.py
 │   ├── preprocess_placental.py
 │   ├── preprocess_correlation.py
 │   └── processed_data/               # Cleaned intermediate datasets
-├── 02_exploratory_analysis/          # Analysis, correlation, and plotting
+├── 02_exploratory_analysis/          # Exploratory analysis scripts
+│   ├── README.md
 │   ├── analyze_clinical.py
 │   ├── analyze_fitbit.py
-│   ├── correlation.py
-│   ├── histogram.py
-│   └── outputs/                      # Final logs, tables, and figures
+│   └── correlation.py
+├── 03_model_development/             # Modeling workflow
+│   ├── README.md
+│   └── run_fitbit_glm_interactions.py
+├── 04_results_and_figures/           # Final outputs for results and figures
+│   ├── README.md
+│   ├── correlations/
+│   ├── data_analysis/
+│   └── models/
 └── README.md                         # Project overview
 ```
 
-## Workflow
+Run the scripts from the repository root in the following order.
 
-Run the scripts from the `anushas` project directory in the following order.
-
-### 1. Clean and preprocess the raw data
+### 1. Clean and preprocess raw data
 
 ```bash
-python 01_data_cleaning/preprocess_clinical.py
-python 01_data_cleaning/preprocess_fitbit.py
-python 01_data_cleaning/preprocess_placental.py
-python 01_data_cleaning/preprocess_correlation.py
+python anushas/01_data_cleaning/preprocess_clinical.py
+python anushas/01_data_cleaning/preprocess_fitbit.py
+python anushas/01_data_cleaning/preprocess_placental.py
+python anushas/01_data_cleaning/preprocess_correlation.py
 ```
 
-These steps generate the cleaned files in `01_data_cleaning/processed_data/`.
+These steps generate cleaned files in `anushas/01_data_cleaning/processed_data/`.
 
-### 2. Run exploratory analysis and generate outputs
+### 2. Run exploratory analysis
 
 ```bash
-python 02_exploratory_analysis/analyze_clinical.py
-python 02_exploratory_analysis/analyze_fitbit.py
-python 02_exploratory_analysis/correlation.py
-python 02_exploratory_analysis/histogram.py
+python anushas/02_exploratory_analysis/analyze_clinical.py
+python anushas/02_exploratory_analysis/analyze_fitbit.py
+python anushas/02_exploratory_analysis/correlation.py
 ```
 
-These steps create the summary outputs, correlation tables, and figures in `02_exploratory_analysis/outputs/`.
+These scripts write their outputs to `anushas/04_results_and_figures/`.
+
+### 3. Run modeling
+
+```bash
+python anushas/03_model_development/run_fitbit_glm_interactions.py
+```
+
+Model results are saved in `anash/04_results_and_figures/models/`.
 
 ## Key outputs
 
-- Processed clinical, Fitbit, and placental datasets in `01_data_cleaning/processed_data/`
-- Correlation results and supporting lists in `02_exploratory_analysis/outputs/`
-- Figures in `02_exploratory_analysis/outputs/figures/`
+- Cleaned clinical, Fitbit, and placental datasets in `anash/01_data_cleaning/processed_data/`
+- Exploratory outputs and correlation tables in `anash/04_results_and_figures/correlations/`
+- Clinical and Fitbit analysis summaries in `anash/04_results_and_figures/data_analysis/`
+- Modeling results and logs in `anash/04_results_and_figures/models/`
 
 ## Environment requirements
 
@@ -75,4 +90,4 @@ Recommended Python environment:
 - seaborn
 - statsmodels
 
-> The raw files in `00_raw_data/` should remain unchanged so the pipeline stays reproducible.
+> Keep raw files in `anash/00_raw_data/` unchanged to maintain reproducibility.

@@ -1,6 +1,8 @@
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+import matplotlib.patches as mpatches
 from matplotlib.backends.backend_pdf import PdfPages
 
 # load and return the fitbit dataset
@@ -443,67 +445,180 @@ def make_histograms_pdf(all_data, pregnancy_data):
         )
 
 
-# generates violin/box plots (split by control vs complications) for each metric for the first trimester
-def make_metric_violin_box_plots(df, metric_cols):
-    plots_dict = {}
-    
+# generates combined violin/box plots (split by control vs complications) for each metric for the first trimester
+# @param normalize: if True, normalizes the data using Z-scores. useful if data ranges vary wildly between metrics
+# @param significant: if True, only plots the Fitbit metrics that are differentially distributed between control/complication groups
+def make_metric_violin_box_plots(df, metric_cols, normalize=True, significant=True):
     plt.rcParams['pdf.fonttype'] = 42
     plt.rcParams['ps.fonttype'] = 42
-    plt.rcParams.update({'font.size': 14})
+    plt.rcParams.update({'font.size': 13})
 
-    label_mapping = {0: 'Control', 1: 'Complications'}
-    color_mapping = {0: 'cornflowerblue', 1: 'crimson'}
+    colors = {0: 'cornflowerblue', 1: 'crimson'}
+    labels = {0: 'Control', 1: 'Complications'}
 
-    for metric in metric_cols:
-        fig, ax = plt.subplots(figsize=(8, 6))
+    valid_metrics = []
+    ctrl_data_list = []
+    comp_data_list = []
 
-        valid_data = df[["group_bin", metric]].dropna()
-        
-        numeric_labels = list(label_mapping.keys())
-        numeric_labels.sort()
-        
-        # extract data lists per group
-        values = [valid_data[valid_data["group_bin"] == lbl][metric].values for lbl in numeric_labels]
+    if significant:
+        # filter metric list to only include differentially distributed metrics
+        diff_distribution_sheet = pd.read_csv("04_results_and_figures/correlations/test4/fitbit_differential_distribution_significant.csv")
+        sig_metrics = diff_distribution_sheet["feature"].unique().tolist()
+        metric_cols_adjusted = [c for c in metric_cols if c in sig_metrics]
+    else:
+        metric_cols_adjusted = metric_cols
 
-        # check if we have data to plot
-        if not values or all(len(v) == 0 for v in values):
-            print(f"Skipping {metric}: No valid data found.")
-            plt.close(fig)
+    for metric in metric_cols_adjusted:
+        if metric not in df.columns or "group_bin" not in df.columns:
+            print(f"Skipping {metric}: Column missing from DataFrame.")
             continue
 
-        colors = [color_mapping[label] for label in numeric_labels]
-        text_labels = [label_mapping[label] for label in numeric_labels]
+        valid_df = df[["group_bin", metric]].dropna()
+        ctrl_vals = valid_df[valid_df["group_bin"] == 0][metric].values
+        comp_vals = valid_df[valid_df["group_bin"] == 1][metric].values
 
-        # create violin plots manually by position
-        for i, (v, c) in enumerate(zip(values, colors), start=1):
-            parts = ax.violinplot([v], positions=[i], showmeans=False, showmedians=False, showextrema=False)
-            for pc in parts['bodies']:
-                pc.set_facecolor(c)
-                pc.set_edgecolor('black')
-                pc.set_alpha(0.7)
+        if len(ctrl_vals) == 0 or len(comp_vals) == 0:
+            print(f"Skipping {metric}: Missing control or complication data.")
+            continue
 
-        # add boxplot overlay (using positions matching the violins)
-        ax.boxplot(values, positions=list(range(1, len(numeric_labels) + 1)), widths=0.15, 
-                   boxprops=dict(color='black', linewidth=1.5),
-                   medianprops=dict(color='black', linewidth=1.5),
-                   whiskerprops=dict(color='black', linewidth=1.5),
-                   capprops=dict(color='black', linewidth=1.5))
+        # Z-score standardization per metric if raw scales vary drastically
+        if normalize:
+            all_vals = np.concatenate([ctrl_vals, comp_vals])
+            mean, std = np.mean(all_vals), np.std(all_vals)
+            if std > 0:
+                ctrl_vals = (ctrl_vals - mean) / std
+                comp_vals = (comp_vals - mean) / std
 
-        ax.set_title(f'Distribution of {metric}')
-        ax.set_ylabel(metric)
-        ax.set_xticks(range(1, len(numeric_labels) + 1))
-        ax.set_xticklabels(text_labels, rotation=0, ha='center')
+        valid_metrics.append(metric)
+        ctrl_data_list.append(ctrl_vals)
+        comp_data_list.append(comp_vals)
 
-        plt.tight_layout()
+    if not valid_metrics:
+        print("No valid metrics to plot.")
+        return None
 
-        plots_dict[metric] = fig
+    n_metrics = len(valid_metrics)
+    metric_spacing = 1.8
+    group_offset = 0.28
+
+    centers = np.arange(n_metrics) * metric_spacing
+    ctrl_positions = centers - group_offset
+    comp_positions = centers + group_offset
+
+    fig_width = max(10, n_metrics * 2.2)
+    fig, ax = plt.subplots(figsize=(fig_width, 6))
+
+    # helper function to render violins and boxplots per group
+    def render_layer(data_list, positions, color):
+        vparts = ax.violinplot(
+            data_list,
+            positions=positions,
+            widths=0.45,
+            showmeans=False,
+            showmedians=False,
+            showextrema=False
+        )
+        for pc in vparts['bodies']:
+            pc.set_facecolor(color)
+            pc.set_edgecolor(color)
+            pc.set_alpha(0.35)
+
+        bp = ax.boxplot(
+            data_list,
+            positions=positions,
+            widths=0.12,
+            patch_artist=True,
+            showfliers=False,
+            manage_ticks=False
+        )
+        for patch in bp['boxes']:
+            patch.set_facecolor(color)
+            patch.set_alpha(0.85)
+            patch.set_edgecolor('black')
+            patch.set_linewidth(1.2)
+
+        for element in ['whiskers', 'caps', 'medians']:
+            plt.setp(bp[element], color='black', linewidth=1.5)
+
+    render_layer(ctrl_data_list, ctrl_positions, colors[0])
+    render_layer(comp_data_list, comp_positions, colors[1])
+
+    ax.set_xticks(centers)
+    ax.set_xticklabels(valid_metrics, rotation=25, ha='right', fontweight='bold')
+    
+    ylabel_str = "Standardized Value (Z-Score)" if normalize else "Value"
+    ax.set_ylabel(ylabel_str)
+    ax.set_title("First Trimester Metrics: Control vs. Complications", pad=15, fontweight='bold')
+
+    legend_patches = [
+        mpatches.Patch(color=colors[0], alpha=0.85, label=labels[0]),
+        mpatches.Patch(color=colors[1], alpha=0.85, label=labels[1])
+    ]
+    ax.legend(handles=legend_patches, loc='upper right', frameon=True)
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    plt.tight_layout()
+    return fig
+
+
+# computes min and max feature sample sizes across gestational bins, split by control vs complication status
+def get_sample_size_range_by_bin(sheets, feature_cols, trimester_names):
+    records = []
+
+    group_map = {0: "Control", 1: "Complication", 0.0: "Control", 1.0: "Complication", "0": "Control", "1": "Complication"}
+
+    for idx, df in enumerate(sheets):
+        stage_label = trimester_names[idx] if idx < len(trimester_names) else f"Trimester_{idx+1}"
+
+        # map 0/1 values to "control"/"complication"
+        df_stage = df.copy()
+        df_stage["group_bin"] = df_stage["group_bin"].replace(group_map)
+
+        groups = df_stage["group_bin"].dropna().unique()
         
-    return plots_dict
+        for grp in groups:
+            sub = df_stage[df_stage["group_bin"] == grp]
+            
+            if len(sub) == 0:
+                min_n, max_n = 0, 0
+            else:
+                counts = sub[feature_cols].notna().sum()
+                min_n = int(counts.min()) if not counts.empty else 0
+                max_n = int(counts.max()) if not counts.empty else 0
+
+            records.append({
+                "Gestational Bin": stage_label,
+                "Group": grp,
+                "Min N": min_n,
+                "Max N": max_n
+            })
+
+    summary_df = pd.DataFrame(records)
+
+    poster_table = summary_df.pivot(
+        index="Gestational Bin",
+        columns="Group",
+        values=["Min N", "Max N"]
+    )
+
+    # order bins chronologically
+    ordered_bins = [s for s in trimester_names if s in poster_table.index]
+    poster_table = poster_table.reindex(ordered_bins)
+
+    # swap header levels to put group status (control vs complication) at top
+    poster_table.columns = poster_table.columns.swaplevel(0, 1)
+    poster_table.sort_index(axis=1, level=0, inplace=True)
+
+    final_df = poster_table.reset_index()
+
+    return final_df
 
 
 # print all calculated data into a log file
 def print_log(total_patients, total_missing, per_patient, consistently_missing_patients, consistently_missing_with_omics, max_con_missing, 
-              unique_dates, summary_stats, patients_per_timeframe, metric_matrix, pt_summary, metric_summary, num_metrics):
+              unique_dates, summary_stats, patients_per_timeframe, metric_matrix, pt_summary, metric_summary, num_metrics, sample_size_table):
     log_path = "04_results_and_figures/data_analysis/fitbit/fitbit_data_analysis.txt"
 
     with open(log_path, "w") as f:
@@ -555,6 +670,9 @@ def print_log(total_patients, total_missing, per_patient, consistently_missing_p
         f.write(metric_summary.to_string(index = False))
         f.write("\n\n\n")
 
+        f.write("Sample size ranges by gestational bin:\n")
+        f.write(sample_size_table.to_string(index = False))
+        f.write("\n\n\n")
 
 def main():
     fitbit_sheet, clinical_sheet = load_sheet()
@@ -585,17 +703,17 @@ def main():
     patients_per_feature_per_bin = get_patients_per_feature_per_bin(sheets_bucketed, feature_cols, timeframe_names)
     omics_patients_per_feature_per_bin = get_omics_patients_per_feature_per_bin(sheets_bucketed, feature_cols, timeframe_names, clinical_sheet)
     metric_matrix, pt_summary, metric_summary = get_metric_representation_matrices(sheet_filtered, feature_cols)
+    sample_size_table = get_sample_size_range_by_bin(sheets_bucketed, feature_cols, timeframe_names)
 
     all_counts, preg_counts = prepare_pregnancy_counts_histogram(fitbit_sheet)
     make_histograms_pdf(all_counts, preg_counts)
 
     violin_box_plots = make_metric_violin_box_plots(sheets_bucketed[0], feature_cols)
     with PdfPages("04_results_and_figures/data_analysis/fitbit/violin_box_plots.pdf") as pdf:
-        for _, fig in violin_box_plots.items():
-            pdf.savefig(fig, bbox_inches='tight')
+        pdf.savefig(violin_box_plots, bbox_inches='tight')
 
     print_log(total_patients, total_missing, per_patient, consistently_missing_patients, consistently_missing_with_omics, max_con_missing, 
-              unique_dates, summary_stats, patients_per_timeframe, metric_matrix, pt_summary, metric_summary, len(feature_cols))
+              unique_dates, summary_stats, patients_per_timeframe, metric_matrix, pt_summary, metric_summary, len(feature_cols), sample_size_table)
 
     patients_per_feature_per_bin.to_csv("04_results_and_figures/data_analysis/fitbit/patients_per_feature_per_bin.csv", index=False)
     omics_patients_per_feature_per_bin.to_csv("04_results_and_figures/data_analysis/fitbit/omics_patients_per_feature_per_bin.csv", index=False)

@@ -7,7 +7,8 @@ Preterm Birth History
     1+                                             24 (10.1%)                40 (39.2%)                0.72
 Insurance                                                                                              
     Commercial                                     172 (72.6%)               72 (70.6%)                0.04
-    Noncommercial (medicaid/uninsured/self-pay)    58 (24.5%)                30 (29.4%)                0.11
+    Medicaid                                       56 (23.6%)                28 (27.5%)                0.09
+    Self pay                                       2 (0.8%)                  2 (2.0%)                  0.10
 ADI Ranking                                        64.0 (35.0)               71.0 (33.0)               0.17
 Risk Factor                                        73 (30.8%)                52 (51.0%)                0.42
 Race                                                                                                   
