@@ -625,6 +625,142 @@ def generate_outcomes_table(clinical_sheet, master_clinical, placental_sheet):
     return build_summary(df, outcomes_vars)
 
 
+def calc_smd_continuous(df_control, df_experimental, k, missing_val="-999.0"):
+    """
+    Standardized mean difference (SMD) for a continuous column.
+
+    SMD = |mean1 - mean2| / sqrt( (var1 + var2) / 2 )
+
+    Uses means and sample SDs (parametric), so the SMD summarizes the
+    difference in central tendency and ignores skew. Median [IQR] is
+    printed for the table display, since skewed variables are conventionally
+    reported that way even though the SMD itself stays mean-based.
+    """
+
+    # Drop None and the sentinel value; cast everything to float
+    d1 = [float(r) for r in df_control[k]
+          if r is not None and r != missing_val]
+    d2 = [float(r) for r in df_experimental[k]
+          if r is not None and r != missing_val]
+    d1, d2 = np.array(d1), np.array(d2)
+
+    # Group means (used for the SMD)
+    m1, m2 = d1.mean(), d2.mean()
+
+    # Pooled SD: average of the two sample variances (ddof=1 = unbiased)
+    pooled_sd = np.sqrt((d1.var(ddof=1) + d2.var(ddof=1)) / 2)
+
+    # Guard against divide-by-zero when the column is constant
+    smd = abs(m1 - m2) / pooled_sd if pooled_sd > 0 else 0.0
+
+    # Median and IQR for the table display (robust to skew)
+    med1, med2 = np.median(d1), np.median(d2)
+    q1_1, q3_1 = np.percentile(d1, [25, 75])
+    q1_2, q3_2 = np.percentile(d2, [25, 75])
+
+    print(f"{k}:")
+    print(f"  control: median={med1:.2f} [IQR {q1_1:.2f}-{q3_1:.2f}], "
+          f"mean={m1:.2f}")
+    print(f"  exp:     median={med2:.2f} [IQR {q1_2:.2f}-{q3_2:.2f}], "
+          f"mean={m2:.2f}")
+    print(f"  SMD={smd:.3f}")
+    return smd
+
+
+def calc_smd_binary(df_control, df_experimental, k):
+    """
+    Standardized mean difference (SMD) for a binary 0/1 column.
+
+    SMD = |p1 - p2| / sqrt( (p1(1-p1) + p2(1-p2)) / 2 )
+
+    Reported as an absolute value: the sign is arbitrary in a balance
+    table, so only magnitude (vs. the 0.1 imbalance threshold) matters.
+    """
+
+    # Group sizes
+    n1, n2 = len(df_control[k]), len(df_experimental[k])
+
+    # Event counts (number of 1s / "yes") in each group
+    x1 = sum(int(x) for x in df_control[k])
+    x2 = sum(int(x) for x in df_experimental[k])
+
+    # Proportion of 1s in each group
+    p1 = x1 / n1
+    p2 = x2 / n2
+
+    # Pooled SD of a Bernoulli variable: average of the two group variances
+    pooled_sd = np.sqrt((p1 * (1 - p1) + p2 * (1 - p2)) / 2)
+
+    # Guard against divide-by-zero when both groups are all-0 or all-1
+    smd = abs(p1 - p2) / pooled_sd if pooled_sd > 0 else 0.0
+
+    print(f"{k}: control={x1} ({p1*100:.1f}%), "
+          f"exp={x2} ({p2*100:.1f}%), SMD={smd:.3f}")
+    return smd
+
+
+def calc_smd_categorical(dict_control, dict_experimental):
+    """
+    Multivariate standardized mean difference (SMD) for a k-level
+    categorical variable (Yang & Dalton, 2012).
+
+    SMD = sqrt( T' * pinv(S) * T )
+
+    where T is the vector of proportion differences across categories and
+    S is the pooled multinomial covariance. Returns a single non-negative
+    value summarizing imbalance across all levels. Reduces to the binary
+    formula when k == 2.
+
+    Inputs are dicts of raw counts per category. Both dicts are sorted by
+    key at the start so the two proportion vectors line up by category
+    regardless of original insertion order.
+    """
+
+    # Sort both dicts by key so the two groups' vectors correspond to the
+    # same categories position-by-position, independent of insertion order
+    dict_control = dict(sorted(dict_control.items()))
+    dict_experimental = dict(sorted(dict_experimental.items()))
+
+    # Both must contain the same category labels (sorting fixes order, not
+    # a genuine set mismatch, so this still guards against missing keys)
+    keys = list(dict_control.keys())
+    assert keys == list(dict_experimental.keys()), "key sets must match"
+
+    # Count vectors -> proportion vectors within each group
+    c = np.array([dict_control[key] for key in keys], dtype=float)
+    e = np.array([dict_experimental[key] for key in keys], dtype=float)
+    n1, n2 = c.sum(), e.sum()
+    p1, p2 = c / n1, e / n2
+
+    # Drop the last category: proportions sum to 1, so the full
+    # covariance matrix is singular. Using k-1 levels makes it invertible.
+    t = (p1 - p2)[:-1]
+    pr1, pr2 = p1[:-1], p2[:-1]
+
+    def cov(p):
+        # Multinomial covariance for one group:
+        #   diagonal   = p_i (1 - p_i)
+        #   off-diag   = -p_i p_j
+        S = -np.outer(p, p)
+        np.fill_diagonal(S, p * (1 - p))
+        return S
+
+    # Pooled covariance = average of the two groups' covariance matrices
+    S = (cov(pr1) + cov(pr2)) / 2
+
+    # pinv (pseudo-inverse) instead of inv for numerical safety when a
+    # category is empty or near-constant and S is ill-conditioned
+    smd = float(np.sqrt(t @ np.linalg.pinv(S) @ t))
+
+    print(f"SMD={smd:.3f}")
+    for key in keys:
+        print(f"  {key}: control={dict_control[key]} "
+              f"({dict_control[key]/n1*100:.1f}%), "
+              f"exp={dict_experimental[key]} "
+              f"({dict_experimental[key]/n2*100:.1f}%)")
+    return smd
+
+
 # helper function to calculate counts (%) for categorical variables and median (IQR) for continuous variables
 def build_summary(df, variables):
     summary_rows = []
@@ -672,14 +808,8 @@ def build_summary(df, variables):
                     adv_pct = (adv_yes / adv_total * 100) if adv_total > 0 else 0.0
                     adv_stat = f"{adv_yes} ({adv_pct:.1f}%)"
 
-                    # calculate SMD for binary variables (using proportion formula)
-                    p1 = (ctrl_yes / ctrl_total) if ctrl_total > 0 else 0.0
-                    p2 = (adv_yes / adv_total) if adv_total > 0 else 0.0
-                    pooled_var = (p1 * (1 - p1) + p2 * (1 - p2)) / 2
-                    if pooled_var > 0:
-                        binary_smd = abs(p1 - p2) / np.sqrt(pooled_var)
-                    else:
-                        binary_smd = 0.0
+                    # calculate SMD for binary variables
+                    binary_smd = calc_smd_binary(df_control, df_adverse, var)
                     
                     summary_rows.append(
                         {
@@ -717,16 +847,8 @@ def build_summary(df, variables):
                         a_pct = adv_percents.get(cat, 0.0)
                         adv_stat = f"{a_count} ({a_pct:.1f}%)"
 
-                        # compute SMD for each category for the categorical variables
-                        total_c = len(df_control)
-                        total_a = len(df_adverse)
-                        p1 = (c_count / total_c) if total_c > 0 else 0.0
-                        p2 = (a_count / total_a) if total_a > 0 else 0.0
-                        pooled_var = (p1 * (1 - p1) + p2 * (1 - p2)) / 2
-                        if pooled_var > 0:
-                            cat_smd = abs(p1 - p2) / np.sqrt(pooled_var)
-                        else:
-                            cat_smd = 0.0
+                        # compute SMD for the categorical variables
+                        cat_smd = calc_smd_categorical(ctrl_counts.to_dict(), adv_counts.to_dict())
 
                         summary_rows.append(
                             {
@@ -754,19 +876,8 @@ def build_summary(df, variables):
                 else:
                     adv_stat = "N/A"
 
-                # calculate SMD for continuous variable (using means and pooled standard deviation)
-                if not ctrl_data.empty and not adv_data.empty:
-                    mean1, mean2 = ctrl_data.mean(), adv_data.mean()
-                    var1, var2 = ctrl_data.var(ddof=1), adv_data.var(ddof=1)
-                    n1, n2 = len(ctrl_data), len(adv_data)
-                    pooled_sd = np.sqrt(((n1 - 1) * var1 + (n2 - 1) * var2) / (n1 + n2 - 2)) if (n1 + n2 > 2) else 0
-                    if pooled_sd > 0:
-                        smd = abs(mean1 - mean2) / pooled_sd
-                    else:
-                        smd = 0.0
-                    smd_str = f"{smd:.2f}"
-                else:
-                    smd_str = "N/A"
+                # calculate SMD for continuous variable
+                smd_str = calc_smd_continuous(df_control, df_adverse, var)
 
                 summary_rows.append(
                     {

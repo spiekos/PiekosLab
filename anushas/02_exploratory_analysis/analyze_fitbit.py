@@ -199,7 +199,7 @@ def count_unique_dates(sheet):
 
 # returns median + interquartile range for each relevant metric:
 # gestational age at start of study, gestational age at delivery, steps, total distance, very active minutes, total minutes asleep
-def calc_summary_stats(sheet, feature_cols):
+def calc_summary_stats_median(sheet, feature_cols):
     new_cols = feature_cols + ["gestational_age_by_reported_lmp", "gest_age_del"]
 
     def iqr(x):
@@ -215,6 +215,39 @@ def calc_summary_stats(sheet, feature_cols):
 
     summary = summary.reset_index()
     summary.columns = ["Feature", "Median", "IQR"]
+
+    return summary
+
+
+# returns mean + standard deviation for each significant Fitbit metric, split by control vs complication groups
+# only includes values in the first trimester
+def calc_summary_stats_mean(sheet, feature_cols):
+    # filter metric list to only include differentially distributed metrics
+    diff_distribution_sheet = pd.read_csv("04_results_and_figures/correlations/test4/fitbit_differential_distribution_significant.csv")
+    sig_metrics = diff_distribution_sheet["feature"].unique().tolist()
+    metric_cols_adjusted = [c for c in feature_cols if c in sig_metrics]
+
+    def iqr(x):
+        return x.quantile(0.75) - x.quantile(0.25)
+    
+    # force-convert to numeric
+    summary_df = sheet[metric_cols_adjusted + ["group_bin"]].copy()
+    for col in metric_cols_adjusted:
+        summary_df[col] = pd.to_numeric(summary_df[col], errors="coerce")
+
+    df_control = summary_df[summary_df["group_bin"] == 0]
+    df_complication = summary_df[summary_df["group_bin"] == 1]
+
+    ctrl_stats = df_control.agg(["mean", "std"]).T
+    ctrl_stats.columns = ["Control Mean", "Control SD"]
+
+    comp_stats = df_complication.agg(["mean", "std"]).T
+    comp_stats.columns = ["Complications Mean", "Complications SD"]
+
+    summary = pd.concat([ctrl_stats, comp_stats], axis=1).reset_index()
+    summary.rename(columns={"index": "Feature"}, inplace=True)
+
+    summary = summary[summary["Feature"] != "group_bin"]
 
     return summary
 
@@ -618,7 +651,8 @@ def get_sample_size_range_by_bin(sheets, feature_cols, trimester_names):
 
 # print all calculated data into a log file
 def print_log(total_patients, total_missing, per_patient, consistently_missing_patients, consistently_missing_with_omics, max_con_missing, 
-              unique_dates, summary_stats, patients_per_timeframe, metric_matrix, pt_summary, metric_summary, num_metrics, sample_size_table):
+              unique_dates, summary_stats_median, summary_stats_mean, patients_per_timeframe, metric_matrix, pt_summary, metric_summary, num_metrics, 
+              sample_size_table):
     log_path = "04_results_and_figures/data_analysis/fitbit/fitbit_data_analysis.txt"
 
     with open(log_path, "w") as f:
@@ -650,8 +684,12 @@ def print_log(total_patients, total_missing, per_patient, consistently_missing_p
         f.write(f"Total number of unique dates recorded across all patients: {unique_dates}")
         f.write("\n\n\n")
 
-        f.write("Summary statistics by metric:\n")
-        f.write(summary_stats.to_string(index = False))
+        f.write("Summary statistics by metric (median/IQR):\n")
+        f.write(summary_stats_median.to_string(index = False))
+        f.write("\n\n\n")
+
+        f.write("First trimester summary statistics by metric, split by control vs complications (mean/SD):\n")
+        f.write(summary_stats_mean.to_string(index = False))
         f.write("\n\n\n")
 
         f.write("Number of unique patients per timeframe:\n")
@@ -673,6 +711,7 @@ def print_log(total_patients, total_missing, per_patient, consistently_missing_p
         f.write("Sample size ranges by gestational bin:\n")
         f.write(sample_size_table.to_string(index = False))
         f.write("\n\n\n")
+
 
 def main():
     fitbit_sheet, clinical_sheet = load_sheet()
@@ -698,7 +737,8 @@ def main():
     )
     max_con_missing = get_max_consecutive_missing(sheet_filtered, feature_cols)
     unique_dates = count_unique_dates(sheet_filtered)
-    summary_stats = calc_summary_stats(sheet_filtered, feature_cols)
+    summary_stats_median = calc_summary_stats_median(sheet_filtered, feature_cols)
+    summary_stats_mean = calc_summary_stats_mean(sheets_bucketed[0], feature_cols)
     patients_per_timeframe = get_patients_per_timeframe(sheets_bucketed, feature_cols, timeframe_names)
     patients_per_feature_per_bin = get_patients_per_feature_per_bin(sheets_bucketed, feature_cols, timeframe_names)
     omics_patients_per_feature_per_bin = get_omics_patients_per_feature_per_bin(sheets_bucketed, feature_cols, timeframe_names, clinical_sheet)
@@ -713,7 +753,8 @@ def main():
         pdf.savefig(violin_box_plots, bbox_inches='tight')
 
     print_log(total_patients, total_missing, per_patient, consistently_missing_patients, consistently_missing_with_omics, max_con_missing, 
-              unique_dates, summary_stats, patients_per_timeframe, metric_matrix, pt_summary, metric_summary, len(feature_cols), sample_size_table)
+              unique_dates, summary_stats_median, summary_stats_mean, patients_per_timeframe, metric_matrix, pt_summary, metric_summary, 
+              len(feature_cols), sample_size_table)
 
     patients_per_feature_per_bin.to_csv("04_results_and_figures/data_analysis/fitbit/patients_per_feature_per_bin.csv", index=False)
     omics_patients_per_feature_per_bin.to_csv("04_results_and_figures/data_analysis/fitbit/omics_patients_per_feature_per_bin.csv", index=False)
