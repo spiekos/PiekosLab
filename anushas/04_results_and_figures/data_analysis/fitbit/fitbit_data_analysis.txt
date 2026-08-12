@@ -747,13 +747,14 @@ activities_summary_lightlyactiveminutes  224.000000  149.000000
 
 
 First trimester summary statistics by metric, split by control vs complications (mean/SD):
-                                Feature  Control Mean  Control SD  Complications Mean  Complications SD      P-Value          FDR
-         activities_summary_caloriesout   2082.402329  482.380778         2198.948611        555.533935 1.696662e-12 5.089986e-12
-activities_summary_lightlyactiveminutes    222.340699  113.575294          206.691187        105.412495 1.967146e-06 3.934292e-06
-          heart_rate_resting_heart_rate     72.715638    7.915963           72.243924          9.690361 1.372376e-01 1.372376e-01
-              sleep_summary_stages_deep     71.004795   24.501095           64.352144         23.501367 7.118283e-13 4.270970e-12
-               sleep_summary_stages_rem     94.414976   31.678948           91.604966         33.593040 2.856413e-02 3.427696e-02
-   activities_summary_veryactiveminutes      6.298408   15.903502            8.777238         20.515500 3.075979e-05 4.613969e-05
+                                Feature  Control Mean  Control SD  Complications Mean  Complications SD      FDR
+         activities_summary_caloriesout   2082.402329  482.380778         2198.948611        555.533935 0.000307
+activities_summary_lightlyactiveminutes    222.340699  113.575294          206.691187        105.412495 0.011286
+          heart_rate_resting_heart_rate     72.715638    7.915963           72.243924          9.690361 0.041345
+              sleep_summary_stages_deep     71.004795   24.501095           64.352144         23.501367 0.002174
+               sleep_summary_stages_rem     94.414976   31.678948           91.604966         33.593040 0.023167
+               activities_summary_steps   5967.572532 3753.462241         5672.314828       3764.148747 0.040579
+   activities_summary_veryactiveminutes      6.298408   15.903502            8.777238         20.515500 0.024713
 
 
 Number of unique patients per timeframe:

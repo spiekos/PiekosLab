@@ -487,14 +487,19 @@ def bin_features(df):
 # generates a table ("Table 1") that introduces our cohort by providing statistics for various demographic features
 # categorical variables: count (%). continuous variables: median (IQR).
 def generate_table_one(clinical_sheet, master_clinical, master_main, fitbit_sheet):
+    print("TABLE 1")
+
     mc = master_clinical.copy()
     mm = master_main.copy()
     cs = clinical_sheet.copy()
 
-    # filter master_clinical and master_main to ensure we only keep the 337 patients we want
+    # filter master_clinical and master_main to ensure we only keep the 347 patients we want
     valid_ids = clinical_sheet["id"].unique()
     mc_filtered = mc[mc["id"].isin(valid_ids)].copy()
     mm_filtered = mm[mm["id"].isin(valid_ids)].copy()
+
+    print("mc_filtered:", mc_filtered.shape[0])
+    print("mm_filtered:", mm_filtered.shape[0])
 
     # drop duplicate columns from mm and cs that already exist in mc 
     # (except 'id') to prevent any column collision suffixes from happening
@@ -503,6 +508,8 @@ def generate_table_one(clinical_sheet, master_clinical, master_main, fitbit_shee
 
     df = mc_filtered.merge(mm_filtered, on="id", how="left")
     df = df.merge(cs, on="id", how="left")
+
+    print("merged df:", df.shape[0])
 
     df = coalesce_merged_columns(df)
     df = standardize_race_ethnicity(df)
@@ -515,14 +522,22 @@ def generate_table_one(clinical_sheet, master_clinical, master_main, fitbit_shee
             numeric_col = pd.to_numeric(df[col], errors="coerce")
             df[col] = numeric_col.map({1: "Yes", 0: "No", 1.0: "Yes", 0.0: "No"})
 
+    print("after binning:", df.shape[0])
+
     # filter cohort to only include patients who have valid data in at least one feature across any bin
     bin_valid_ids = set()
     feature_cols = [col for col in fitbit_sheet.columns if col.startswith(("activities", "sleep", "heart_rate"))]
     # check which patients have non-null data for at least one feature in this sheet
     valid_mask = fitbit_sheet[feature_cols].notna().any(axis=1)
     bin_valid_ids.update(fitbit_sheet.loc[valid_mask, "id"].dropna())
+    print("len df:", len(df))
+    print("len bin_valid_ids:", len(bin_valid_ids))
+    print("num patients without valid bin data:", len(df) - len(bin_valid_ids))
+    print("bin - df ids:", bin_valid_ids - set(df["id"]))
     # restrict dataframe to only those patients
     df = df[df["id"].isin(bin_valid_ids)].copy()
+
+    print("after filtering for valid bin data:", df.shape[0])
     
     table1_vars = [
         "para_pre_term",
@@ -567,12 +582,18 @@ def generate_table_one(clinical_sheet, master_clinical, master_main, fitbit_shee
 
 # generates a table that introduces our cohort by providing statistics for various pregnancy outcome features
 # categorical variables: count (%). continuous variables: median (IQR).
-def generate_outcomes_table(clinical_sheet, master_clinical, placental_sheet):    
+def generate_outcomes_table(clinical_sheet, master_clinical, placental_sheet):
+    print("OUTCOMES TABLE")
+     
     df = clinical_sheet.merge(master_clinical, on="id", how="left")
     df = df.merge(placental_sheet, on="id", how="left")
 
+    print("merged df:", df.shape[0])
+
     df = coalesce_merged_columns(df)
     df = bin_features(df)
+
+    print("after binning:", df.shape[0])
     
     # explicitly grab group and subgroup columns from clinical_sheet to avoid merge/coalesce wiping them
     group_source_cols = [c for c in ["id", "group", "subgroup"] if c in clinical_sheet.columns]
@@ -657,14 +678,8 @@ def calc_smd_continuous(df_control, df_experimental, k, missing_val="-999.0"):
     med1, med2 = np.median(d1), np.median(d2)
     q1_1, q3_1 = np.percentile(d1, [25, 75])
     q1_2, q3_2 = np.percentile(d2, [25, 75])
-
-    print(f"{k}:")
-    print(f"  control: median={med1:.2f} [IQR {q1_1:.2f}-{q3_1:.2f}], "
-          f"mean={m1:.2f}")
-    print(f"  exp:     median={med2:.2f} [IQR {q1_2:.2f}-{q3_2:.2f}], "
-          f"mean={m2:.2f}")
-    print(f"  SMD={smd:.3f}")
-    return smd
+    
+    return med1, med2, q1_1, q3_1, q1_2, q3_2, smd
 
 
 def calc_smd_binary(df_control, df_experimental, k):
@@ -681,8 +696,9 @@ def calc_smd_binary(df_control, df_experimental, k):
     n1, n2 = len(df_control[k]), len(df_experimental[k])
 
     # Event counts (number of 1s / "yes") in each group
-    x1 = sum(int(x) for x in df_control[k])
-    x2 = sum(int(x) for x in df_experimental[k])
+    yes_values = {"1", "1.0", "yes", "true"}
+    x1 = sum(1 for x in df_control[k] if str(x).strip().lower() in yes_values)
+    x2 = sum(1 for x in df_experimental[k] if str(x).strip().lower() in yes_values)
 
     # Proportion of 1s in each group
     p1 = x1 / n1
@@ -694,9 +710,7 @@ def calc_smd_binary(df_control, df_experimental, k):
     # Guard against divide-by-zero when both groups are all-0 or all-1
     smd = abs(p1 - p2) / pooled_sd if pooled_sd > 0 else 0.0
 
-    print(f"{k}: control={x1} ({p1*100:.1f}%), "
-          f"exp={x2} ({p2*100:.1f}%), SMD={smd:.3f}")
-    return smd
+    return x1, p1*100, x2, p2*100, smd
 
 
 def calc_smd_categorical(dict_control, dict_experimental):
@@ -716,10 +730,12 @@ def calc_smd_categorical(dict_control, dict_experimental):
     regardless of original insertion order.
     """
 
-    # Sort both dicts by key so the two groups' vectors correspond to the
-    # same categories position-by-position, independent of insertion order
-    dict_control = dict(sorted(dict_control.items(), key=lambda item: str(item[0])))
-    dict_experimental = dict(sorted(dict_experimental.items(), key=lambda item: str(item[0])))
+    # Union all unique keys across both groups
+    all_keys = set(dict_control.keys()).union(set(dict_experimental.keys()))
+
+    # Fill missing category counts with 0 and sort by key
+    dict_control = {k: dict_control.get(k, 0) for k in sorted(all_keys, key=str)}
+    dict_experimental = {k: dict_experimental.get(k, 0) for k in sorted(all_keys, key=str)}
 
     # Both must contain the same category labels (sorting fixes order, not
     # a genuine set mismatch, so this still guards against missing keys)
@@ -752,21 +768,21 @@ def calc_smd_categorical(dict_control, dict_experimental):
     # category is empty or near-constant and S is ill-conditioned
     smd = float(np.sqrt(t @ np.linalg.pinv(S) @ t))
 
-    print(f"SMD={smd:.3f}")
-    for key in keys:
-        print(f"  {key}: control={dict_control[key]} "
-              f"({dict_control[key]/n1*100:.1f}%), "
-              f"exp={dict_experimental[key]} "
-              f"({dict_experimental[key]/n2*100:.1f}%)")
     return smd
 
 
 # helper function to calculate counts (%) for categorical variables and median (IQR) for continuous variables
 def build_summary(df, variables):
+    print("BUILD SUMMARY TABLE")
+
     summary_rows = []
 
     df_control = df[df["group"].astype(str).str.lower() == "control"]
     df_adverse = df[df["group"].astype(str).str.lower() != "control"]
+
+    print("total:", len(df))
+    print("control:", len(df_control))
+    print("adverse:", len(df_adverse))
 
     for var in variables:
         if var in df.columns:
@@ -796,43 +812,32 @@ def build_summary(df, variables):
 
                 if is_binary:
                     # for binary variables, only show the "yes" count and %
-                    # control stats
-                    ctrl_total = len(df_control)
-                    ctrl_yes = (df_control[var] == "Yes").sum()
-                    ctrl_pct = (ctrl_yes / ctrl_total * 100) if ctrl_total > 0 else 0.0
-                    ctrl_stat = f"{ctrl_yes} ({ctrl_pct:.1f}%)"
-
-                    # adverse stats
-                    adv_total = len(df_adverse)
-                    adv_yes = (df_adverse[var] == "Yes").sum()
-                    adv_pct = (adv_yes / adv_total * 100) if adv_total > 0 else 0.0
-                    adv_stat = f"{adv_yes} ({adv_pct:.1f}%)"
-
-                    # calculate SMD for binary variables
-                    binary_smd = calc_smd_binary(df_control, df_adverse, var)
+                    x1, p1, x2, p2, smd = calc_smd_binary(df_control, df_adverse, var)
                     
                     summary_rows.append(
                         {
                             "Variable / Category": formatted_var_name,
-                            "Control": ctrl_stat,
-                            "Adverse Outcomes": adv_stat,
-                            "SMD": f"{binary_smd:.2f}"
+                            "Control": f"{x1} ({p1:.1f}%)",
+                            "Adverse Outcomes": f"{x2} ({p2:.1f}%)",
+                            "SMD": f"{smd:.2f}"
                         }
                     )
                 else:
-                    summary_rows.append({
-                        "Variable / Category": formatted_var_name,
-                        "Control": "",
-                        "Adverse Outcomes": "",
-                        "SMD": ""
-                    })
-
                     all_cats = df[var].dropna().unique()
 
                     ctrl_counts = df_control[var].value_counts(dropna=False, sort=False)
                     ctrl_percents = df_control[var].value_counts(normalize=True, dropna=False, sort=False) * 100
                     adv_counts = df_adverse[var].value_counts(dropna=False, sort=False)
                     adv_percents = df_adverse[var].value_counts(normalize=True, dropna=False, sort=False) * 100
+
+                    # compute SMD for the categorical variables
+                    cat_smd = calc_smd_categorical(ctrl_counts.to_dict(), adv_counts.to_dict())
+                    summary_rows.append({
+                        "Variable / Category": formatted_var_name,
+                        "Control": "",
+                        "Adverse Outcomes": "",
+                        "SMD": f"{cat_smd:.2f}"
+                    })
 
                     for cat in sorted(all_cats, key=str):
                         formatted_cat = str(cat).capitalize()
@@ -847,44 +852,26 @@ def build_summary(df, variables):
                         a_pct = adv_percents.get(cat, 0.0)
                         adv_stat = f"{a_count} ({a_pct:.1f}%)"
 
-                        # compute SMD for the categorical variables
-                        cat_smd = calc_smd_categorical(ctrl_counts.to_dict(), adv_counts.to_dict())
-
                         summary_rows.append(
-                            {
-                                "Variable / Category": f"    {formatted_cat}",
-                                "Control": ctrl_stat,
-                                "Adverse Outcomes": adv_stat,
-                                "SMD": f"{cat_smd:.2f}"
-                            }
-                        )
+                        {
+                            "Variable / Category": f"    {formatted_cat}",
+                            "Control": ctrl_stat,
+                            "Adverse Outcomes": adv_stat,
+                            "SMD": ""
+                        }
+                    )
 
             else:
-                ctrl_data = pd.to_numeric(df_control[var], errors="coerce").dropna()
-                if not ctrl_data.empty:
-                    c_med = ctrl_data.median()
-                    c_iqr = ctrl_data.quantile(0.75) - ctrl_data.quantile(0.25)
-                    ctrl_stat = f"{c_med:.1f} ({c_iqr:.1f})"
-                else:
-                    ctrl_stat = "N/A"
-
-                adv_data = pd.to_numeric(df_adverse[var], errors="coerce").dropna()
-                if not adv_data.empty:
-                    a_med = adv_data.median()
-                    a_iqr = adv_data.quantile(0.75) - adv_data.quantile(0.25)
-                    adv_stat = f"{a_med:.1f} ({a_iqr:.1f})"
-                else:
-                    adv_stat = "N/A"
-
-                # calculate SMD for continuous variable
-                smd_str = calc_smd_continuous(df_control, df_adverse, var)
+                med1, med2, q1_1, q3_1, q1_2, q3_2, smd = calc_smd_continuous(df_control, df_adverse, var)
+                iqr_1 = q3_1 - q1_1
+                iqr_2 = q3_2 - q1_2
 
                 summary_rows.append(
                     {
                         "Variable / Category": formatted_var_name,
-                        "Control": ctrl_stat,
-                        "Adverse Outcomes": adv_stat,
-                        "SMD": smd_str
+                        "Control": f"{med1:.1f} ({iqr_1:.1f})",
+                        "Adverse Outcomes": f"{med2:.1f} ({iqr_2:.1f})",
+                        "SMD": f"{smd:.3f}"
                     }
                 )
 

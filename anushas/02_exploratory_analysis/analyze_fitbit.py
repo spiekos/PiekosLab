@@ -226,7 +226,11 @@ def calc_summary_stats_median(sheet, feature_cols):
 def calc_summary_stats_mean(sheet, feature_cols):
     # filter metric list to only include differentially distributed metrics
     diff_distribution_sheet = pd.read_csv("04_results_and_figures/correlations/test4/fitbit_differential_distribution_significant.csv")
-    sig_metrics = diff_distribution_sheet["feature"].unique().tolist()
+    diff_distribution_sheet["feature"] = (diff_distribution_sheet["feature"].astype(str).str.strip())
+
+    # map minimum FDR q-value (p_value_adjusted) per feature across weeks
+    ks_fdr_map = diff_distribution_sheet.groupby("feature")["p_value_adjusted"].min().to_dict()
+    sig_metrics = list(ks_fdr_map.keys())
     metric_cols_adjusted = [c for c in feature_cols if c in sig_metrics]
 
     # force-convert to numeric
@@ -246,28 +250,9 @@ def calc_summary_stats_mean(sheet, feature_cols):
     summary = pd.concat([ctrl_stats, comp_stats], axis=1).reset_index()
     summary.rename(columns={"index": "Feature"}, inplace=True)
 
-    # calculate raw p-values per feature
-    p_values = []
-    for feature in summary["Feature"]:
-        ctrl_vals = df_control[feature].dropna()
-        comp_vals = df_complication[feature].dropna()
-        if len(ctrl_vals) > 1 and len(comp_vals) > 1:
-            _, p_val = stats.ttest_ind(ctrl_vals, comp_vals, equal_var=False)
-        else:
-            p_val = float("nan")
-        p_values.append(p_val)
-
-    summary["P-Value"] = p_values
-
-    # calculate FDR using Benjamini-Hochberg adjustment
-    valid_p_mask = ~summary["P-Value"].isna()
-    summary["FDR"] = float("nan")
-    if valid_p_mask.any():
-        _, fdr_vals, _, _ = multipletests(
-            summary.loc[valid_p_mask, "P-Value"], method="fdr_bh"
-        )
-        summary.loc[valid_p_mask, "FDR"] = fdr_vals
-
+    # attach FDR q-values to the summary table
+    summary["FDR"] = summary["Feature"].str.strip().map(ks_fdr_map)
+    
     return summary
 
 
@@ -511,12 +496,17 @@ def make_metric_violin_box_plots(df, metric_cols, normalize=True, significant=Tr
     valid_metrics = []
     ctrl_data_list = []
     comp_data_list = []
+    q_values = []
+    q_value_map = {}
 
     if significant:
         # filter metric list to only include differentially distributed metrics
         diff_distribution_sheet = pd.read_csv("04_results_and_figures/correlations/test4/fitbit_differential_distribution_significant.csv")
-        sig_metrics = diff_distribution_sheet["feature"].unique().tolist()
-        metric_cols_adjusted = [c for c in metric_cols if c in sig_metrics]
+        diff_distribution_sheet["feature"] = (diff_distribution_sheet["feature"].astype(str).str.strip())
+        # Group by feature and take the minimum (most significant) q-value across weeks
+        min_q = diff_distribution_sheet.groupby("feature")["p_value_adjusted"].min()
+        q_value_map = min_q[min_q < 0.05].to_dict()
+        metric_cols_adjusted = [c for c in metric_cols if c.strip() in q_value_map]
     else:
         metric_cols_adjusted = metric_cols
 
@@ -533,6 +523,13 @@ def make_metric_violin_box_plots(df, metric_cols, normalize=True, significant=Tr
             print(f"Skipping {metric}: Missing control or complication data.")
             continue
 
+        # Use pre-computed q-value from Kolmogorov-Smirnov test results if available
+        if metric in q_value_map:
+            q_val = q_value_map[metric]
+        else:
+            _, p_val = stats.mannwhitneyu(ctrl_vals, comp_vals, alternative='two-sided')
+            q_val = p_val
+
         # Z-score standardization per metric if raw scales vary drastically
         if normalize:
             all_vals = np.concatenate([ctrl_vals, comp_vals])
@@ -544,6 +541,7 @@ def make_metric_violin_box_plots(df, metric_cols, normalize=True, significant=Tr
         valid_metrics.append(metric)
         ctrl_data_list.append(ctrl_vals)
         comp_data_list.append(comp_vals)
+        q_values.append(q_val)
 
     if not valid_metrics:
         print("No valid metrics to plot.")
@@ -595,8 +593,65 @@ def make_metric_violin_box_plots(df, metric_cols, normalize=True, significant=Tr
     render_layer(ctrl_data_list, ctrl_positions, colors[0])
     render_layer(comp_data_list, comp_positions, colors[1])
 
+    # add significance annotations (stars) above the violins based on FDR-adjusted q-values
+    all_data_max = max(max(np.max(c), np.max(m)) for c, m in zip(ctrl_data_list, comp_data_list))
+    all_data_min = min(min(np.min(c), np.min(m)) for c, m in zip(ctrl_data_list, comp_data_list))
+    y_range = all_data_max - all_data_min
+    bracket_height = y_range * 0.03
+    text_offset = y_range * 0.01
+
+    max_annotation_y = all_data_max
+
+    for i in range(n_metrics):
+        q = q_values[i]
+        print(f"Metric: {valid_metrics[i]}, Q-value: {q:.6f}")
+        if q < 0.0001:
+            star = '****'
+        elif q < 0.001:
+            star = '***'
+        elif q < 0.01:
+            star = '**'
+        elif q < 0.05:
+            star = '*'
+        else:
+            star = ''
+
+        if star:
+            # Measure local peak height for this metric
+            local_max = max(np.max(ctrl_data_list[i]), np.max(comp_data_list[i]))
+            bar_y = local_max + y_range * 0.04
+            
+            # Draw significance bracket connecting control and complication violins
+            ax.plot(
+                [ctrl_positions[i], ctrl_positions[i], comp_positions[i], comp_positions[i]],
+                [bar_y, bar_y + bracket_height, bar_y + bracket_height, bar_y],
+                lw=1.2, color='black'
+            )
+            
+            # Draw significance star centered above the bracket
+            ax.text(
+                centers[i], bar_y + bracket_height + text_offset, star,
+                ha='center', va='bottom', fontsize=11, fontweight='bold'
+            )
+            
+            max_annotation_y = max(max_annotation_y, bar_y + bracket_height + text_offset + y_range * 0.05)
+
+    # Adjust top y-limit so brackets/stars don't get clipped
+    ax.set_ylim(top=max_annotation_y + y_range * 0.05)
+
+    label_map = {
+        "activities_summary_caloriesout": "Calories Out",
+        "activities_summary_lightlyactiveminutes": "Lightly Active Minutes",
+        "heart_rate_resting_heart_rate": "Resting Heart Rate",
+        "sleep_summary_stages_deep": "Deep Sleep Minutes",
+        "sleep_summary_stages_rem": "REM Sleep Minutes",
+        "activities_summary_steps": "Steps",
+        "activities_summary_veryactiveminutes": "Very Active Minutes"
+    }
+    formatted_labels = [label_map.get(metric, metric) for metric in valid_metrics]
+
     ax.set_xticks(centers)
-    ax.set_xticklabels(valid_metrics, rotation=25, ha='right', fontweight='bold')
+    ax.set_xticklabels(formatted_labels, rotation=25, ha='right', fontweight='bold')
     
     ylabel_str = "Standardized Value (Z-Score)" if normalize else "Value"
     ax.set_ylabel(ylabel_str)
@@ -606,7 +661,7 @@ def make_metric_violin_box_plots(df, metric_cols, normalize=True, significant=Tr
         mpatches.Patch(color=colors[0], alpha=0.85, label=labels[0]),
         mpatches.Patch(color=colors[1], alpha=0.85, label=labels[1])
     ]
-    ax.legend(handles=legend_patches, loc='upper right', frameon=True)
+    ax.legend(handles=legend_patches, loc='upper left', frameon=True)
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
