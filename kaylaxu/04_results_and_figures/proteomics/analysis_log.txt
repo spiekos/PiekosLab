@@ -1,0 +1,32 @@
+2026-08-06 15:55:00,077 [INFO] ======================================================================
+2026-08-06 15:55:00,077 [INFO] Intraomics Differential Analysis Log
+2026-08-06 15:55:00,078 [INFO] Date/time    : 2026-08-06 15:55:00
+2026-08-06 15:55:00,078 [INFO] Python       : 3.13.7
+2026-08-06 15:55:00,078 [INFO] scipy        : 1.18.0
+2026-08-06 15:55:00,078 [INFO] statsmodels  : 0.14.6
+2026-08-06 15:55:00,078 [INFO] pandas       : 3.0.5
+2026-08-06 15:55:00,078 [INFO] numpy        : 2.5.1
+2026-08-06 15:55:00,078 [INFO] ----------------------------------------------------------------------
+2026-08-06 15:55:00,078 [INFO] Parameters:
+2026-08-06 15:55:00,078 [INFO]   MIN_N             = 5  (min non-missing observations per group)
+2026-08-06 15:55:00,078 [INFO]   FDR_THRESHOLD     = 0.05
+2026-08-06 15:55:00,078 [INFO]   LOG2_FC_THRESHOLD = 0.5850  (log2(1.5); both CS and longitudinal)
+2026-08-06 15:55:00,078 [INFO]   FDR method        = Benjamini-Hochberg
+2026-08-06 15:55:00,078 [INFO]   CS test           = Mann-Whitney U (two-sided)
+2026-08-06 15:55:00,078 [INFO]   Long test         = Wilcoxon signed-rank (two-sided, zero_method='wilcox')
+2026-08-06 15:55:00,078 [INFO] ======================================================================
+2026-08-06 15:55:00,130 [INFO] Loaded 126 samples × 2816 analytes from /Users/kaylaxu/Desktop/dp3_project/02_exploratory_analysis/data/processed/PROT/normalized_full_results/PROT_plasma.csv
+2026-08-06 15:55:00,130 [INFO] Cross-sectional: Control vs 1 complication group (s) → 1 comparison(s)
+2026-08-06 15:55:00,433 [INFO]   Control_vs_PE → 0 tested, 2816 excluded (n < 5), 0 significant (q < 0.05)
+2026-08-06 15:55:00,483 [INFO] Loaded 104 samples × 2816 analytes from /Users/kaylaxu/Desktop/dp3_project/02_exploratory_analysis/data/processed/PROT/normalized_full_results/PROT_plasma.csv
+2026-08-06 15:55:00,483 [INFO] Cross-sectional: Control vs 1 complication group (s) → 1 comparison(s)
+2026-08-06 15:55:00,824 [INFO]   Control_vs_PE → 0 tested, 2816 excluded (n < 5), 0 significant (q < 0.05)
+2026-08-06 15:55:00,883 [INFO] Loaded 148 samples × 2816 analytes from /Users/kaylaxu/Desktop/dp3_project/02_exploratory_analysis/data/processed/PROT/normalized_full_results/PROT_plasma.csv
+2026-08-06 15:55:00,883 [INFO] Cross-sectional: Control vs 1 complication group (s) → 1 comparison(s)
+2026-08-06 15:55:01,187 [INFO]   Control_vs_PE → 0 tested, 2816 excluded (n < 5), 0 significant (q < 0.05)
+2026-08-06 15:55:01,227 [INFO] Loaded 55 samples × 2816 analytes from /Users/kaylaxu/Desktop/dp3_project/02_exploratory_analysis/data/processed/PROT/normalized_full_results/PROT_plasma.csv
+2026-08-06 15:55:01,227 [INFO] Cross-sectional: Control vs 1 complication group (s) → 1 comparison(s)
+2026-08-06 15:55:01,538 [INFO]   Control_vs_PE → 0 tested, 2816 excluded (n < 5), 0 significant (q < 0.05)
+2026-08-06 15:55:01,623 [INFO] Loaded 97 samples × 2816 analytes from /Users/kaylaxu/Desktop/dp3_project/02_exploratory_analysis/data/processed/PROT/normalized_full_results/PROT_plasma.csv
+2026-08-06 15:55:01,623 [INFO] Cross-sectional: Control vs 1 complication group (s) → 1 comparison(s)
+2026-08-06 15:55:01,929 [INFO]   Control_vs_PE → 0 tested, 2816 excluded (n < 5), 0 significant (q < 0.05)
