@@ -45,8 +45,8 @@ Run the scripts from the repository root in the following order.
 ### 1. Clean and preprocess raw data
 
 ```bash
-python anushas/01_data_cleaning/preprocess_clinical.py
 python anushas/01_data_cleaning/preprocess_fitbit.py
+python anushas/01_data_cleaning/preprocess_clinical.py
 python anushas/01_data_cleaning/preprocess_placental.py
 python anushas/01_data_cleaning/preprocess_correlation.py
 ```
@@ -69,14 +69,14 @@ These scripts write their outputs to `anushas/04_results_and_figures/`.
 python anushas/03_model_development/run_fitbit_glm_interactions.py
 ```
 
-Model results are saved in `anash/04_results_and_figures/models/`.
+Model results are saved in `anushas/04_results_and_figures/models/`.
 
 ## Key outputs
 
-- Cleaned clinical, Fitbit, and placental datasets in `anash/01_data_cleaning/processed_data/`
-- Exploratory outputs and correlation tables in `anash/04_results_and_figures/correlations/`
-- Clinical and Fitbit analysis summaries in `anash/04_results_and_figures/data_analysis/`
-- Modeling results and logs in `anash/04_results_and_figures/models/`
+- Cleaned clinical, Fitbit, and placental datasets in `anushas/01_data_cleaning/processed_data/`
+- Exploratory outputs and correlation tables in `anushas/04_results_and_figures/correlations/`
+- Clinical and Fitbit analysis summaries in `anushas/04_results_and_figures/data_analysis/`
+- Modeling results and logs in `anushas/04_results_and_figures/models/`
 
 ## Environment requirements
 
@@ -89,5 +89,10 @@ Recommended Python environment:
 - matplotlib
 - seaborn
 - statsmodels
+- statsmodels
 
-> Keep raw files in `anash/00_raw_data/` unchanged to maintain reproducibility.
+> Keep raw files in `anushas/00_raw_data/` unchanged to maintain reproducibility.
+
+## Quick checks & troubleshooting
+
+- If a script fails with missing columns or empty outputs, confirm the processed CSVs exist in `anushas/01_data_cleaning/processed_data/` and that `id` values overlap across datasets.
