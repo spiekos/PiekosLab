@@ -1,3 +1,5 @@
+import json
+
 import pandas as pd
 import numpy as np
 
@@ -213,6 +215,11 @@ def main():
     sheet1 = standardize_sheet(sheet1)
     sheet2 = standardize_sheet(sheet2)
     merged = merge_sheets(sheet1, sheet2)
+
+    with open("04_results_and_figures/data_analysis/fitbit/valid_fitbit_patient_ids.json", "r") as f:
+        valid_ids = json.load(f)
+    merged = merged[merged["id"].isin(valid_ids)].copy()
+
     merged = delete_patients(merged, dp3_sheet)
     merged = delete_columns(merged)
     merged = encode(merged)

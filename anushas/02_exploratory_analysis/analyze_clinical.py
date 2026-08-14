@@ -31,7 +31,6 @@ def load_sheet():
 
     placental_sheet = pd.read_csv("01_data_cleaning/processed_data/processed_placental_data.csv")
     master_main = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - Sheet1.csv")
-    fitbit_sheet = pd.read_csv("01_data_cleaning/processed_data/processed_fitbit_data.csv")
     
     # normalize ID column and lowercase all headers across all sheets
     for df in [clinical_sheet, master_clinical, placental_sheet, master_main]:
@@ -41,7 +40,20 @@ def load_sheet():
                     df.rename(columns={col: "id"}, inplace=True)
             df.columns = [str(c).strip().lower() for c in df.columns]
 
-    return clinical_sheet, master_clinical, placental_sheet, master_main, fitbit_sheet
+    return clinical_sheet, master_clinical, placental_sheet, master_main
+
+
+# filters the Fitbit sheet to only include "fitbit data" events and only include events during pregnancy
+def filter_sheet(sheet):
+    # filter out all events from the sheet except the "fitbit data" ones
+    sheet_filtered = sheet[sheet["event_name"] == "fitbit data"].copy()
+
+    # only include events during pregnancy
+    # if gestational age at delivery is not in the dataset, assume that delivery occurred at 40 weeks
+    sheet_filtered["current_weeks"] = sheet_filtered["timepoint"] / 7
+    sheet_filtered = sheet_filtered[(sheet_filtered["current_weeks"] < sheet_filtered["gest_age_del"]) | 
+                                    (sheet_filtered["gest_age_del"].isna() & sheet_filtered["current_weeks"] < 40)]
+    return sheet_filtered
 
 
 # returns a diagnostic summary of data missingness across all patients for the following information:
@@ -328,8 +340,6 @@ def bin_features(df):
     # insurance binning
     if "hosp_insurance_grping" in df.columns:
         def map_insurance(val):
-            if pd.isna(val):
-                return np.nan
             val_str = str(val).strip().lower()
             if "commercial" in val_str:
                 return "Commercial"
@@ -486,30 +496,19 @@ def bin_features(df):
 
 # generates a table ("Table 1") that introduces our cohort by providing statistics for various demographic features
 # categorical variables: count (%). continuous variables: median (IQR).
-def generate_table_one(clinical_sheet, master_clinical, master_main, fitbit_sheet):
-    print("TABLE 1")
-
+def generate_table_one(clinical_sheet, master_clinical, master_main):
     mc = master_clinical.copy()
     mm = master_main.copy()
     cs = clinical_sheet.copy()
 
-    # filter master_clinical and master_main to ensure we only keep the 347 patients we want
-    valid_ids = clinical_sheet["id"].unique()
-    mc_filtered = mc[mc["id"].isin(valid_ids)].copy()
-    mm_filtered = mm[mm["id"].isin(valid_ids)].copy()
-
-    print("mc_filtered:", mc_filtered.shape[0])
-    print("mm_filtered:", mm_filtered.shape[0])
-
-    # drop duplicate columns from mm and cs that already exist in mc 
+    # drop duplicate columns from mc and mm that already exist in cs
     # (except 'id') to prevent any column collision suffixes from happening
-    mm_filtered = mm_filtered[[c for c in mm_filtered.columns if c == "id" or c not in mc_filtered.columns]]
-    cs = cs[[c for c in cs.columns if c == "id" or c not in mc_filtered.columns and c not in mm_filtered.columns]]
+    # Deduplicate columns relative to cs (cs takes priority)
+    mc = mc[[c for c in mc.columns if c == "id" or c not in cs.columns]]
+    mm = mm[[c for c in mm.columns if c == "id" or (c not in cs.columns and c not in mc.columns)]]
 
-    df = mc_filtered.merge(mm_filtered, on="id", how="left")
-    df = df.merge(cs, on="id", how="left")
-
-    print("merged df:", df.shape[0])
+    df = cs.merge(mc, on="id", how="left")
+    df = df.merge(mm, on="id", how="left")
 
     df = coalesce_merged_columns(df)
     df = standardize_race_ethnicity(df)
@@ -521,23 +520,6 @@ def generate_table_one(clinical_sheet, master_clinical, master_main, fitbit_shee
         if col in df.columns:
             numeric_col = pd.to_numeric(df[col], errors="coerce")
             df[col] = numeric_col.map({1: "Yes", 0: "No", 1.0: "Yes", 0.0: "No"})
-
-    print("after binning:", df.shape[0])
-
-    # filter cohort to only include patients who have valid data in at least one feature across any bin
-    bin_valid_ids = set()
-    feature_cols = [col for col in fitbit_sheet.columns if col.startswith(("activities", "sleep", "heart_rate"))]
-    # check which patients have non-null data for at least one feature in this sheet
-    valid_mask = fitbit_sheet[feature_cols].notna().any(axis=1)
-    bin_valid_ids.update(fitbit_sheet.loc[valid_mask, "id"].dropna())
-    print("len df:", len(df))
-    print("len bin_valid_ids:", len(bin_valid_ids))
-    print("num patients without valid bin data:", len(df) - len(bin_valid_ids))
-    print("bin - df ids:", bin_valid_ids - set(df["id"]))
-    # restrict dataframe to only those patients
-    df = df[df["id"].isin(bin_valid_ids)].copy()
-
-    print("after filtering for valid bin data:", df.shape[0])
     
     table1_vars = [
         "para_pre_term",
@@ -582,18 +564,12 @@ def generate_table_one(clinical_sheet, master_clinical, master_main, fitbit_shee
 
 # generates a table that introduces our cohort by providing statistics for various pregnancy outcome features
 # categorical variables: count (%). continuous variables: median (IQR).
-def generate_outcomes_table(clinical_sheet, master_clinical, placental_sheet):
-    print("OUTCOMES TABLE")
-     
+def generate_outcomes_table(clinical_sheet, master_clinical, placental_sheet):     
     df = clinical_sheet.merge(master_clinical, on="id", how="left")
     df = df.merge(placental_sheet, on="id", how="left")
 
-    print("merged df:", df.shape[0])
-
     df = coalesce_merged_columns(df)
     df = bin_features(df)
-
-    print("after binning:", df.shape[0])
     
     # explicitly grab group and subgroup columns from clinical_sheet to avoid merge/coalesce wiping them
     group_source_cols = [c for c in ["id", "group", "subgroup"] if c in clinical_sheet.columns]
@@ -624,7 +600,7 @@ def generate_outcomes_table(clinical_sheet, master_clinical, placental_sheet):
         if "gest_hypertension" not in df.columns:
             df["gest_hypertension"] = False
 
-    # ensure outcomes columns are explicitly present in df before summary
+    # ensure outcomes columns are explicitly present in df
     if "gest_hypertension" not in df.columns and "gest hypertension" in df.columns:
         df["gest_hypertension"] = df["gest hypertension"]
 
@@ -773,16 +749,10 @@ def calc_smd_categorical(dict_control, dict_experimental):
 
 # helper function to calculate counts (%) for categorical variables and median (IQR) for continuous variables
 def build_summary(df, variables):
-    print("BUILD SUMMARY TABLE")
-
     summary_rows = []
 
     df_control = df[df["group"].astype(str).str.lower() == "control"]
     df_adverse = df[df["group"].astype(str).str.lower() != "control"]
-
-    print("total:", len(df))
-    print("control:", len(df_control))
-    print("adverse:", len(df_adverse))
 
     for var in variables:
         if var in df.columns:
@@ -971,19 +941,14 @@ def print_log(missing_report, missing_ids, race_table, total_patients, cont_summ
 
 
 def main():
-    clinical_sheet, master_clinical, placental_sheet, master_main, fitbit_sheet = load_sheet()
-    
-    # filter master_clinical and master_main to only contain the 347 patient IDs we want
-    valid_patient_ids = clinical_sheet['id'].unique()
-    master_clinical_filtered = master_clinical[master_clinical['id'].isin(valid_patient_ids)].copy()
-    master_main_filtered = master_main[master_main['id'].isin(valid_patient_ids)].copy()
-    
+    clinical_sheet, master_clinical, placental_sheet, master_main = load_sheet()
+
     missing_report, missing_ids = summarize_missing_info(clinical_sheet)
     race_table, total_patients = get_race_counts(clinical_sheet)
     cont_summary_table, cat_summary_table = calc_demographic_stats(clinical_sheet)
 
-    table_1 = generate_table_one(clinical_sheet, master_clinical_filtered, master_main_filtered, fitbit_sheet)
-    outcomes_table = generate_outcomes_table(clinical_sheet, master_clinical_filtered, placental_sheet)
+    table_1 = generate_table_one(clinical_sheet, master_clinical, master_main)
+    outcomes_table = generate_outcomes_table(clinical_sheet, master_clinical, placental_sheet)
     export_formatted_tables_to_file(table_1, outcomes_table)
 
     print_log(missing_report, missing_ids, race_table, total_patients, cont_summary_table, cat_summary_table)

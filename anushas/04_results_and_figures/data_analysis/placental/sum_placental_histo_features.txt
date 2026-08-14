@@ -6,11 +6,11 @@ stem vessel obliteration/fibromuscular sclerosis, vascular ectasia, fetal inflam
 and placental hypoplasia.
 
 
-gestational_age_at_delivery: 2161.4
+gestational_age_at_delivery: 2097.0
 distal_villous_hypoplasia_focal/diffuse: 4
-accelerated_villous_maturation: 18
-increased_syncytial_knots: 16
+accelerated_villous_maturation: 17
+increased_syncytial_knots: 15
 delayed_villous_maturation: 2
 increased_perivillous_fibrin_deposition: 2
 chorangiosis: 4
-spontaneous_preterm_birth: 12
+spontaneous_preterm_birth: 11

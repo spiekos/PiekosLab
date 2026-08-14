@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import json
 
 
 # loads both fitbit data sheets and returns both sheets
@@ -118,6 +119,30 @@ def sort_columns(sheet):
     sheet = sheet[front_columns + other_columns]
     
     return sheet
+
+
+# splits the filtered dataset into five smaller datasets, based on which trimester of the pregnancy each datapoint is in
+# the five datasets are: 1st trimester, early 2nd trimester, late 2nd/early 3rd trimester, mid 3rd trimester, late 3rd trimester
+# returns a list containing these five datasets
+# note that the input dataset has already been filtered and only includes events during pregnancy
+def bucket_data(sheet):
+    local_sheet = sheet.copy()
+
+    local_sheet["timepoint"] = pd.to_numeric(local_sheet["timepoint"], errors="coerce")
+    local_sheet["current_weeks"] = local_sheet["timepoint"] / 7
+
+    bins = [float("-inf"), 14, 22, 32, 37, float("inf")]
+    labels = ["first", "early_second", "late_second_early_third", "mid_third", "late_third"]
+
+    local_sheet["bin"] = pd.cut(local_sheet["current_weeks"], bins = bins, labels = labels, right = False)
+
+    outputs = []
+    
+    for label in labels:
+        group_sheet = local_sheet[local_sheet["bin"] == label].drop(columns = ["bin"])
+        outputs.append(group_sheet)
+
+    return outputs
 
 
 # helper function of null_implausible_values()
@@ -246,6 +271,33 @@ def null_implausible_values(df, metric_cols, bounds):
         df_cleaned.loc[df_cleaned[col] == 0, col] = np.nan
 
     return df_cleaned
+
+
+# returns a list of all patients with valid data
+# i.e. they have data for at least one feature/bin combo
+def get_valid_patients(sheets_bucketed, feature_cols):
+    # standardize all IDs in clinical_sheet
+    valid_ids = set()
+
+    missing_values = {"nan", "none", "null", "no value", "-1", "-1.0", ""}
+
+    for sheet in sheets_bucketed:
+        sub_df = sheet[["id"] + feature_cols].copy()
+
+        # check if values are valid (not in missing_values)
+        def is_cell_valid(series):
+            str_series = series.astype(str).str.strip().str.lower()
+            return ~str_series.isin(missing_values) & series.notna()
+
+        valid_mask_matrix = sub_df[feature_cols].apply(is_cell_valid)
+
+        # a row is valid if at least one feature is valid
+        row_has_valid_data = valid_mask_matrix.any(axis=1)
+
+        # add IDs of patients with valid data in this sheet
+        valid_ids.update(sub_df.loc[row_has_valid_data, "id"].dropna().unique())
+
+    return valid_ids
 
 
 # performs consistency checks on the Fitbit dataset to ensure that all values are reasonable
@@ -513,8 +565,6 @@ def print_log(flags, flag_counts, flag_map):
         else:
             f.write("FITBIT DATA CONSISTENCY CHECK: No rule violations found. All records passed.")
 
-    counts_df = pd.DataFrame(list(flag_counts.items()), columns=["Metric", "Total_Flagged_Patients"])
-
     with open(log_path2, "w") as f:
         # format flag map table
         w_id = 25
@@ -564,6 +614,17 @@ def main():
     metric_cols.remove("activities_summary_caloriesbmr") # we don't need to analyze this column
 
     merged = null_implausible_values(merged, metric_cols, improbable_value_bounds)
+
+    # filter out patients who don't have any valid data for any of the Fitbit metrics
+    fitbit_sheets_bucketed = bucket_data(merged)
+    valid_ids = get_valid_patients(fitbit_sheets_bucketed, metric_cols)
+    print("patients with missing data:", set(merged["id"].unique()) - valid_ids)
+    merged = merged[merged["id"].isin(valid_ids)].copy()
+
+    # write valid_ids to an output file so it can be easily accessed by other preprocessing files
+    with open("04_results_and_figures/data_analysis/fitbit/valid_fitbit_patient_ids.json", "w") as f:
+        json.dump(list(valid_ids), f)
+
     merged, flags = check_consistency(merged)
 
     # this column should have been dropped earlier, as it's insignificant and won't be needed in the future. however, it's used in the function

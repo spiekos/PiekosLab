@@ -1,21 +1,18 @@
 import pandas as pd
 import numpy as np
+import json
 
 
 # load and return the clinical dataset
 def load_sheet():
     clinical_sheet = pd.read_csv("00_raw_data/dp3 master table v2.xlsx - variables of interest.csv")
-    dp3_sheet = pd.read_csv("00_raw_data/DP3_playset.csv")
-    return clinical_sheet, dp3_sheet
+    return clinical_sheet
 
 
 # standardizes all values to lowercase (except the values in the "id" column)
 # replaces spaces with underscores
 def standardize_sheet(df):
     if df is not None and not df.empty:
-        if df.index.max() > 0:
-            df = df.iloc[1:].copy()
-
         df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_", regex=False)
 
         cols_to_lower = [col for col in df.columns if col != "id"]
@@ -37,19 +34,14 @@ def fix_typos(sheet):
     return sheet_copy
 
 
-# include only patients with "delivered" in their "status" column
-# limit dataset to the 347 patients from the DP3 playset
-def filter_sheet(sheet, dp3_sheet):
+# include only patients with "delivered" or "delivered off site" in their "status" column
+def filter_sheet(sheet):
     sheet_copy = sheet.copy()
 
     if "status" in sheet_copy.columns:
         status_clean = sheet_copy["status"].astype(str).str.strip()
-        keep_mask = status_clean == "delivered"
+        keep_mask = status_clean.isin(["delivered", "delivered off site"])
         sheet_copy = sheet_copy[keep_mask].reset_index(drop=True)
-
-    # limit dataset to the 347 patients from the DP3 playset
-    filtered_patients = dp3_sheet["Record.ID"].unique().tolist()    
-    sheet_copy = sheet_copy[sheet_copy["id"].isin(filtered_patients)]
       
     return sheet_copy
 
@@ -243,11 +235,15 @@ def one_hot_encode_demographics(sheet):
 
 
 def main():
-    clinical_sheet, dp3_sheet = load_sheet()
+    clinical_sheet = load_sheet()
+
+    with open("04_results_and_figures/data_analysis/fitbit/valid_fitbit_patient_ids.json", "r") as f:
+        valid_ids = json.load(f)
+    sheet_cleaned = clinical_sheet[clinical_sheet["ID"].isin(valid_ids)].copy()
     
-    sheet_cleaned = standardize_sheet(clinical_sheet)
+    sheet_cleaned = standardize_sheet(sheet_cleaned)
     sheet_cleaned = fix_typos(sheet_cleaned)
-    sheet_cleaned = filter_sheet(sheet_cleaned, dp3_sheet)
+    sheet_cleaned = filter_sheet(sheet_cleaned)
     sheet_cleaned = unmask_missing_data(sheet_cleaned)
     sheet_cleaned = add_missingness_indicators(sheet_cleaned)
     sheet_cleaned = encode_smoking_status(sheet_cleaned)

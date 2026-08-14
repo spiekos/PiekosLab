@@ -27,9 +27,9 @@ def filter_sheet(sheet):
     return sheet_filtered
 
 
-# splits the filtered dataset into four smaller datasets, based on which trimester of the pregnancy each datapoint is in
-# the four datasets are: 1st trimester, early 2nd trimester, late 2nd/early 3rd trimester, late 3rd trimester
-# returns a list containing these four datasets
+# splits the filtered dataset into five smaller datasets, based on which trimester of the pregnancy each datapoint is in
+# the five datasets are: 1st trimester, early 2nd trimester, late 2nd/early 3rd trimester, mid 3rd trimester, late 3rd trimester
+# returns a list containing these five datasets
 # note that the input dataset has already been filtered and only includes events during pregnancy
 def bucket_data(sheet):
     local_sheet = sheet.copy()
@@ -83,6 +83,7 @@ def get_missing_per_patient(sheet, feature_cols):
     return result
 
 
+# returns a dataframe containing the number of missing patients per feature per timeframe
 def get_missing_patients_per_feature_per_timeframe(sheets, feature_cols, timeframe_names):
     summary_data = []
 
@@ -111,56 +112,39 @@ def get_missing_patients_per_feature_per_timeframe(sheets, feature_cols, timefra
 
 # finds all patients that have consistently missing data across all features and bins
 # also finds the patients with omics data that have consistently missing data across all features and bins
-def get_consistently_missing_patients(clinical_sheet, sheets, feature_cols, timeframe_names):
-    summary_data = []
+import numpy as np
+import pandas as pd
 
-    for df, timeframe in zip(sheets, timeframe_names):
-        df_cleaned = df.copy()
+def get_consistently_missing_patients(clinical_sheet, sheets, feature_cols):
+    # standardize all IDs in clinical_sheet
+    all_clinical_ids = set(clinical_sheet["id"].dropna().unique())
+    valid_ids = set()
 
-        for _, row in df_cleaned.iterrows():
-            patient_id = row["id"]
+    missing_values = {"nan", "none", "null", "no value", "-1", "-1.0", ""}
 
-            for feature in feature_cols:
-                if feature in df_cleaned.columns:
-                    val = row[feature]
-                    is_missing = pd.isna(val) or (str(val).strip() == "no value") or (val == -1.0)
-                else:
-                    is_missing = True
+    for sheet in sheets:
+        sub_df = sheet[["id"] + feature_cols].copy()
 
-                summary_data.append({
-                    "id": patient_id,
-                    "Feature_Bin": f"{feature} [{timeframe}]",
-                    "Missing": int(is_missing)
-                })
+        # check if values are valid (not in missing_values)
+        def is_cell_valid(series):
+            str_series = series.astype(str).str.strip().str.lower()
+            return ~str_series.isin(missing_values) & series.notna()
 
-    df_tracker = pd.DataFrame(summary_data)
+        valid_mask_matrix = sub_df[feature_cols].apply(is_cell_valid)
 
-    if df_tracker.empty:
-        return [], []
+        # a row is valid if at least one feature is valid
+        row_has_valid_data = valid_mask_matrix.any(axis=1)
 
-    # Use pivot_table to safely handle any duplicate id/Feature_Bin pairs
-    df_wide = df_tracker.pivot_table(
-        index="id", 
-        columns="Feature_Bin", 
-        values="Missing", 
-        aggfunc="max"
-    ).reset_index()
-    
-    # fill any missing ID-bin entries with 1
-    df_wide = df_wide.fillna(1)
+        # add IDs of patients with valid data in this sheet
+        valid_ids.update(sub_df.loc[row_has_valid_data, "id"].dropna().unique())
 
-    # calculate how many present (0) values each participant has across all feature-bin columns
-    df_wide["total_present"] = (df_wide.iloc[:, 1:] == 0).sum(axis=1)
+    missing_ids = list(all_clinical_ids - valid_ids)
 
-    # filter for participants who have 0 valid data points across the entire dataset
-    consistently_missing = df_wide[df_wide["total_present"] == 0]
-    missing_ids = consistently_missing["id"].tolist()
-    
-    # filter for those where omics data exists
+    # check for omics data among missing patients
     clinical_dropped = clinical_sheet[clinical_sheet["id"].isin(missing_ids)]
-    with_omics = clinical_dropped[clinical_dropped["omics_set#"] > 0]["id"].tolist()
+    with_omics_missing = clinical_dropped[clinical_dropped["omics_set#"] > 0]["id"].tolist()
 
-    return missing_ids, with_omics
+    return missing_ids, with_omics_missing
 
 
 # returns a table containing the maximum consecutive number of days missing per feature per patient
@@ -604,7 +588,6 @@ def make_metric_violin_box_plots(df, metric_cols, normalize=True, significant=Tr
 
     for i in range(n_metrics):
         q = q_values[i]
-        print(f"Metric: {valid_metrics[i]}, Q-value: {q:.6f}")
         if q < 0.0001:
             star = '****'
         elif q < 0.001:
@@ -807,7 +790,7 @@ def main():
     per_patient = get_missing_per_patient(sheet_filtered, feature_cols)
     missing_per_feature_per_bin = get_missing_patients_per_feature_per_timeframe(sheets_bucketed, feature_cols, timeframe_names)
     consistently_missing_patients, consistently_missing_with_omics = get_consistently_missing_patients(
-        clinical_sheet, sheets_bucketed, feature_cols, timeframe_names
+        clinical_sheet, sheets_bucketed, feature_cols
     )
     max_con_missing = get_max_consecutive_missing(sheet_filtered, feature_cols)
     unique_dates = count_unique_dates(sheet_filtered)

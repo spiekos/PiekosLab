@@ -1,61 +1,61 @@
 Timeframe,Feature,Total_Missing_Patients
-First Trimester,activities_summary_activitycalories,11
-First Trimester,activities_summary_caloriesout,11
-First Trimester,activities_summary_fairlyactiveminutes,11
-First Trimester,activities_summary_lightlyactiveminutes,11
-First Trimester,activities_summary_sedentaryminutes,11
-First Trimester,heart_rate_resting_heart_rate,14
-First Trimester,heart_rate_zone:_fat_burn_minutes,10
-First Trimester,heart_rate_zone:_cardio_minutes,10
-First Trimester,heart_rate_zone:_peak_minutes,10
-First Trimester,sleep_summary_stages_deep,38
-First Trimester,sleep_summary_stages_light,38
-First Trimester,sleep_summary_stages_rem,38
-First Trimester,sleep_summary_stages_wake,37
-First Trimester,sleep_summary_total_sleep_records,32
-First Trimester,sleep_summary_total_time_in_bed,32
-First Trimester,activities_summary_steps,11
-First Trimester,activities_summary_totaldistances,11
-First Trimester,activities_summary_veryactiveminutes,11
-First Trimester,sleep_summary_total_minutes_asleep,32
-Early Second Trimester,activities_summary_activitycalories,4
-Early Second Trimester,activities_summary_caloriesout,4
-Early Second Trimester,activities_summary_fairlyactiveminutes,4
-Early Second Trimester,activities_summary_lightlyactiveminutes,4
-Early Second Trimester,activities_summary_sedentaryminutes,4
-Early Second Trimester,heart_rate_resting_heart_rate,9
-Early Second Trimester,heart_rate_zone:_fat_burn_minutes,7
-Early Second Trimester,heart_rate_zone:_cardio_minutes,7
-Early Second Trimester,heart_rate_zone:_peak_minutes,7
-Early Second Trimester,sleep_summary_stages_deep,29
-Early Second Trimester,sleep_summary_stages_light,29
-Early Second Trimester,sleep_summary_stages_rem,29
-Early Second Trimester,sleep_summary_stages_wake,28
-Early Second Trimester,sleep_summary_total_sleep_records,27
-Early Second Trimester,sleep_summary_total_time_in_bed,27
-Early Second Trimester,activities_summary_steps,4
-Early Second Trimester,activities_summary_totaldistances,4
-Early Second Trimester,activities_summary_veryactiveminutes,4
-Early Second Trimester,sleep_summary_total_minutes_asleep,27
-Late Second and Early Third Trimester,activities_summary_activitycalories,3
-Late Second and Early Third Trimester,activities_summary_caloriesout,3
-Late Second and Early Third Trimester,activities_summary_fairlyactiveminutes,3
-Late Second and Early Third Trimester,activities_summary_lightlyactiveminutes,3
-Late Second and Early Third Trimester,activities_summary_sedentaryminutes,3
-Late Second and Early Third Trimester,heart_rate_resting_heart_rate,6
-Late Second and Early Third Trimester,heart_rate_zone:_fat_burn_minutes,5
-Late Second and Early Third Trimester,heart_rate_zone:_cardio_minutes,5
-Late Second and Early Third Trimester,heart_rate_zone:_peak_minutes,5
-Late Second and Early Third Trimester,sleep_summary_stages_deep,23
-Late Second and Early Third Trimester,sleep_summary_stages_light,23
-Late Second and Early Third Trimester,sleep_summary_stages_rem,23
-Late Second and Early Third Trimester,sleep_summary_stages_wake,22
-Late Second and Early Third Trimester,sleep_summary_total_sleep_records,21
-Late Second and Early Third Trimester,sleep_summary_total_time_in_bed,21
-Late Second and Early Third Trimester,activities_summary_steps,3
-Late Second and Early Third Trimester,activities_summary_totaldistances,3
-Late Second and Early Third Trimester,activities_summary_veryactiveminutes,3
-Late Second and Early Third Trimester,sleep_summary_total_minutes_asleep,21
+First Trimester,activities_summary_activitycalories,9
+First Trimester,activities_summary_caloriesout,9
+First Trimester,activities_summary_fairlyactiveminutes,9
+First Trimester,activities_summary_lightlyactiveminutes,9
+First Trimester,activities_summary_sedentaryminutes,9
+First Trimester,heart_rate_resting_heart_rate,12
+First Trimester,heart_rate_zone:_fat_burn_minutes,8
+First Trimester,heart_rate_zone:_cardio_minutes,8
+First Trimester,heart_rate_zone:_peak_minutes,8
+First Trimester,sleep_summary_stages_deep,36
+First Trimester,sleep_summary_stages_light,36
+First Trimester,sleep_summary_stages_rem,36
+First Trimester,sleep_summary_stages_wake,35
+First Trimester,sleep_summary_total_sleep_records,30
+First Trimester,sleep_summary_total_time_in_bed,30
+First Trimester,activities_summary_steps,9
+First Trimester,activities_summary_totaldistances,9
+First Trimester,activities_summary_veryactiveminutes,9
+First Trimester,sleep_summary_total_minutes_asleep,30
+Early Second Trimester,activities_summary_activitycalories,2
+Early Second Trimester,activities_summary_caloriesout,2
+Early Second Trimester,activities_summary_fairlyactiveminutes,2
+Early Second Trimester,activities_summary_lightlyactiveminutes,2
+Early Second Trimester,activities_summary_sedentaryminutes,2
+Early Second Trimester,heart_rate_resting_heart_rate,7
+Early Second Trimester,heart_rate_zone:_fat_burn_minutes,5
+Early Second Trimester,heart_rate_zone:_cardio_minutes,5
+Early Second Trimester,heart_rate_zone:_peak_minutes,5
+Early Second Trimester,sleep_summary_stages_deep,27
+Early Second Trimester,sleep_summary_stages_light,27
+Early Second Trimester,sleep_summary_stages_rem,27
+Early Second Trimester,sleep_summary_stages_wake,26
+Early Second Trimester,sleep_summary_total_sleep_records,25
+Early Second Trimester,sleep_summary_total_time_in_bed,25
+Early Second Trimester,activities_summary_steps,2
+Early Second Trimester,activities_summary_totaldistances,2
+Early Second Trimester,activities_summary_veryactiveminutes,2
+Early Second Trimester,sleep_summary_total_minutes_asleep,25
+Late Second and Early Third Trimester,activities_summary_activitycalories,2
+Late Second and Early Third Trimester,activities_summary_caloriesout,2
+Late Second and Early Third Trimester,activities_summary_fairlyactiveminutes,2
+Late Second and Early Third Trimester,activities_summary_lightlyactiveminutes,2
+Late Second and Early Third Trimester,activities_summary_sedentaryminutes,2
+Late Second and Early Third Trimester,heart_rate_resting_heart_rate,5
+Late Second and Early Third Trimester,heart_rate_zone:_fat_burn_minutes,4
+Late Second and Early Third Trimester,heart_rate_zone:_cardio_minutes,4
+Late Second and Early Third Trimester,heart_rate_zone:_peak_minutes,4
+Late Second and Early Third Trimester,sleep_summary_stages_deep,22
+Late Second and Early Third Trimester,sleep_summary_stages_light,22
+Late Second and Early Third Trimester,sleep_summary_stages_rem,22
+Late Second and Early Third Trimester,sleep_summary_stages_wake,21
+Late Second and Early Third Trimester,sleep_summary_total_sleep_records,20
+Late Second and Early Third Trimester,sleep_summary_total_time_in_bed,20
+Late Second and Early Third Trimester,activities_summary_steps,2
+Late Second and Early Third Trimester,activities_summary_totaldistances,2
+Late Second and Early Third Trimester,activities_summary_veryactiveminutes,2
+Late Second and Early Third Trimester,sleep_summary_total_minutes_asleep,20
 Mid Third Trimester,activities_summary_activitycalories,1
 Mid Third Trimester,activities_summary_caloriesout,1
 Mid Third Trimester,activities_summary_fairlyactiveminutes,1
@@ -75,22 +75,22 @@ Mid Third Trimester,activities_summary_steps,1
 Mid Third Trimester,activities_summary_totaldistances,1
 Mid Third Trimester,activities_summary_veryactiveminutes,1
 Mid Third Trimester,sleep_summary_total_minutes_asleep,8
-Late Third Trimester,activities_summary_activitycalories,2
-Late Third Trimester,activities_summary_caloriesout,2
-Late Third Trimester,activities_summary_fairlyactiveminutes,2
-Late Third Trimester,activities_summary_lightlyactiveminutes,2
-Late Third Trimester,activities_summary_sedentaryminutes,2
-Late Third Trimester,heart_rate_resting_heart_rate,5
-Late Third Trimester,heart_rate_zone:_fat_burn_minutes,5
-Late Third Trimester,heart_rate_zone:_cardio_minutes,5
-Late Third Trimester,heart_rate_zone:_peak_minutes,5
-Late Third Trimester,sleep_summary_stages_deep,15
-Late Third Trimester,sleep_summary_stages_light,15
-Late Third Trimester,sleep_summary_stages_rem,15
-Late Third Trimester,sleep_summary_stages_wake,11
-Late Third Trimester,sleep_summary_total_sleep_records,6
-Late Third Trimester,sleep_summary_total_time_in_bed,6
-Late Third Trimester,activities_summary_steps,3
-Late Third Trimester,activities_summary_totaldistances,2
-Late Third Trimester,activities_summary_veryactiveminutes,2
-Late Third Trimester,sleep_summary_total_minutes_asleep,6
+Late Third Trimester,activities_summary_activitycalories,1
+Late Third Trimester,activities_summary_caloriesout,1
+Late Third Trimester,activities_summary_fairlyactiveminutes,1
+Late Third Trimester,activities_summary_lightlyactiveminutes,1
+Late Third Trimester,activities_summary_sedentaryminutes,1
+Late Third Trimester,heart_rate_resting_heart_rate,4
+Late Third Trimester,heart_rate_zone:_fat_burn_minutes,4
+Late Third Trimester,heart_rate_zone:_cardio_minutes,4
+Late Third Trimester,heart_rate_zone:_peak_minutes,4
+Late Third Trimester,sleep_summary_stages_deep,14
+Late Third Trimester,sleep_summary_stages_light,14
+Late Third Trimester,sleep_summary_stages_rem,14
+Late Third Trimester,sleep_summary_stages_wake,10
+Late Third Trimester,sleep_summary_total_sleep_records,5
+Late Third Trimester,sleep_summary_total_time_in_bed,5
+Late Third Trimester,activities_summary_steps,2
+Late Third Trimester,activities_summary_totaldistances,1
+Late Third Trimester,activities_summary_veryactiveminutes,1
+Late Third Trimester,sleep_summary_total_minutes_asleep,5
