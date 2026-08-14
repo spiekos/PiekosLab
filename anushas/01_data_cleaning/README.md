@@ -1,6 +1,6 @@
 ## 01_data_cleaning
 
-This directory contains the data preprocessing pipeline used to produce the cleaned, analysis-ready datasets for clinical, Fitbit, and placental data. The outputs are consumed by the exploratory analysis and modeling steps in `anash/02_exploratory_analysis` and `anash/03_model_development`.
+This directory contains the data preprocessing pipeline used to produce the cleaned, analysis-ready datasets for clinical, Fitbit, and placental data. The outputs are consumed by the exploratory analysis and modeling steps in `anushas/02_exploratory_analysis` and `anushas/03_model_development`.
 
 ## Directory structure
 
@@ -53,15 +53,15 @@ These processed CSVs are the canonical inputs for the exploratory and modeling s
 Run each script from the repository root. Typical order:
 
 ```bash
-python anash/01_data_cleaning/preprocess_clinical.py
-python anash/01_data_cleaning/preprocess_fitbit.py
-python anash/01_data_cleaning/preprocess_placental.py
-python anash/01_data_cleaning/preprocess_correlation.py
+python anushas/01_data_cleaning/preprocess_fitbit.py
+python anushas/01_data_cleaning/preprocess_clinical.py
+python anushas/01_data_cleaning/preprocess_placental.py
+python anushas/01_data_cleaning/preprocess_correlation.py
 ```
 
 Notes:
-- Scripts expect the raw files listed above to be present in `anash/00_raw_data/`.
-- The Fitbit cleaning step assumes `timepoint` is expressed in days; downstream scripts convert to pregnancy weeks by dividing by 7.
+
+- Scripts expect the raw files listed above to be present in `anushas/00_raw_data/`.
 - The correlation preprocessing buckets Fitbit data into five pregnancy windows and applies per-patient coverage thresholds; consult `preprocess_correlation.py` for exact thresholds.
 
 ## Environment
@@ -84,6 +84,5 @@ pip install pandas numpy scipy statsmodels matplotlib seaborn
 
 ## Reproducibility & notes
 
-- Keep raw files in `anash/00_raw_data/` unchanged to maintain reproducibility.
+- Keep raw files in `anushas/00_raw_data/` unchanged to maintain reproducibility.
 - If you change preprocessing logic, re-run the full `01_data_cleaning` pipeline and version the resulting `processed_data` CSVs used for downstream analysis.
-

@@ -618,7 +618,6 @@ def main():
     # filter out patients who don't have any valid data for any of the Fitbit metrics
     fitbit_sheets_bucketed = bucket_data(merged)
     valid_ids = get_valid_patients(fitbit_sheets_bucketed, metric_cols)
-    print("patients with missing data:", set(merged["id"].unique()) - valid_ids)
     merged = merged[merged["id"].isin(valid_ids)].copy()
 
     # write valid_ids to an output file so it can be easily accessed by other preprocessing files

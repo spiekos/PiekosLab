@@ -87,6 +87,50 @@ Placental feature summarization produced by `01_data_cleaning/preprocess_placent
 
 Model fitting outputs from `03_model_development/run_fitbit_glm_interactions.py`.
 
+## How to interpret key outputs
+
+- Correlation tables (e.g. `correlations/test1/full_correlation_table_placental.txt` and `correlations/test2/full_correlation_table_fitbit.txt`):
+
+  - Typical columns: `var1`, `var2`, `rho` (Spearman correlation), `p` (raw p-value), `q` (FDR-adjusted p-value), `n` (number of paired observations).
+  - `filtered_*` files are FDR-filtered subsets (e.g., q < 0.05) and `positively_associated_*` / `negatively_associated_*` summarize direction-specific hits.
+- Differential/distribution results (e.g. `correlations/test4/fitbit_differential_distribution.csv`):
+
+  - Contains per-feature distribution comparison statistics (group medians, test statistic, p, q) comparing control vs complication groups during pregnancy windows.
+- Fitbit diagnostics and reports (`data_analysis/fitbit/`):
+
+  - `pregnancy_plots_report.pdf`, `violin_box_plots.pdf` — visualization summaries for data coverage and first-trimester comparisons.
+  - Per-feature CSVs (`patients_per_feature_per_bin.csv`, `missing_per_feature_per_bin.csv`) list counts used to determine which metrics enter modeling.
+- GLM aggregated results (`models/final_glm_results.csv`):
+
+  - Core columns included in the aggregated table: `Fitbit_Metric`, `Outcome`, `N`, `Model_Family`, `Link_Function`, `Extreme_Outliers`, `Converged`, `Pseudo_R_Squared`.
+  - Parameter estimates appear as `coef_<param>` and their p-values as `p_<param>` (for example `coef_X_Metric`, `p_X_Metric`, `coef_C(race)[T.2]`, `p_C(race)[T.2]`).
+
+## Practical notes & troubleshooting
+
+- Ensure the directories exist before running model scripts. For example:
+
+```bash
+mkdir -p anushas/04_results_and_figures/models
+mkdir -p anushas/04_results_and_figures/data_analysis/fitbit
+mkdir -p anushas/04_results_and_figures/correlations/test1
+```
+
+- If `final_glm_results.csv` contains many `NaN` or few rows, confirm that the processed input CSVs have overlapping `id` values and that Fitbit metrics have >10 non-missing numeric values.
+- Logs for model failures and exceptions are written to `anushas/04_results_and_figures/models/glm_fitbit_analysis.log` — inspect it for rows skipped due to insufficient data or convergence errors.
+
+## Regeneration checklist (recommended order)
+
+```bash
+python anushas/01_data_cleaning/preprocess_fitbit.py
+python anushas/01_data_cleaning/preprocess_clinical.py
+python anushas/01_data_cleaning/preprocess_placental.py
+python anushas/01_data_cleaning/preprocess_correlation.py
+python anushas/02_exploratory_analysis/analyze_clinical.py
+python anushas/02_exploratory_analysis/analyze_fitbit.py
+python anushas/02_exploratory_analysis/correlation.py
+python anushas/03_model_development/run_fitbit_glm_interactions.py
+```
+
 ## Regeneration notes
 
 Run the relevant scripts from the `anushas` project root to regenerate outputs:
