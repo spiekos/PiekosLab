@@ -1,2 +1,0 @@
-analyte_id,U_statistic,p_value,q_value,significant,median_group1,median_group2,fold_change,n_group1,n_group2,excluded
-ENTPD2,934.0,0.00010014090702972044,0.04992361203163048,True,4.7733233164703925,5.770090878930204,1.0238292341293107,54,60,False
