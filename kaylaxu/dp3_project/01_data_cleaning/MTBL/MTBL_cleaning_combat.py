@@ -1,8 +1,3 @@
-### Data Cleaning and Quality Control for Pregnancy Deep Phenotyping Metabolomics Data
-##### All data cleaning and quality control steps are outlined in the data/README.md
-### Kayla Xu, Piekos Lab
-### 01/28/2026
-
 # set up environment
 import pandas as pd
 import numpy as np
@@ -14,10 +9,15 @@ import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.decomposition import PCA
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 import re
 import logging
 import sys
 import warnings
+from inmoose.pycombat import pycombat_norm
+
 warnings.filterwarnings("ignore")
 
 ##############################################################
@@ -31,20 +31,11 @@ warnings.filterwarnings("ignore")
 # 5. Calculate relative standard deviation (RSD = SD/Mean * 100) of all compounds in the QC pools, split by batch. Remove any metabolites with an RSD > 30%.
 # 6. Remove any metabolites with >20% missingness. Double-check that no group has significantly differential patterns of missingness for discard analyses.
 # 7. Generate a non-batch corrected PCA plot.
-# 8. Batch normalization using the biological replicates (better than quantile normalization):
-#       1. Identify and log the number of batch replicates (samples that are present in both batches).
-#       2. Calculate the ratio for each sample replicate pair (batch 2 value / batch 1 value) for each metabolite. Store in a list for each metabolite, making sure to exclude any outliers. (what counts as an outlier?)
-#       3. Take the median ratio for each metabolite.
-#       4. Calculate the correction factor = 1 / median ratio for each metabolite.
-#       5. Apply the correction factors to all batch 2 samples
+# 8. Batch normalization using Python pycombat.
 # 9. Generate a batch-corrected PCA plot in which the color of the sample dots match the batch they were in.
 # 10. For the samples ran in both batches - average metabolic expression.
 # 11. Perform log2 transformation
-# 12. Combine the POS and NEG compounds:
-#       1. Identify compounds present in both
-#       2. Check the correlation between the POS and NEG values
-#               1. If it is r >= 0.9, then average the two samples (or if one is missing, take the non-missing vaue)
-#               2. If r < 0.9, keep both separately and append _POS or _NEG to the compound name respectively.
+# 12. Combine the POS and NEG compounds.
 # 13. Handle all additional formatting: adding group, spliting by timepoint, output to csv.
 
 # GLOBAL VARIABLES
@@ -70,21 +61,70 @@ def handle_missing(exp1, exp2):
     exp2 = exp2.map(convert_missing)
     return exp1, exp2
 
+# for lipids only
+def _lipid_lsi_score(value)->float:
+        """
+        Update these regular expressions if Appendix F uses a different
+        LipidID convention.
+
+        Examples:
+        PC(16:0/18:1(9Z))  -> structure-defined: 10
+        PC(16:0/18:1)      -> sn-position: 9
+        PC(16:0_18:1)      -> molecular species: 7
+        PC(34:1) or PC 34:1 -> species: 5
+        PC                 -> class only: 2
+        """
+        lipid_id=str(value or "").strip()
+
+        if not lipid_id:
+            return 0.0
+
+        normalized=re.sub(r"\s+","",lipid_id)
+
+        # Structure-defined: acyl chains plus double-bond geometry/location.
+        if re.search(r"\(\d+[ZE]\)",normalized,re.IGNORECASE):
+            return 10.0
+
+        # sn-position-resolved species.
+        if "/" in normalized:
+            return 9.0
+
+        # Molecular species, chains known but sn positions unresolved.
+        if "_" in normalized:
+            return 7.0
+
+        # Sum-composition / species-level notation, e.g. PC(34:1).
+        if re.search(r"\d+:\d+",normalized):
+            return 5.0
+
+        # Lipid class/category but no acyl composition.
+        if re.match(r"^[A-Za-z]+$",normalized):
+            return 2.0
+
+        return 0.0
+
 # calculate quality scores (peak quality + rsd + ms2 + signal intensity + annotation confidence)
 def qs(comp):
     # get peak rating qc
-    peak = pd.Series([10 if x >= 7.0 else 7 if x >= 5 else 4 if x >= 3 else 1 for x in comp['Peak Rating (Max.)']])
+    try:
+        peak = pd.Series([10 if x >= 7.0 else 7 if x >= 5 else 4 if x >= 3 else 1 for x in comp['Peak Rating (Max.)']])
+    except:
+        peak = 0
     # get rsd qc areas
     try:
         rsd = pd.Series([10 if x < 10 else 8 if x < 15 else 6 if x < 20 else 4 if x < 25 else 2 if x < 30 else 0 for x in comp["RSD QC Areas [%]"]])
     except:
         rsd = 0
     # get ms2
-    ms2 = pd.Series([10 if x == "DDA for preferred ion" else 6 if x == "DDA for other ion" else 4 if x == "DDA available" else 0 for x in comp["MS2"]])
+    try:
+        ms2 = pd.Series([10 if x == "DDA for preferred ion" else 6 if x == "DDA for other ion" else 4 if x == "DDA available" else 0 for x in comp["MS2"]])
+    except:
+        ms2 = 0
     # get signal intensity (area max)
     scaler = MinMaxScaler(feature_range=(0, 10))
     signal = pd.Series((scaler.fit_transform(comp[["Area (Max.)"]])).flatten())
     # annotation confidence (mzCloud Best Match Confidence)
+
     temp = (comp.loc[:, ['Annot. Source: Predicted Compositions', 'Annot. Source: mzCloud Search', 'Annot. Source: mzVault Search', 'Annot. Source: Metabolika Search', 'Annot. Source: ChemSpider Search','Annot. Source: MassList Search']])
     full = (temp == "Full match").sum(axis=1)
     notTop = (temp == "Not the top hit").sum(axis=1)
@@ -136,9 +176,9 @@ def mad_failed(c):
 # filter out samples with >50% missing
 def MAD_or_missing(exp_data, mode, e):
     for temp in exp_data.keys(): 
-        if "Samples" in temp and e in temp: # only filter in sample expression with the specified charge
+        if "Samples" in temp and e in temp: 
             if mode == "MAD":
-                fail = mad_failed(exp_data[temp]["c1"]) | mad_failed(exp_data[temp]["c2"]) # mask of samples that failed the internal control for either c1 or c2
+                fail = mad_failed(exp_data[temp]["c1"]) | mad_failed(exp_data[temp]["c2"]) 
                 message = "Median Absolute Deviation threshold"
             elif mode == "sample_missing":
                 fail = exp_data[temp].isna().sum(axis=1)/len(exp_data[temp].index) > SAMPLE_MISSING
@@ -153,9 +193,6 @@ def MAD_or_missing(exp_data, mode, e):
                         exp_data[x] = exp_data[x].drop(index=s)
                     except:
                         continue
-
-#### add by group check
-# rsd = calculate RSD (sd/mean * 100) in QC pools and remove metabolites with RSD > 30%
 
 def rsd(exp_data, e, unique_batches):
     rsd = pd.DataFrame()
@@ -174,7 +211,6 @@ def rsd(exp_data, e, unique_batches):
             except:
                 logging.warning(m + " is missing from Samples" + b + "_" + e)
 
-#  >20% missing = remove metabolites with >20% missing
 def sample_missing(exp_data, e, unique_batches):
     missing_dict = {}
     for b in unique_batches:
@@ -194,18 +230,25 @@ def sample_missing(exp_data, e, unique_batches):
                 exp_data[pooled_key] = exp_data[pooled_key].drop(columns=m)
 
 
-# generate pca from expression data
-def generate_pca(exp_data, title, e, dir_input):
+def generate_pca(exp_data, title, e, dir_input, tissue):
     df = pd.DataFrame()
     for k in exp_data.keys():
         if "Sample" in k and e in k:
             df = pd.concat([df, exp_data[k]])
     batch = df["batch"]
     df = df.drop(["batch"], axis=1)
+
     scaler = StandardScaler()
     scaled_data = scaler.fit_transform(df)
+    
+    imputer = SimpleImputer(missing_values = np.nan, 
+                        strategy ='mean')
+    imputer = imputer.fit(scaled_data)
+    scaled_data = imputer.transform(scaled_data)
+
     pca = PCA(n_components=2)
     principal_components = pca.fit_transform(scaled_data)
+
     pca_df = pd.DataFrame(data=principal_components, columns=['PC1', 'PC2'])
     pca_df['batch'] = list(batch)
     plt.figure(figsize=(10, 8))
@@ -215,54 +258,105 @@ def generate_pca(exp_data, title, e, dir_input):
         hue='batch', 
         data=pca_df, 
         palette='viridis', 
-        s=100,      # Marker size
-        alpha=0.8   # Transparency
+        s=100,
+        alpha=0.8
     )
-    # Add titles and labels
     plt.title(title, fontsize=15)
     plt.xlabel(f'Principal Component 1 ({pca.explained_variance_ratio_[0]*100:.2f}% Variance)', fontsize=12)
     plt.ylabel(f'Principal Component 2 ({pca.explained_variance_ratio_[1]*100:.2f}% Variance)', fontsize=12)
     plt.grid(True)
-    plt.savefig(dir_input + "/" + title + "_PCA_" + e + ".png")
+    plt.savefig(f"{dir_input}/{title}_PCA_{e}_{tissue}.png")
 
-# calculate corection factor between batches
-def correction_factor(rep1, rep2):
-    med_ratios = {}
-    ratios = rep2 / rep1
-    ratios = ratios.dropna(how = "all")
-    mad = sp.median_abs_deviation(ratios)
-    upper = ratios.median() + 5*mad
-    lower = ratios.median() - 5*mad
-    for m in ratios.columns:
-        temp = ratios.loc[list(ratios[m] < upper[m]) and list(ratios[m] > lower[m]), m]
-        med_ratios[m] = temp.median()
-    correction = {k: 1/v for k, v in med_ratios.items()}
-    return correction
+def combat_normalize_wide(X: pd.DataFrame, batch_labels: pd.Series) -> pd.DataFrame:
+    """
+    Apply ComBat batch normalization using Python pycombat.
+    Preserves original missingness pattern after correction.
+    """
+    b = batch_labels.reindex(X.index)
+    if b.isna().any():
+        raise ValueError("ComBat requires non-missing batch labels for all samples.")
 
-# use biolgoical replicates to conduct batch normalization 
+    if b.nunique() < 2:
+        return X.copy()
+
+    missing_mask = X.isna()
+
+    X_filled = X.copy()
+    med = X_filled.median(axis=0, skipna=True)
+    X_filled = X_filled.fillna(med).fillna(0.0)
+
+    # checking for 0 variance features
+    tol = 1e-8
+    df_filtered = X_filled.loc[:, X_filled.var(axis=0) > tol]
+
+    # Step 2: (Optional but recommended) Remove features with zero variance in ANY batch
+    valid_features = pd.Series(True, index=df_filtered.columns)
+
+    for batch_id in b.unique():
+        # Get the rows (samples) for this specific batch
+        batch_rows = df_filtered.loc[b == batch_id]
+        
+        # Calculate feature variance within this specific batch
+        batch_var = batch_rows.var(axis=0)
+        
+        # Update valid features: must have variance > 0 in this batch
+        # (If a batch has only 1 sample, var is NaN, which > 0 safely handles)
+        valid_features = valid_features & (batch_var > tol)
+        logging.info(f"Number of features: {len(X_filled.columns)}")
+        logging.info(f"Number of features with 0 variance across samples in batch {batch_id}: {(batch_var <= 0).sum()}")
+
+    # Apply the strict batch-variance filter (keeping all rows, filtering columns)
+    X_filled = df_filtered.loc[:, valid_features]
+
+    # model = Combat()
+    # pycombat can error with pandas slicing internals; pass ndarray explicitly.
+    # corrected = model.fit_transform(X_filled.to_numpy(dtype=float), b.values)
+    # corrected = pycombat(X_filled, b.values)
+    corrected_transposed = pycombat_norm(X_filled.T.copy(), b.values.copy(), ref_batch=1)
+    
+    # Transpose back to standard format (samples as rows)
+    corrected = corrected_transposed.T
+    Xc = pd.DataFrame(corrected, index=X_filled.index, columns=X_filled.columns)
+
+    Xc = Xc.mask(missing_mask)
+    return Xc
+
 def normalization(exp_data, e, unique_batches, mode):
-    bdf = {}
-    samples = []
+    df_list = []
+    batch_list = []
+    
     for b in unique_batches:
-        bdf[b] = exp_data["Samples_" + b + "_" + e].drop(['batch'], axis=1)
-        samples = samples + list(bdf[b].index)
-    replicates = [i for i in set(samples) if samples.count(i) > 1]
-    logging.info("Initializing batch normalization with " + str(len(replicates)) + " biological replicates.")
-    reps = {}
+        # Extract dataframe, dropping batch column. Keep original index as column 
+        # to circumvent Duplicate Index errors upon concatenation of biological replicates.
+        df_b = exp_data["Samples_" + str(b) + "_" + e].drop(['batch'], axis=1)
+        df_list.append(df_b.reset_index())
+        batch_list.extend([b] * len(df_b))
+        
+    X = pd.concat(df_list, axis=0, ignore_index=True)
+    print(X.columns)
+    original_indices = X['compound']
+    X = X.drop(columns=['compound'])
+    
+    # Ensure mapping of batches maps to 1, 2, 3... to satisfy `ref_batch=1` in provided ComBat function.
+    unique_b_list = list(pd.Series(batch_list).unique())
+    batch_mapping = {b: i+1 for i, b in enumerate(unique_b_list)}
+    batch_labels = pd.Series([batch_mapping[b] for b in batch_list], index=X.index)
+    
+    logging.info(f"Applying ComBat normalization for {e} charges...")
+    Xc = combat_normalize_wide(X, batch_labels)
+    Xc.index = original_indices 
+    
+    # Reconstruct back into separated batch objects in dictionary
+    start_idx = 0
     for b in unique_batches:
-        reps[b] = bdf[b].loc[list(set(bdf[b].index) & set(replicates)),:]
-    #110123 is reference batch for plasma
-    if mode == "placenta":
-        cf = correction_factor(reps["32425"], reps["62323"])
-        for m in reps["62323"].columns:
-            exp_data["Samples_62323_" + e][m] = exp_data["Samples_62323_" + e][m]*cf[m]
-    else:
-        cf1 = correction_factor(reps["110123"], reps["51223"])
-        cf2 = correction_factor(reps["110123"], reps["112524"])
-        for m in reps["51223"].columns:
-            exp_data["Samples_51223_" + e][m] = exp_data["Samples_51223_" + e][m]*cf1[m]
-        for m in reps["112524"].columns:
-            exp_data["Samples_112524_" + e][m] = exp_data["Samples_112524_" + e][m]*cf2[m]
+        key = "Samples_" + str(b) + "_" + e
+        n_samples = len(exp_data[key])
+        
+        df_b_corrected = Xc.iloc[start_idx : start_idx + n_samples].copy()
+        df_b_corrected['batch'] = int(b) if str(b).isdigit() else b 
+        
+        exp_data[key] = df_b_corrected
+        start_idx += n_samples
 
 # average replicate expression values
 def merge_rep(exp_data, e, unique_batches, mode):
@@ -292,15 +386,11 @@ def merge_rep(exp_data, e, unique_batches, mode):
         exp_data["Samples_112524_" + e].loc[avg2.index,:] = avg2
         exp_data["Samples_110123_" + e].loc[avg2.index,:] = avg2
         
-
-# do log2 transformation on expression data
 def log2_transform(exp_data,e, unique_batches):
     for b in unique_batches:
         exp_data["Pooled_" + str(b) + "_" + e]= np.log2(exp_data["Pooled_" + str(b) + "_" + e])
         exp_data["Samples_" + str(b) + "_" + e]= np.log2(exp_data["Samples_" + str(b) + "_" + e])
 
-# combine pos and neg expression in same file
-    # if mtbl present in both, choose the one with the better signal intensity (area max)
 def combine_pos_neg(mode, batch, exp_data, pos_comp, neg_comp):
     all_s = list(set(exp_data[mode + "_" + batch + "_POS"].index) | set(exp_data[mode + "_" + batch + "_NEG"].index))
     all_m = list(set(exp_data[mode + "_" + batch + "_POS"].columns) | set(exp_data[mode + "_" + batch + "_NEG"].columns))
@@ -324,20 +414,20 @@ def combine_pos_neg(mode, batch, exp_data, pos_comp, neg_comp):
             combine_best[m + "_POS"] = pos_m
     return combine_best
 
-# perform 1/2 minimum imputation
-#def min_imputation(a=0.5):
-#    pass
-
-# final formatting of expression files
-def formatting(final, meta, mode, dir_input, preNorm = False):
+def formatting(final, meta, mode, dir_input, dir_output, tissue, preNorm = False):
     for k in final.keys():
         if "Samples" in k:
-            #final[k]["group"] = meta.loc[final[k].index,:]["group"]
             patient = []
             group = []
             subgroup = []
             gest_age = []
             gest_age_collection = []
+            column = ""
+            if tissue == "plasma":
+                column = "Sample ID"
+            elif tissue == "placenta":
+                column = "ID"
+            print(meta.columns)
             for id in final[k].index:
                 keys_to_try = [
                     id,
@@ -347,15 +437,16 @@ def formatting(final, meta, mode, dir_input, preNorm = False):
                 found = False
                 for key in keys_to_try:
                     try:
-                        patient.append(list(meta.loc[meta["Sample ID"] == key, :].index)[0])
-                        group.append(list(meta.loc[meta["Sample ID"] == key, :]["group"])[0])
-                        subgroup.append(list(meta.loc[meta["Sample ID"] == key, :]["subgroup"])[0])
-                        gest_age.append(list(meta.loc[meta["Sample ID"] == key, :]["gest age del"])[0])
-                        gest_age_collection.append(list(meta.loc[meta["Sample ID"] == key, :]["sample gest Age"])[0])
+                        print(id)
+                        patient.append(list(meta.loc[meta[column] == key, :].index)[0])
+                        group.append(list(meta.loc[meta[column] == key, "group"])[0])
+                        subgroup.append(list(meta.loc[meta[column] == key, "subgroup"])[0])
+                        gest_age.append(list(meta.loc[meta[column] == key, "gest age del"])[0])
+                        gest_age_collection.append(list(meta.loc[meta[column] == key,"sample gest Age"])[0])
                         found = True
-                        break # Success! Exit the loop and stop trying fallbacks
+                        break 
                     except:
-                        continue # That key failed, try the next one in the list
+                        continue 
                 if not found:
                     logging.error(f"Issue with indexing {id} in meta data.")
             final[k]["patient_ID"] = patient
@@ -372,40 +463,37 @@ def formatting(final, meta, mode, dir_input, preNorm = False):
                     if not temp.empty:
                         temp = temp.transpose()
                         if preNorm:
-                            temp.to_csv(dir_input + "/" + k + "_" + t + "_preNorm.csv")
+                            temp.to_csv(dir_output + "/" + k + "_" + t + "_preNorm.csv")
                         else:
-                            temp.to_csv(dir_input + "/" + k + "_" + t + ".csv")
+                            temp.to_csv(dir_output + "/" + k + "_" + t + ".csv")
             else:
                 if preNorm:
-                    final[k].to_csv(dir_input + "/" + k + "_preNorm.csv")
+                    final[k].to_csv(dir_output + "/" + k + "_preNorm.csv")
                 else:
-                    final[k].to_csv(dir_input + "/" + k + ".csv")
+                    final[k].to_csv(dir_output + "/" + k + ".csv")
         else:
             if preNorm:
-                final[k].to_csv(dir_input + "/" + k + "_preNorm.csv")
+                final[k].to_csv(dir_output + "/" + k + "_preNorm.csv")
             else:
-                final[k].to_csv(dir_input + "/" + k + ".csv")
+                final[k].to_csv(dir_output + "/" + k + ".csv")
     
-# do all cleaning steps split by charge
-def cleanHelper(exp_data, e, dir_input, unique_batches, mode):
-    MAD_or_missing(exp_data, "MAD", e) # MAD test 
-    MAD_or_missing(exp_data, "sample_missing", e) # sample >50% missingness test
-    rsd(exp_data,  e, unique_batches) # RSD test (consider metabolite as missing)
-    sample_missing(exp_data, e, unique_batches) # metabolite >20% missingness test
-        #Have not added by group check yet, mtbl doesn't have any missing mtbl expression anyway
+def cleanHelper(exp_data, e, dir_input, unique_batches, mode, tissue):
+    MAD_or_missing(exp_data, "MAD", e) 
+    MAD_or_missing(exp_data, "sample_missing", e) 
+    rsd(exp_data,  e, unique_batches) 
+    sample_missing(exp_data, e, unique_batches) 
     logging.info("Generating unnormalized PCA plot...")
-    generate_pca(exp_data, "Unnormalized_MTBL_Expression", e, dir_input) # generate unnormalized PCA
+    generate_pca(exp_data, "Unnormalized_MTBL_Expression", e, dir_input, tissue) 
     preNorm = {k: v for k, v in exp_data.items() if e in k}
-    normalization(exp_data, e, unique_batches, mode) # batch normalization using replicates
+    normalization(exp_data, e, unique_batches, mode) 
     logging.info("Generating batch unnormalized PCA plot")
-    generate_pca(exp_data, "Batch_Normalized_MTBL_Expression", e, dir_input) # generate normalized PCA
-    merge_rep(exp_data, e, unique_batches, mode) # average replicates expression 
+    generate_pca(exp_data, "Batch_Normalized_MTBL_Expression", e, dir_input, tissue) 
+    merge_rep(exp_data, e, unique_batches, mode)  
     logging.info("Applying log2 transformation...")
-    log2_transform(exp_data, e, unique_batches) # log2 transform all data
+    log2_transform(exp_data, e, unique_batches) 
     return preNorm
 
-# function for data cleaning
-def clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp, dir_input, meta):
+def clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp, dir_input, meta, dir_output, tissue):
     if "plasma" in dir_input:
         mode = "plasma"
     elif "placenta" in dir_input:
@@ -415,22 +503,19 @@ def clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp, dir_input,
     unique_batches = list(set(pos_batch["batch"]))
     unique_batches = [str(x) for x in unique_batches]
     logging.info("Batches: " + str(unique_batches))
-    #  handle missing
     logging.info("Handling NA entires...")
     pos_exp, neg_exp = handle_missing(pos_exp, neg_exp) 
 
     logging.info("Splitting by batch and run type (Samples or Pooled)...")
-    exp_data = {} # dictionary to stroe split data by batches and pools
-    split_exp(pos_exp, pos_batch, "POS", exp_data, unique_batches) # naming format = [Pooled, Samples]_[batch]_[charge]
+    exp_data = {} 
+    split_exp(pos_exp, pos_batch, "POS", exp_data, unique_batches) 
     split_exp(neg_exp, neg_batch, "NEG", exp_data, unique_batches)
 
-    # do cleaning steps split by charge
-    preNorm_POS = cleanHelper(exp_data, "POS", dir_input, unique_batches, mode)
-    preNorm_NEG = cleanHelper(exp_data, "NEG", dir_input, unique_batches, mode)
+    preNorm_POS = cleanHelper(exp_data, "POS", dir_input, unique_batches, mode, tissue)
+    preNorm_NEG = cleanHelper(exp_data, "NEG", dir_input, unique_batches, mode, tissue)
 
     preNorm = preNorm_NEG | preNorm_POS
 
-    # remove duplicate metabolite entries based on computed quality scores
     logging.info("Removing multiplet parent metabolites by quality score...")
     neg_comp["quality_score"] = qs(neg_comp)
     pos_comp["quality_score"] = qs(pos_comp)
@@ -442,7 +527,6 @@ def clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp, dir_input,
             exp_data[x] = remove_duplicates(exp_data[x], neg_comp)
             preNorm_NEG[x] = remove_duplicates(preNorm_NEG[x], neg_comp)
 
-    # combine the pos and neg compounds
     logging.info("Combining POS and NEG polarity into shared file...")
     final = {}
     preNorm_final = {}
@@ -450,54 +534,54 @@ def clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp, dir_input,
     s = ["Pooled", "Samples"]
     for i in b:
         for j in s:
-            temp = combine_pos_neg(str(j), str(i), exp_data, pos_comp, neg_comp) # combine compounds in both pos and neg
+            temp = combine_pos_neg(str(j), str(i), exp_data, pos_comp, neg_comp) 
             final[str(j) + "_" + str(i)] = temp
             temp = combine_pos_neg(str(j), str(i), preNorm, pos_comp, neg_comp)
             preNorm_final[str(j) + "_" + str(i)] = temp
 
-     # 1/2 minium imputation of missing, no mtbl are missing
-    #min_imputation()
     logging.info("Exporting csv files...")
-    formatting(final, meta, mode, dir_input) # add group columns, split files by timepoint
-    formatting(preNorm_final, meta, mode, dir_input, preNorm=True)
+    formatting(final, meta, mode, dir_input, dir_output, tissue) 
+    formatting(preNorm_final, meta, mode, dir_input, dir_output, tissue, preNorm=True)
 
-        
-
-# Give folder with both postive and negative metabolomic expression, batch info, and compound metadata
-#def main(directory, meta):
 def main():
-    dir_input = sys.argv[1] # e.g. /Users/kaylaxu/Desktop/data/clean_data/MTBL_placenta
-    meta_input = sys.argv[2] # e.g. /Users/kaylaxu/Desktop/data/raw_data/dp3 master table v2.xlsx
-#    dir_input = directory
-#    meta_input = meta
+    dir_input = sys.argv[1] 
+    meta_input = sys.argv[2] 
+    dir_output = sys.argv[3]
 
     if "MTBL" in dir_input:
         filename= 'MTBL_cleaning.log'
+        modality = "MTBL"
     elif "LIPD" in dir_input:
         filename= 'LIPD_cleaning.log'
+        modality = "LIPD"
 
-    logging.basicConfig( # initiate log file
-        filename='MTBL_cleaning.log',
+    if "plasma" in dir_input:
+        tissue = "plasma"
+    elif "placenta" in dir_input:
+        tissue = "placenta"
+
+    configFile = f"{modality}_{tissue}_cleaning.log"
+
+    logging.basicConfig(
+        filename=configFile,
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
-        filemode='w'  # Use 'w' to overwrite the file each run, or 'a' to append
+        filemode='w'  
     )
     logging.info("Initializing metabolomics cleaning...")
     logging.info("Reading expression, batch, compound, and metadata files...")
-    # get files
     pos_exp = pd.read_csv(dir_input + "/pos_expression.csv", index_col=0)
     pos_batch = pd.read_csv(dir_input + "/pos_batch.csv", index_col=0)
     pos_comp = pd.read_csv(dir_input + "/pos_compounds.csv", index_col=0)
     neg_exp = pd.read_csv(dir_input + "/neg_expression.csv", index_col=0)
     neg_batch = pd.read_csv(dir_input + "/neg_batch.csv", index_col=0)
     neg_comp = pd.read_csv(dir_input + "/neg_compounds.csv", index_col=0)
-    meta = pd.read_excel(meta_input, index_col=0, sheet_name="n=133 metabolomics")
+    meta = pd.read_excel(meta_input, sheet_name="n=133 metabolomics")
+    meta.index = meta["ID"]
     meta = meta[meta.index.notna()]
-    # call cleaning functions
-    clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp, dir_input, meta)
+    clean(pos_exp, pos_batch, pos_comp, neg_exp, neg_batch, neg_comp, dir_input, meta, dir_output, tissue)
 
     logging.info("DONE - Metabolomics cleaning pipeline complete")
-    #close log file
     logging.shutdown()
 
 if __name__ == "__main__":

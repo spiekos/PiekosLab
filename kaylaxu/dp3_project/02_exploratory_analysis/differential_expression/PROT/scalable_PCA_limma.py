@@ -6,8 +6,12 @@ import anndata as ad
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from sklearn.impute import SimpleImputer
 import seaborn as sns
 import pylimma
+from pathlib import Path
+
+
 
 # Suppress warnings for cleaner output during batch processing
 warnings.filterwarnings('ignore', category=FutureWarning)
@@ -16,7 +20,11 @@ warnings.filterwarnings('ignore', category=FutureWarning)
 def process_pca(adata, color_by, output_path):
     """Runs PCA and saves a dynamically named scatter plot."""
     # PCA on samples (centre proteins)
-    Xc = adata.X - adata.X.mean(axis=0, keepdims=True)
+    Xc = adata.X - np.nanmean(adata.X, axis=0, keepdims=True)
+    imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
+    # Fit to data and transform it
+    Xc = imputer.fit_transform(Xc)
+
     U, s, Vt = np.linalg.svd(Xc, full_matrices=False)
     pcs = U * s
     var_explained = (s ** 2) / (s ** 2).sum()
@@ -46,7 +54,7 @@ def process_pca(adata, color_by, output_path):
     plt.close()
 
 
-def run_limma_pipeline(adata, feature, target_group, control_group, output_csv, output_volcano):
+def run_limma_pipeline(adata, feature, target_group, control_group, output_csv, output_volcano, modality, tissue):
     """
     Runs pylimma on the anndata object, saves significant results, 
     and generates a volcano plot.
@@ -82,7 +90,7 @@ def run_limma_pipeline(adata, feature, target_group, control_group, output_csv, 
         pylimma.e_bayes(adata)
 
         results_df = pylimma.top_table(adata, coef= 'CompvsCtrl',
-                            number=np.inf, sort_by='p').join(adata.var[['uniprot_id']], how='left')
+                            number=np.inf, sort_by='p').join(adata.var[['analyte_id']], how='left')
         
         
         # Calculate adjusted p-values (FDR using Benjamini-Hochberg)
@@ -100,7 +108,7 @@ def run_limma_pipeline(adata, feature, target_group, control_group, output_csv, 
     top = pylimma.top_table(adata, coef='CompvsCtrl',
                             number=np.inf, sort_by='p')
     
-    top = top.join(adata.var[['uniprot_id']], how='left')
+    top = top.join(adata.var[['analyte_id']], how='left')
 
     pvalue_threshold = 0.05
     logfc_threshold = 0
@@ -117,7 +125,7 @@ def run_limma_pipeline(adata, feature, target_group, control_group, output_csv, 
     print(f'differentially abundant proteins at adj_p_value < 0.05: {n_sig_05:,}')
     print(f'differentially abundant proteins at adj_p_value < 0.01: {n_sig_01:,}')
 
-    display_cols = ['uniprot_id', 'log_fc', 'ave_expr', 't',
+    display_cols = ['analyte_id', 'log_fc', 'ave_expr', 't',
                     'p_value', 'adj_p_value', 'b']
     top.loc[:, display_cols].head(15).round(3)
 
@@ -143,17 +151,17 @@ def run_limma_pipeline(adata, feature, target_group, control_group, output_csv, 
     top_up   = sig.sort_values('log_fc', ascending=False).head(5)
     top_down = sig.sort_values('log_fc', ascending=True ).head(5)
     for _, row in pd.concat([top_up, top_down]).iterrows():
-        label = row['uniprot_id']
+        label = row['analyte_id']
         if not isinstance(label, str) or ';' in label or label == '':
             continue
         ax.annotate(label, (row['log_fc'], -np.log10(max(row['p_value'], 1e-300))),
-                    fontsize=8, ha='left', va='bottom')
+                    fontsize=10, ha='left', va='bottom')
 
     ax.axhline(-np.log10(0.05), color='black', lw=0.5, linestyle='--')
     ax.axvline(0, color='black', lw=0.5)
     ax.set_xlabel('log2 fold-change (Complication - control)')
     ax.set_ylabel('-log10 p-value')
-    ax.set_title(f'{complication} vs control - placenta proteome ')
+    ax.set_title(f'{complication} vs control - {modality} {tissue}')
     ax.legend(frameon=False, loc='lower right')
     fig.tight_layout()
     plt.savefig(output_volcano)
@@ -192,12 +200,10 @@ def run_limma_pipeline(adata, feature, target_group, control_group, output_csv, 
     plt.close()
     '''
 
-def process_proteomics_files(file_list, output_dir, meta_columns, feature = "Group", target_group = "HDP", control_group="Control"):
+def process_proteomics_files(file_list, output_dir, meta_columns, feature = "Group", target_group = "HDP", control_group="Control", modality = "PROT"):
     """
     Main loop to process a list of CSV files.
     """
-    out_path = Path(output_dir)
-    out_path.mkdir(parents=True, exist_ok=True)
 
     for file in file_list:
         file_path = Path(file)
@@ -207,20 +213,28 @@ def process_proteomics_files(file_list, output_dir, meta_columns, feature = "Gro
             continue
 
         if "plasma" in file:
+            
             if "1.csv" in file:
                 base_name = f"{target_group}_v_{control_group}_plasma_1"
+                tissue = "plasma 1"
             elif "2.csv" in file:
                 base_name = f"{target_group}_v_{control_group}_plasma_2"
+                tissue = "plasma 2"
             elif "3.csv" in file:
                 base_name = f"{target_group}_v_{control_group}_plasma_3"
+                tissue = "plasma 3"
             elif "4.csv" in file:
                 base_name = f"{target_group}_v_{control_group}_plasma_4"
+                tissue = "plasma 4"
             elif "5.csv" in file:
                 base_name = f"{target_group}_v_{control_group}_plasma_5"
+                tissue = "plasma 5"
             else:
                 base_name = f"{target_group}_v_{control_group}_plasma"
+                tissue = "plasma all"
         elif "placenta" in file:
             base_name = f"{target_group}_v_{control_group}_placenta"
+            tissue = "placenta all"
         else:
             print(f"Tissue must be plasma or placenta - no valid tissue specified by file: {file}")
             return
@@ -238,21 +252,29 @@ def process_proteomics_files(file_list, output_dir, meta_columns, feature = "Gro
         proteome_cols = [c for c in df.columns if c not in current_meta_cols]
         X = df[proteome_cols].copy()
         X.index = obs_df.index
-        
+
         var_df = pd.DataFrame(index=proteome_cols)
-        var_df['uniprot_id'] = proteome_cols
-        
+        var_df['analyte_id'] = proteome_cols
+
         # Create AnnData
         adata = ad.AnnData(X=X, obs=obs_df, var=var_df)
         
         # Define Output Paths
-        pca_out = out_path / f"batch_correction/PROT/corrected_{base_name}_PCA.jpeg"
-        limma_csv_out = out_path / f"differential_expression/PROT/results/{base_name}_significant_results.csv"
-        volcano_out = out_path / f"differential_expression/PROT/volcano_plots/{base_name}_volcano.jpeg"
-        
+        pca_out = Path(f"{output_dir}/batch_correction/{modality}/corrected_{base_name}_PCA.jpeg")
+        limma_csv_out = Path(f"{output_dir}/differential_expression/{modality}/results/{base_name}_significant_results.csv")
+        volcano_out = Path(f"{output_dir}/differential_expression/{modality}/volcano_plots/{base_name}_volcano.jpeg")
+
+        pca_out.parent.mkdir(parents=True, exist_ok=True)
+        limma_csv_out.parent.mkdir(parents=True, exist_ok=True)
+        volcano_out.parent. mkdir(parents=True, exist_ok=True)
+
+        #pca_out = out_path / f"batch_correction/{modality}/corrected_{base_name}_PCA.jpeg"
+        #limma_csv_out = out_path / f"differential_expression/{modality}/results/{base_name}_significant_results.csv"
+        #volcano_out = out_path / f"differential_expression/{modality}/volcano_plots/{base_name}_volcano.jpeg"
+
         # Execute Tasks
         process_pca(adata, color_by='Group', output_path=pca_out)
-        run_limma_pipeline(adata, feature, target_group, control_group, limma_csv_out, volcano_out)
+        run_limma_pipeline(adata, feature, target_group, control_group, limma_csv_out, volcano_out, modality, tissue)
 
 
 if __name__ == "__main__":
@@ -261,28 +283,53 @@ if __name__ == "__main__":
     # 1. Define the metadata columns based on your notebook structure
     metadata_cols_to_extract = [
         'SampleID', 'SubjectID', 'SampleGestAge', 
-        'Batch', 'Group', 'Subgroup', 'GestAgeDelivery', 'Timepoint'
+        'Batch', 'Group', 'Subgroup', 'GestAgeDelivery', "SampleTimepoint",
+        "MetadataCanonicalID", "labor_onset", "indicated_onset",
+        "spont_labor_flag", "indicated_onset_flag", "cat_labor_onset_flag",
+        "within_0_1wk_delivery_flag", "post_birth_sample_flag"
     ]
     
     # 2. Provide the list of files you want to loop over
+    '''
     files_to_process = [
-        "/Users/kaylaxu/Desktop/dp3_project/data/processed/PROT/normalized_full_results/PROT_placenta.csv",
-        "/Users/kaylaxu/Desktop/dp3_project/data/processed/PROT/normalized_full_results/PROT_plasma.csv",
-        "/Users/kaylaxu/Desktop/dp3_project/data/processed/PROT/normalized_sliced_by_suffix/proteomics_plasma_formatted_suffix_1.csv",
-        "/Users/kaylaxu/Desktop/dp3_project/data/processed/PROT/normalized_sliced_by_suffix/proteomics_plasma_formatted_suffix_2.csv",
-        "/Users/kaylaxu/Desktop/dp3_project/data/processed/PROT/normalized_sliced_by_suffix/proteomics_plasma_formatted_suffix_3.csv",
-        "/Users/kaylaxu/Desktop/dp3_project/data/processed/PROT/normalized_sliced_by_suffix/proteomics_plasma_formatted_suffix_4.csv",
-        "/Users/kaylaxu/Desktop/dp3_project/data/processed/PROT/normalized_sliced_by_suffix/proteomics_plasma_formatted_suffix_5.csv"
+        "/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/PROT/normalized_full_results/PROT_placenta.csv",
+        "/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/PROT/normalized_full_results/PROT_plasma.csv",
+        "/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/PROT/normalized_sliced_by_suffix/proteomics_plasma_formatted_suffix_1.csv",
+        "/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/PROT/normalized_sliced_by_suffix/proteomics_plasma_formatted_suffix_2.csv",
+        "/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/PROT/normalized_sliced_by_suffix/proteomics_plasma_formatted_suffix_3.csv",
+        "/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/PROT/normalized_sliced_by_suffix/proteomics_plasma_formatted_suffix_4.csv",
+        "/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/PROT/normalized_sliced_by_suffix/proteomics_plasma_formatted_suffix_5.csv"
     ]
-    
+    '''
+
+    files_to_process = [
+        #"/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/MTBL/placenta/MTBL_placenta_cleaned_with_metadata.csv",
+        #"/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/MTBL/plasma/MTBL_plasma_cleaned_with_metadata.csv",
+        #"/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/MTBL/plasma/MTBL_plasma_T1.csv",
+        #"/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/MTBL/plasma/MTBL_plasma_T2.csv",
+        #"/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/MTBL/plasma/MTBL_plasma_T3.csv",
+        #"/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/MTBL/plasma/MTBL_plasma_T4.csv",
+        #"/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/MTBL/plasma/MTBL_plasma_T5.csv",
+        "/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/LIPD/placenta/LIPD_placenta_cleaned_with_metadata.csv",
+        "/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/LIPD/plasma/LIPD_plasma_cleaned_with_metadata.csv",
+        "/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/LIPD/plasma/LIPD_plasma_T1.csv",
+        "/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/LIPD/plasma/LIPD_plasma_T2.csv",
+        "/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/LIPD/plasma/LIPD_plasma_T3.csv",
+        "/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/LIPD/plasma/LIPD_plasma_T4.csv",
+        "/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/data/processed/LIPD/plasma/LIPD_plasma_T5.csv"
+    ]
+
     # 3. Define the destination folder for plots and tables
-    output_directory = "/Users/kaylaxu/Desktop/dp3_project/04_results_and_figures"
+    output_directory = "/Users/kaylaxu/Desktop/PiekosLab/kaylaxu/dp3_project/04_results_and_figures/"
 
     comps = {"FGR": "Group", 
              "HDP": "Group",
              "sPTB": "Group",
              "PE|HELLP": "Subgroup",
              "HDP|FGR|sPTB": "Group"}
+
+    modality = "LIPD"
+
     # 4. Execute the pipeline
     for complication in comps.keys():
         process_proteomics_files(
@@ -291,6 +338,7 @@ if __name__ == "__main__":
             meta_columns=metadata_cols_to_extract,
             feature=comps[complication],
             target_group=complication,      
-            control_group="Control"
+            control_group="Control",
+            modality = modality
         )
     
