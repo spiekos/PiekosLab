@@ -24,6 +24,9 @@ from sklearn.metrics import (
     roc_curve,
 )
 from sklearn.preprocessing import RobustScaler
+from sklearn.pipeline import Pipeline
+from sklearn.feature_selection import SelectFromModel
+from sklearn.model_selection import GroupShuffleSplit, GroupKFold
 from xgboost import XGBClassifier
 import optuna
 
@@ -52,6 +55,14 @@ TIMEPOINTS = ["A", "B", "C", "D", "E"]
 
 N_CV_FOLDS = 10
 RANDOM_STATE = 42
+
+# Elastic-net mixing grid. 0.0 = pure ridge, 1.0 = pure lasso; the intermediate
+# values are the elastic net proper. Tuned in the inner CV loop per Aim 3A.
+# NOTE: this grid only takes effect when penalty="elasticnet" is passed
+# explicitly - LogisticRegressionCV silently ignores l1_ratios under its
+# default penalty="l2", which yields no zeroed coefficients and therefore no
+# feature selection at all.
+L1_RATIO_GRID = (0.1, 0.3, 0.5, 0.7, 0.9, 1.0)
 
 
 def load_significant_analytes(
@@ -133,13 +144,59 @@ def plot_correlation_matrix(
     logger.info("Correlation matrix saved -> %s", output_path)
 
 
-def lasso_feature_selection_binary(
+def make_elasticnet_selector(
+    l1_ratios: tuple = L1_RATIO_GRID,
+    cv: int = N_CV_FOLDS,
+    random_state: int = RANDOM_STATE,
+    max_iter: int = 20000,
+    tol: float = 1e-4,
+) -> Pipeline:
+    """Return a scaler + elastic-net selector Pipeline for use *inside* CV.
+
+    Wrapping the selector in a Pipeline is what lets it be refit on each
+    training fold, so `l1_ratio` is chosen by the inner CV loop rather than
+    once on the whole development set. Fitting the selector a single time
+    outside CV lets it see every inner validation fold before those folds are
+    used for tuning.
+
+    `penalty="elasticnet"` is mandatory: `LogisticRegressionCV` silently
+    ignores `l1_ratios` under its default `penalty="l2"`, and because L2 never
+    drives a coefficient to exactly zero, a downstream `coef != 0` test then
+    selects every feature.
+    """
+    return Pipeline([
+        ("scale", RobustScaler()),
+        ("select", SelectFromModel(
+            LogisticRegressionCV(
+                penalty="elasticnet",
+                l1_ratios=list(l1_ratios),
+                solver="saga",
+                cv=cv,
+                scoring="average_precision",
+                class_weight="balanced",
+                random_state=random_state,
+                max_iter=max_iter,
+                tol=tol,
+                n_jobs=-1,
+            ),
+            threshold=1e-10,
+        )),
+    ])
+
+
+def elasticnet_feature_selection_binary(
     X_train: pd.DataFrame,
     y_train: pd.Series,
     cv: int = N_CV_FOLDS,
     random_state: int = RANDOM_STATE,
 ) -> list:
-    """Elastic-net logistic regression CV for binary feature selection."""
+    """Elastic-net logistic regression CV for binary feature selection.
+
+    Standalone form, kept for reporting and for callers that want an explicit
+    feature list. Prefer `make_elasticnet_selector` inside a CV pipeline: this
+    function fits once on whatever it is given, so calling it on a full
+    development set leaks that set's structure into later tuning folds.
+    """
     scaler = RobustScaler()
     X_scaled = scaler.fit_transform(X_train)
 
@@ -160,13 +217,15 @@ def lasso_feature_selection_binary(
         )
 
     enet = LogisticRegressionCV(
-        l1_ratios=(0.1, 0.5, 0.7, 0.9, 1.0),
+        penalty="elasticnet",          # REQUIRED: l1_ratios is ignored under the default "l2"
+        l1_ratios=list(L1_RATIO_GRID),
         solver="saga",
         cv=cv_actual,
+        scoring="average_precision",   # PR-AUC, per Aim 3A
         class_weight="balanced",
         random_state=random_state,
         max_iter=20000,
-        tol=1e-3,
+        tol=1e-4,
         n_jobs=-1,
     )
     enet.fit(X_scaled, y_train)
@@ -174,11 +233,22 @@ def lasso_feature_selection_binary(
     chosen_ratio = enet.l1_ratio_[0] if hasattr(enet.l1_ratio_, "__len__") else enet.l1_ratio_
     coef = enet.coef_.ravel()
     selected = [col for col, c in zip(X_train.columns, coef) if c != 0.0]
+    if len(selected) == X_train.shape[1]:
+        logger.warning(
+            "ElasticNet binary: selection kept ALL %d features - check that the "
+            "penalty is elastic-net and that l1_ratio is not pinned near 0.",
+            X_train.shape[1],
+        )
     logger.info(
         "ElasticNet binary: %d / %d features selected (best l1_ratio=%.2f).",
         len(selected), X_train.shape[1], chosen_ratio,
     )
     return selected
+
+
+# Backwards-compatible alias: the old name said "lasso" but the method is
+# elastic net (l1_ratio is tuned, and 1.0 - pure lasso - is only one grid point).
+lasso_feature_selection_binary = elasticnet_feature_selection_binary
 
 
 def lasso_feature_selection_multilabel(

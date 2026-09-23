@@ -1,0 +1,158 @@
+========================================================================
+DP3 SOP Preprocessing Log  —  MTBL_plasma
+Generated : 2026-08-13 13:10:38
+Database  : HMDB
+========================================================================
+
+INTERNAL STANDARDS USED
+----------------------------------------
+  NEG: c1, c2
+  POS: c1, c2
+
+NORMALIZATION SUMMARY (Steps 1–6)
+----------------------------------------
+  POS injection-order source: raw_workbook_f_number.
+  NEG injection-order source: raw_workbook_f_number.
+  MTBL_plasma: resolved 7 sample IDs via metadata aliases before normalization.
+  POS: filled missing sample-level ISTD geometric means for 22 rows using batch/global medians.
+  POS: ISTD normalization used geometric mean of ['c1', 'c2'].
+  pycombat without ref.batch, protected=['SampleGestAge'], bridge_samples=20
+  POS: batch correction method=pycombat_standard, reference batch=51223.
+  NEG: filled missing sample-level ISTD geometric means for 22 rows using batch/global medians.
+  NEG: ISTD normalization used geometric mean of ['c1', 'c2'].
+  pycombat without ref.batch, protected=['SampleGestAge'], bridge_samples=20
+  NEG: batch correction method=pycombat_standard, reference batch=51223.
+
+  Median fold-change batch scaling factors:
+    Batch 110123: 0.832454
+    Batch 112524: 1.255935
+    Batch 51223: 1.000000
+
+  Post-normalization drift flags:
+    ! POS_pre batch 110123: ISTD concordance is weak (minimum pairwise r=0.13).
+    ! POS_pre batch 112524: ISTD concordance is weak (minimum pairwise r=0.25).
+    ! POS_pre batch 51223: ISTD concordance is weak (minimum pairwise r=0.19).
+    ! NEG_pre batch 110123: ISTD concordance is weak (minimum pairwise r=0.24).
+    ! NEG_pre batch 112524: ISTD concordance is weak (minimum pairwise r=0.31).
+    ! NEG_pre batch 51223: ISTD concordance is weak (minimum pairwise r=0.10).
+
+INITIAL BIOLOGICAL SAMPLE COUNTS BY BATCH (before filtering)
+----------------------------------------
+  NEG:
+    Batch 51223: 128 samples
+    Batch 110123: 164 samples
+    Batch 112524: 258 samples
+    Total: 550 samples
+  POS:
+    Batch 51223: 128 samples
+    Batch 110123: 164 samples
+    Batch 112524: 258 samples
+    Total: 550 samples
+
+PER-STEP FEATURE AND SAMPLE COUNTS (Steps 7–18, Parts 3A–3B, Step 30)
+----------------------------------------
+  MERGED:
+    Step                                         Features  Bio Samples
+    ------------------------------------------ ---------- ------------
+    after POS/NEG merge (Step 30)                     664          530
+  NEG:
+    Step                                         Features  Bio Samples
+    ------------------------------------------ ---------- ------------
+    entry (post-ISTD removal)                       3,942          550
+    after Step 7 (feature missingness)              3,940          550
+    after Step 8 (sample missingness)               3,940          550
+    after Step 16 (sample ISTD MAD, post-ComBat)      3,940          543
+    after Step 17 (QC RSD filter, post-ComBat)        589          543
+    after Step 18 (IQR filter, within-timepoint)        559          543
+    after Part 3A (named-compound dedup)              524          543
+    after Part 3B (unnamed dedup)                     161          543
+  POS:
+    Step                                         Features  Bio Samples
+    ------------------------------------------ ---------- ------------
+    entry (post-ISTD removal)                       5,806          550
+    after Step 7 (feature missingness)              5,804          550
+    after Step 8 (sample missingness)               5,804          550
+    after Step 16 (sample ISTD MAD, post-ComBat)      5,804          550
+    after Step 17 (QC RSD filter, post-ComBat)      1,515          550
+    after Step 18 (IQR filter, within-timepoint)      1,439          550
+    after Part 3A (named-compound dedup)            1,339          550
+    after Part 3B (unnamed dedup)                     503          550
+
+  Final (post-dedup) feature count: 664
+  Final biological sample count   : 530
+
+SAMPLES FLAGGED BY FILTER STEP
+----------------------------------------
+  NEG Step 16 — ISTD MAD (post-ComBat): 7 sample(s) removed
+    - DP3-0093A (c1 raw ISTD=4.945e+06 outside [2.508e+06, 4.702e+06] (median=3.605e+06, MAD=2.194e+05))
+    - DP3-0045C (c2 raw ISTD=3.206e+06 outside [1.928e+06, 3.089e+06] (median=2.509e+06, MAD=1.160e+05))
+    - DP3-0156D (c2 raw ISTD=1.583e+06 outside [1.928e+06, 3.089e+06] (median=2.509e+06, MAD=1.160e+05))
+    - DP3-0272D (c1 raw ISTD=2.992e+06 outside [3.145e+06, 5.258e+06] (median=4.201e+06, MAD=2.112e+05))
+    - DP3-0273A (c1 raw ISTD=2.926e+06 outside [3.145e+06, 5.258e+06] (median=4.201e+06, MAD=2.112e+05))
+    - DP3-0358EC (c1 raw ISTD=3.133e+06 outside [3.145e+06, 5.258e+06] (median=4.201e+06, MAD=2.112e+05))
+    - DP3-0364A (c1 raw ISTD=2.942e+06 outside [3.145e+06, 5.258e+06] (median=4.201e+06, MAD=2.112e+05))
+
+FEATURE FILTER SUMMARY BY STEP
+----------------------------------------
+  NEG Step 17 — QC RSD (per-batch, post-ComBat): 3,351 feature(s) removed
+  NEG Step 18 — IQR filter (within-timepoint): 30 feature(s) removed
+  POS Step 17 — QC RSD (per-batch, post-ComBat): 4,289 feature(s) removed
+  POS Step 18 — IQR filter (within-timepoint): 76 feature(s) removed
+
+DEDUPLICATION (Steps 20–28)
+----------------------------------------
+  Total deduplication drop events: 1,334
+
+BATCH CORRECTION (Step 13)
+----------------------------------------
+  POS: batch correction method=pycombat_standard, reference batch=51223.
+  NEG: batch correction method=pycombat_standard, reference batch=51223.
+
+  Bridge samples used for ComBat anchor:
+    NEG: 20 unique bridge sample(s)
+    POS: 20 unique bridge sample(s)
+
+BATCH-CONFOUNDING CHECKS (Step 12)
+----------------------------------------
+  Group via chi_square: p=0.004285 *** SIGNIFICANT
+  Subgroup via chi_square: p=3.322e-12 *** SIGNIFICANT
+  SampleGestAge via anova: p=0.3436
+  GestAgeDelivery via anova: p=0.009707 *** SIGNIFICANT
+  Group via chi_square: p=0.004285 *** SIGNIFICANT
+  Subgroup via chi_square: p=3.322e-12 *** SIGNIFICANT
+  SampleGestAge via anova: p=0.3436
+  GestAgeDelivery via anova: p=0.009707 *** SIGNIFICANT
+
+SCHYMANSKI ANNOTATION TIER BREAKDOWN
+----------------------------------------
+  Level 1:      0  (  0.0%)
+  Level 2:    148  ( 22.3%)
+  Level 3:    265  ( 39.9%)
+  Level 4:    194  ( 29.2%)
+  Level 5:     57  (  8.6%)
+  Total   :    664
+
+FEATURE MISSINGNESS DETAIL (Step 7)
+----------------------------------------
+  POS: 0 feature(s) removed for missingness.
+  NEG: 0 feature(s) removed for missingness.
+
+QC WARNINGS
+----------------------------------------
+  ! Batch confounding warning: Group is associated with batch (chi-square p=0.004285).
+  ! Batch confounding warning: Subgroup is associated with batch (chi-square p=3.322e-12).
+  ! Batch confounding warning: GestAgeDelivery differs by batch (ANOVA p=0.009707).
+  ! R ref.batch ComBat failed ([Errno 2] No such file or directory: 'Rscript'); trying Python pycombat without ref.batch.
+  ! Python pycombat does not support ref.batch; used standard empirical-Bayes ComBat.
+  ! POS Step 18 IQR filter: 5.0th pct IQR = 0.0001 (floor = 0.1; filter active = True), 95.0th pct IQR = 0.1727 (ceiling = 5.0; filter active = False).
+  ! Batch confounding warning: Group is associated with batch (chi-square p=0.004285).
+  ! Batch confounding warning: Subgroup is associated with batch (chi-square p=3.322e-12).
+  ! Batch confounding warning: GestAgeDelivery differs by batch (ANOVA p=0.009707).
+  ! R ref.batch ComBat failed ([Errno 2] No such file or directory: 'Rscript'); trying Python pycombat without ref.batch.
+  ! Python pycombat does not support ref.batch; used standard empirical-Bayes ComBat.
+  ! NEG Step 18 IQR filter: 5.0th pct IQR = 0.0021 (floor = 0.1; filter active = True), 95.0th pct IQR = 0.3763 (ceiling = 5.0; filter active = False).
+  ! MTBL_plasma: no curated pregnancy-trajectory metabolites were retained.
+
+========================================================================
+END OF LOG
+========================================================================

@@ -1,0 +1,65 @@
+DP3 SOP preprocessing summary: LIPD_placenta
+Database: LIPID_MAPS
+Injection order source is reported below for each polarity.
+
+Normalization summary:
+- POS injection-order source: row_order_proxy.
+- NEG injection-order source: row_order_proxy.
+- POS: filled missing sample-level ISTD geometric means for 14 rows using batch/global medians.
+- POS: ISTD normalization used geometric mean of ['c1', 'c2'].
+- R sva::ComBat(ref.batch=62923), protected=['Subgroup', 'GestAgeDelivery'], bridge_samples=10
+- POS: batch correction method=sva_combat_ref_batch, reference batch=62923.
+- NEG: filled missing sample-level ISTD geometric means for 13 rows using batch/global medians.
+- NEG: ISTD normalization used geometric mean of ['c1', 'c2'].
+- R sva::ComBat(ref.batch=62923), protected=['Subgroup', 'GestAgeDelivery'], bridge_samples=10
+- NEG: batch correction method=sva_combat_ref_batch, reference batch=62923.
+- Batch 32425 scaling factor: 1.759799
+- Batch 62923 scaling factor: 1.000000
+- No post-normalization drift flags triggered.
+
+Filtering counts:
+- Sample filter events: 11
+- Feature filter events: 2937
+- Deduplication drop events: 843
+- Final biological sample count: 114
+- Final feature count: 1234
+
+Annotation tiers:
+- Level 1: 0 (0.0%)
+- Level 2: 0 (0.0%)
+- Level 3: 1234 (100.0%)
+- Level 4: 0 (0.0%)
+- Level 5: 0 (0.0%)
+
+Batch-confounding checks:
+- Group via chi_square: p=0.02783
+- Subgroup via chi_square: p=0.265
+- GestAgeDelivery via anova: p=0.04007
+- Group via chi_square: p=0.05983
+- Subgroup via chi_square: p=0.2858
+- GestAgeDelivery via anova: p=0.1971
+
+Bridge samples used for ComBat:
+- NEG: 10
+- POS: 10
+
+QC warnings:
+- POS feature 6958 shows differential missingness (control=0.30, case=0.48).
+- POS feature 6720 shows differential missingness (control=0.21, case=0.39).
+- POS feature 7333 shows differential missingness (control=0.21, case=0.10).
+- POS feature 3151 shows differential missingness (control=0.16, case=0.28).
+- POS feature 3051 shows differential missingness (control=0.14, case=0.33).
+- POS feature 3129 shows differential missingness (control=0.26, case=0.39).
+- POS feature 1358 shows differential missingness (control=0.53, case=0.36).
+- POS feature 2678 shows differential missingness (control=0.61, case=0.36).
+- POS feature 2997 shows differential missingness (control=0.28, case=0.43).
+- POS feature 3013 shows differential missingness (control=0.28, case=0.43).
+- POS feature 4917 shows differential missingness (control=0.51, case=0.31).
+- POS feature 6595 shows differential missingness (control=0.56, case=0.37).
+- Batch confounding warning: Group is associated with batch (chi-square p=0.02783).
+- Batch confounding warning: GestAgeDelivery differs by batch (ANOVA p=0.04007).
+- NEG feature 1 shows differential missingness (control=0.39, case=0.25).
+
+Missingness reports:
+- POS: 23 features exceeded missingness threshold.
+- NEG: 1 features exceeded missingness threshold.

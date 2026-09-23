@@ -1,0 +1,5 @@
+{
+  "windows_root": "data/cleaned/visits_AE_20260813",
+  "n_trials": 40,
+  "note": "Test set evaluated once. Preprocessing fitted on dev only (--blind-combat --fit-split dev)."
+}

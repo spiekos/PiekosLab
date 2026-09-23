@@ -49,8 +49,8 @@ def run_dataset(
     tissue, _ = dataset.split("_", 1)          # "MTBL" or "LIPD"
     has_placenta = (tissue == "MTBL")
 
-    plasma_dir   = os.path.join(wkdir, "data", "cleaned", "sop_omics_pipeline_v2", f"{tissue}_plasma")
-    placenta_dir = os.path.join(wkdir, "data", "cleaned", "sop_omics_pipeline_v2", f"{tissue}_placenta")
+    plasma_dir   = os.path.join(wkdir, "data", "cleaned", "sop_omics_pipeline", f"{tissue}_plasma")
+    placenta_dir = os.path.join(wkdir, "data", "cleaned", "sop_omics_pipeline", f"{tissue}_placenta")
     diff_root    = os.path.join(wkdir, "04_results_and_figures", "differential_analysis", dataset)
     output_root  = os.path.join(wkdir, "04_results_and_figures", "models", "binary", dataset)
 

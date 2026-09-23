@@ -31,8 +31,8 @@ def main():
 
     wkdir       = os.getcwd()
     tissue      = "MTBL"
-    plasma_dir  = os.path.join(wkdir, "data", "cleaned", "sop_omics_pipeline_v2", "MTBL_plasma")
-    placenta_dir= os.path.join(wkdir, "data", "cleaned", "sop_omics_pipeline_v2", "MTBL_placenta")
+    plasma_dir  = os.path.join(wkdir, "data", "cleaned", "sop_omics_pipeline", "MTBL_plasma")
+    placenta_dir= os.path.join(wkdir, "data", "cleaned", "sop_omics_pipeline", "MTBL_placenta")
     output_root = os.path.join(wkdir, "04_results_and_figures", "models", "binary", "MTBL_sop_nodiff")
 
     logger.info("=== %s_nodiff | n_trials=%d | NO differential filter ===", DATASET, args.n_trials)

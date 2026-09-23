@@ -8,7 +8,7 @@ Statistical approach
 --------------------
   Survey scores are ordinal / skewed → non-parametric tests.
     • Kruskal-Wallis H  : overall test across all 4 groups.
-    • Mann-Whitney U    : pairwise Control vs FGR / HDP / sPTB.
+    • Two-sample KS     : pairwise Control vs FGR / HDP / sPTB.
     • BH FDR            : applied across all pairwise tests within
                          each survey × visit combination.
 

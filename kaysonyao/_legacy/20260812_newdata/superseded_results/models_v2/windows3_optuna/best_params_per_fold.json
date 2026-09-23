@@ -1,0 +1,620 @@
+{
+  "MTBL_plasma|W1_early": {
+    "LogisticRegression (elastic-net)": [
+      {
+        "C": 1.4663473918669512,
+        "l1_ratio": 0.7171409693086566
+      },
+      {
+        "C": 77.62120319752471,
+        "l1_ratio": 0.0059971829558171375
+      },
+      {
+        "C": 77.62120319752471,
+        "l1_ratio": 0.0059971829558171375
+      },
+      {
+        "C": 0.005273423275477924,
+        "l1_ratio": 0.20209508347872823
+      },
+      {
+        "C": 0.005950009310832575,
+        "l1_ratio": 0.3588250983705619
+      }
+    ],
+    "RandomForest": [
+      {
+        "n_estimators": 300,
+        "max_depth": 8,
+        "min_samples_leaf": 8,
+        "max_features": "sqrt"
+      },
+      {
+        "n_estimators": 200,
+        "max_depth": 2,
+        "min_samples_leaf": 6,
+        "max_features": "log2"
+      },
+      {
+        "n_estimators": 400,
+        "max_depth": 8,
+        "min_samples_leaf": 8,
+        "max_features": 0.3
+      },
+      {
+        "n_estimators": 200,
+        "max_depth": 12,
+        "min_samples_leaf": 3,
+        "max_features": "sqrt"
+      },
+      {
+        "n_estimators": 200,
+        "max_depth": 12,
+        "min_samples_leaf": 3,
+        "max_features": "sqrt"
+      }
+    ],
+    "XGBoost": [
+      {
+        "n_estimators": 400,
+        "max_depth": 5,
+        "learning_rate": 0.07131942591519519,
+        "subsample": 0.8743458105869518,
+        "colsample_bytree": 0.5516094187250992,
+        "min_child_weight": 4,
+        "reg_lambda": 0.0035249451019259935
+      },
+      {
+        "n_estimators": 100,
+        "max_depth": 5,
+        "learning_rate": 0.21209019033734575,
+        "subsample": 0.7423249695903524,
+        "colsample_bytree": 0.44245972359340163,
+        "min_child_weight": 3,
+        "reg_lambda": 0.012364265350007168
+      },
+      {
+        "n_estimators": 400,
+        "max_depth": 5,
+        "learning_rate": 0.029836879610011975,
+        "subsample": 0.774582487311944,
+        "colsample_bytree": 0.3830916832914355,
+        "min_child_weight": 4,
+        "reg_lambda": 1.4519633084784405
+      },
+      {
+        "n_estimators": 500,
+        "max_depth": 4,
+        "learning_rate": 0.27047297227177763,
+        "subsample": 0.7387403565626488,
+        "colsample_bytree": 0.7480619517272895,
+        "min_child_weight": 4,
+        "reg_lambda": 0.834579246362133
+      },
+      {
+        "n_estimators": 700,
+        "max_depth": 5,
+        "learning_rate": 0.20091743377018262,
+        "subsample": 0.8323178575504153,
+        "colsample_bytree": 0.8137444122234498,
+        "min_child_weight": 2,
+        "reg_lambda": 2.8048907330158475
+      }
+    ]
+  },
+  "MTBL_plasma|W2_mid": {
+    "LogisticRegression (elastic-net)": [
+      {
+        "C": 14.528246637516036,
+        "l1_ratio": 0.21233911067827616
+      },
+      {
+        "C": 0.47252063118276894,
+        "l1_ratio": 0.5765485713709624
+      },
+      {
+        "C": 77.62120319752471,
+        "l1_ratio": 0.0059971829558171375
+      },
+      {
+        "C": 0.5223025350695499,
+        "l1_ratio": 0.7810386441369601
+      },
+      {
+        "C": 0.09988151348099307,
+        "l1_ratio": 0.35989088013545917
+      }
+    ],
+    "RandomForest": [
+      {
+        "n_estimators": 400,
+        "max_depth": 7,
+        "min_samples_leaf": 7,
+        "max_features": "sqrt"
+      },
+      {
+        "n_estimators": 300,
+        "max_depth": 2,
+        "min_samples_leaf": 5,
+        "max_features": "log2"
+      },
+      {
+        "n_estimators": 600,
+        "max_depth": 10,
+        "min_samples_leaf": 4,
+        "max_features": "log2"
+      },
+      {
+        "n_estimators": 400,
+        "max_depth": 12,
+        "min_samples_leaf": 2,
+        "max_features": 0.3
+      },
+      {
+        "n_estimators": 600,
+        "max_depth": 2,
+        "min_samples_leaf": 4,
+        "max_features": "sqrt"
+      }
+    ],
+    "XGBoost": [
+      {
+        "n_estimators": 100,
+        "max_depth": 6,
+        "learning_rate": 0.011886116086964082,
+        "subsample": 0.687220314585472,
+        "colsample_bytree": 0.38512523329570897,
+        "min_child_weight": 3,
+        "reg_lambda": 0.0034445716207434016
+      },
+      {
+        "n_estimators": 800,
+        "max_depth": 4,
+        "learning_rate": 0.1727834743584485,
+        "subsample": 0.604210683629969,
+        "colsample_bytree": 0.4500912727900328,
+        "min_child_weight": 2,
+        "reg_lambda": 0.011550833166808334
+      },
+      {
+        "n_estimators": 500,
+        "max_depth": 2,
+        "learning_rate": 0.02259857033309562,
+        "subsample": 0.6047551558283194,
+        "colsample_bytree": 0.42070080066199456,
+        "min_child_weight": 3,
+        "reg_lambda": 0.003782007216391036
+      },
+      {
+        "n_estimators": 800,
+        "max_depth": 3,
+        "learning_rate": 0.010458361070578832,
+        "subsample": 0.9322694568091302,
+        "colsample_bytree": 0.7310159289616366,
+        "min_child_weight": 1,
+        "reg_lambda": 0.021525013795263212
+      },
+      {
+        "n_estimators": 100,
+        "max_depth": 2,
+        "learning_rate": 0.011662890273931383,
+        "subsample": 0.7301321323053057,
+        "colsample_bytree": 0.5720741027826374,
+        "min_child_weight": 3,
+        "reg_lambda": 2.0651425578959257
+      }
+    ]
+  },
+  "MTBL_plasma|W3_third": {
+    "LogisticRegression (elastic-net)": [
+      {
+        "C": 0.03917919727661385,
+        "l1_ratio": 0.5559599448330216
+      },
+      {
+        "C": 0.012258831355178613,
+        "l1_ratio": 0.31003722710560144
+      },
+      {
+        "C": 4.5705630998014515,
+        "l1_ratio": 0.5986584841970366
+      },
+      {
+        "C": 77.62120319752471,
+        "l1_ratio": 0.0059971829558171375
+      },
+      {
+        "C": 0.008111941985431923,
+        "l1_ratio": 0.18340450985343382
+      }
+    ],
+    "RandomForest": [
+      {
+        "n_estimators": 200,
+        "max_depth": 12,
+        "min_samples_leaf": 3,
+        "max_features": "sqrt"
+      },
+      {
+        "n_estimators": 600,
+        "max_depth": 2,
+        "min_samples_leaf": 8,
+        "max_features": "log2"
+      },
+      {
+        "n_estimators": 500,
+        "max_depth": 11,
+        "min_samples_leaf": 7,
+        "max_features": "log2"
+      },
+      {
+        "n_estimators": 500,
+        "max_depth": 3,
+        "min_samples_leaf": 6,
+        "max_features": "sqrt"
+      },
+      {
+        "n_estimators": 300,
+        "max_depth": 10,
+        "min_samples_leaf": 1,
+        "max_features": "sqrt"
+      }
+    ],
+    "XGBoost": [
+      {
+        "n_estimators": 500,
+        "max_depth": 2,
+        "learning_rate": 0.010082506129903558,
+        "subsample": 0.9968872695164013,
+        "colsample_bytree": 0.6022927952613834,
+        "min_child_weight": 3,
+        "reg_lambda": 0.4178360484522121
+      },
+      {
+        "n_estimators": 400,
+        "max_depth": 5,
+        "learning_rate": 0.0196360852967244,
+        "subsample": 0.6125716977881215,
+        "colsample_bytree": 0.47184550356771093,
+        "min_child_weight": 3,
+        "reg_lambda": 0.023707557016307855
+      },
+      {
+        "n_estimators": 800,
+        "max_depth": 3,
+        "learning_rate": 0.01688256119852172,
+        "subsample": 0.6112953759485307,
+        "colsample_bytree": 0.8380829132328528,
+        "min_child_weight": 1,
+        "reg_lambda": 0.7045490097809957
+      },
+      {
+        "n_estimators": 500,
+        "max_depth": 4,
+        "learning_rate": 0.2957442500740312,
+        "subsample": 0.9970125535876503,
+        "colsample_bytree": 0.7322181310951148,
+        "min_child_weight": 4,
+        "reg_lambda": 0.7190168301086837
+      },
+      {
+        "n_estimators": 500,
+        "max_depth": 4,
+        "learning_rate": 0.20462783559168243,
+        "subsample": 0.8466709203426127,
+        "colsample_bytree": 0.6593688463612137,
+        "min_child_weight": 1,
+        "reg_lambda": 0.030669901086107256
+      }
+    ]
+  },
+  "LIPD_plasma|W1_early": {
+    "LogisticRegression (elastic-net)": [
+      {
+        "C": 0.00336613848725774,
+        "l1_ratio": 0.1440515462253036
+      },
+      {
+        "C": 4.5705630998014515,
+        "l1_ratio": 0.5986584841970366
+      },
+      {
+        "C": 4.5705630998014515,
+        "l1_ratio": 0.5986584841970366
+      },
+      {
+        "C": 0.021889848355209802,
+        "l1_ratio": 0.5404058684974871
+      },
+      {
+        "C": 0.0019517224641449498,
+        "l1_ratio": 0.8661761457749352
+      }
+    ],
+    "RandomForest": [
+      {
+        "n_estimators": 400,
+        "max_depth": 9,
+        "min_samples_leaf": 5,
+        "max_features": "log2"
+      },
+      {
+        "n_estimators": 500,
+        "max_depth": 12,
+        "min_samples_leaf": 1,
+        "max_features": 0.3
+      },
+      {
+        "n_estimators": 300,
+        "max_depth": 9,
+        "min_samples_leaf": 3,
+        "max_features": 0.3
+      },
+      {
+        "n_estimators": 400,
+        "max_depth": 5,
+        "min_samples_leaf": 4,
+        "max_features": 0.3
+      },
+      {
+        "n_estimators": 200,
+        "max_depth": 5,
+        "min_samples_leaf": 5,
+        "max_features": "log2"
+      }
+    ],
+    "XGBoost": [
+      {
+        "n_estimators": 400,
+        "max_depth": 6,
+        "learning_rate": 0.18350811987028126,
+        "subsample": 0.8426680977913068,
+        "colsample_bytree": 0.45374919873402914,
+        "min_child_weight": 1,
+        "reg_lambda": 0.0012246651174215777
+      },
+      {
+        "n_estimators": 600,
+        "max_depth": 3,
+        "learning_rate": 0.012976811893608888,
+        "subsample": 0.7447641933204572,
+        "colsample_bytree": 0.8320946705646464,
+        "min_child_weight": 4,
+        "reg_lambda": 0.0012246651174215777
+      },
+      {
+        "n_estimators": 700,
+        "max_depth": 3,
+        "learning_rate": 0.03156097707753634,
+        "subsample": 0.781248137164276,
+        "colsample_bytree": 0.40147777025459214,
+        "min_child_weight": 2,
+        "reg_lambda": 1.1404525346809673
+      },
+      {
+        "n_estimators": 800,
+        "max_depth": 3,
+        "learning_rate": 0.2288201366963505,
+        "subsample": 0.9087696049520285,
+        "colsample_bytree": 0.6730195144022865,
+        "min_child_weight": 1,
+        "reg_lambda": 0.7045490097809957
+      },
+      {
+        "n_estimators": 500,
+        "max_depth": 3,
+        "learning_rate": 0.011989584870809346,
+        "subsample": 0.9348632846655239,
+        "colsample_bytree": 0.6389438225253602,
+        "min_child_weight": 1,
+        "reg_lambda": 0.04016658883118531
+      }
+    ]
+  },
+  "LIPD_plasma|W2_mid": {
+    "LogisticRegression (elastic-net)": [
+      {
+        "C": 14.528246637516036,
+        "l1_ratio": 0.21233911067827616
+      },
+      {
+        "C": 0.007147877527105639,
+        "l1_ratio": 0.3796042434202234
+      },
+      {
+        "C": 14.528246637516036,
+        "l1_ratio": 0.21233911067827616
+      },
+      {
+        "C": 0.001267425589893723,
+        "l1_ratio": 0.9699098521619943
+      },
+      {
+        "C": 0.0011463607271289301,
+        "l1_ratio": 0.8572586135917489
+      }
+    ],
+    "RandomForest": [
+      {
+        "n_estimators": 300,
+        "max_depth": 9,
+        "min_samples_leaf": 7,
+        "max_features": "sqrt"
+      },
+      {
+        "n_estimators": 800,
+        "max_depth": 7,
+        "min_samples_leaf": 8,
+        "max_features": "log2"
+      },
+      {
+        "n_estimators": 600,
+        "max_depth": 2,
+        "min_samples_leaf": 1,
+        "max_features": "log2"
+      },
+      {
+        "n_estimators": 500,
+        "max_depth": 6,
+        "min_samples_leaf": 1,
+        "max_features": "log2"
+      },
+      {
+        "n_estimators": 500,
+        "max_depth": 3,
+        "min_samples_leaf": 1,
+        "max_features": 0.3
+      }
+    ],
+    "XGBoost": [
+      {
+        "n_estimators": 200,
+        "max_depth": 2,
+        "learning_rate": 0.0300121424233423,
+        "subsample": 0.7957763375394767,
+        "colsample_bytree": 0.4708702390613629,
+        "min_child_weight": 1,
+        "reg_lambda": 0.00517734583792422
+      },
+      {
+        "n_estimators": 400,
+        "max_depth": 4,
+        "learning_rate": 0.04306623800513102,
+        "subsample": 0.9087696049520285,
+        "colsample_bytree": 0.6792357153000843,
+        "min_child_weight": 3,
+        "reg_lambda": 0.0011836898209768149
+      },
+      {
+        "n_estimators": 200,
+        "max_depth": 4,
+        "learning_rate": 0.02129909025979983,
+        "subsample": 0.8635159097607085,
+        "colsample_bytree": 0.9209970932521915,
+        "min_child_weight": 1,
+        "reg_lambda": 0.00972460497855794
+      },
+      {
+        "n_estimators": 100,
+        "max_depth": 2,
+        "learning_rate": 0.010133586566302052,
+        "subsample": 0.7604472579832643,
+        "colsample_bytree": 0.668101855523297,
+        "min_child_weight": 3,
+        "reg_lambda": 0.7274642448017383
+      },
+      {
+        "n_estimators": 100,
+        "max_depth": 2,
+        "learning_rate": 0.02278727191654183,
+        "subsample": 0.8920386422336303,
+        "colsample_bytree": 0.9412449661030986,
+        "min_child_weight": 1,
+        "reg_lambda": 0.0026442950154090465
+      }
+    ]
+  },
+  "LIPD_plasma|W3_third": {
+    "LogisticRegression (elastic-net)": [
+      {
+        "C": 0.005032053945641346,
+        "l1_ratio": 0.7231697338510515
+      },
+      {
+        "C": 0.012458996965525847,
+        "l1_ratio": 0.39998069938371483
+      },
+      {
+        "C": 1.0129197956845732,
+        "l1_ratio": 0.7080725777960455
+      },
+      {
+        "C": 0.039692382749645407,
+        "l1_ratio": 0.5935996342799981
+      },
+      {
+        "C": 0.0019517224641449498,
+        "l1_ratio": 0.8661761457749352
+      }
+    ],
+    "RandomForest": [
+      {
+        "n_estimators": 600,
+        "max_depth": 3,
+        "min_samples_leaf": 1,
+        "max_features": "log2"
+      },
+      {
+        "n_estimators": 500,
+        "max_depth": 4,
+        "min_samples_leaf": 8,
+        "max_features": "log2"
+      },
+      {
+        "n_estimators": 500,
+        "max_depth": 4,
+        "min_samples_leaf": 1,
+        "max_features": 0.3
+      },
+      {
+        "n_estimators": 600,
+        "max_depth": 8,
+        "min_samples_leaf": 8,
+        "max_features": 0.3
+      },
+      {
+        "n_estimators": 700,
+        "max_depth": 8,
+        "min_samples_leaf": 1,
+        "max_features": "log2"
+      }
+    ],
+    "XGBoost": [
+      {
+        "n_estimators": 600,
+        "max_depth": 4,
+        "learning_rate": 0.019397896858756224,
+        "subsample": 0.954903064283179,
+        "colsample_bytree": 0.8032238668217395,
+        "min_child_weight": 1,
+        "reg_lambda": 3.296121283573555
+      },
+      {
+        "n_estimators": 100,
+        "max_depth": 6,
+        "learning_rate": 0.08009438889926469,
+        "subsample": 0.653934287143479,
+        "colsample_bytree": 0.3163712751769256,
+        "min_child_weight": 2,
+        "reg_lambda": 0.0011070315045182111
+      },
+      {
+        "n_estimators": 800,
+        "max_depth": 4,
+        "learning_rate": 0.27047297227177763,
+        "subsample": 0.9481974559098773,
+        "colsample_bytree": 0.7480619517272895,
+        "min_child_weight": 1,
+        "reg_lambda": 0.021095233013334026
+      },
+      {
+        "n_estimators": 400,
+        "max_depth": 2,
+        "learning_rate": 0.08389012487233577,
+        "subsample": 0.8012026838722489,
+        "colsample_bytree": 0.6747405582597777,
+        "min_child_weight": 4,
+        "reg_lambda": 0.019114323899990147
+      },
+      {
+        "n_estimators": 200,
+        "max_depth": 3,
+        "learning_rate": 0.01833758283733391,
+        "subsample": 0.7963350126558645,
+        "colsample_bytree": 0.9212102664732513,
+        "min_child_weight": 1,
+        "reg_lambda": 0.19812665770059845
+      }
+    ]
+  }
+}

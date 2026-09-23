@@ -1,0 +1,176 @@
+{
+  "model_params": {
+    "LogisticRegression (elastic-net)": {
+      "C": 0.001267425589893723,
+      "l1_ratio": 0.9699098521619943
+    },
+    "RandomForest": {
+      "n_estimators": 135,
+      "max_depth": 7,
+      "min_samples_split": 19,
+      "min_samples_leaf": 5,
+      "max_features": "log2"
+    },
+    "XGBoost": {
+      "n_estimators": 362,
+      "max_depth": 7,
+      "learning_rate": 0.0206874131562798,
+      "subsample": 0.535019319746997,
+      "colsample_bytree": 0.6017633506828866,
+      "min_child_weight": 3,
+      "gamma": 2.852837539599049,
+      "reg_alpha": 0.00016503375163466255,
+      "reg_lambda": 0.013236200203389297
+    },
+    "SVM": {
+      "C": 31.81333776754451,
+      "gamma": "scale"
+    }
+  },
+  "oof_pr_auc": {
+    "LogisticRegression (elastic-net)": 0.5314502227625693,
+    "RandomForest": 0.4534917386582322,
+    "XGBoost": 0.41262917270649524,
+    "SVM": 0.43738347910378583
+  },
+  "params_per_fold": {
+    "LogisticRegression (elastic-net)": [
+      {
+        "C": 0.07796618438905216,
+        "l1_ratio": 0.35339613832696065
+      },
+      {
+        "C": 0.003211082890744462,
+        "l1_ratio": 0.9587860050827519
+      },
+      {
+        "C": 0.0034059890945988495,
+        "l1_ratio": 0.8647509289391615
+      },
+      {
+        "C": 0.09988151348099307,
+        "l1_ratio": 0.4195038495129044
+      },
+      {
+        "C": 0.001267425589893723,
+        "l1_ratio": 0.9699098521619943
+      }
+    ],
+    "RandomForest": [
+      {
+        "n_estimators": 115,
+        "max_depth": 11,
+        "min_samples_split": 9,
+        "min_samples_leaf": 8,
+        "max_features": "log2"
+      },
+      {
+        "n_estimators": 129,
+        "max_depth": 11,
+        "min_samples_split": 10,
+        "min_samples_leaf": 9,
+        "max_features": "log2"
+      },
+      {
+        "n_estimators": 257,
+        "max_depth": 3,
+        "min_samples_split": 4,
+        "min_samples_leaf": 10,
+        "max_features": "log2"
+      },
+      {
+        "n_estimators": 240,
+        "max_depth": 7,
+        "min_samples_split": 3,
+        "min_samples_leaf": 3,
+        "max_features": "log2"
+      },
+      {
+        "n_estimators": 135,
+        "max_depth": 7,
+        "min_samples_split": 19,
+        "min_samples_leaf": 5,
+        "max_features": "log2"
+      }
+    ],
+    "XGBoost": [
+      {
+        "n_estimators": 486,
+        "max_depth": 6,
+        "learning_rate": 0.22260440374904691,
+        "subsample": 0.5121573992610218,
+        "colsample_bytree": 0.8936221864929604,
+        "min_child_weight": 1,
+        "gamma": 3.271102789427494,
+        "reg_alpha": 0.010862289420171272,
+        "reg_lambda": 1.3301323263817933e-05
+      },
+      {
+        "n_estimators": 393,
+        "max_depth": 6,
+        "learning_rate": 0.017949269995582065,
+        "subsample": 0.9215371139227924,
+        "colsample_bytree": 0.6827899601880103,
+        "min_child_weight": 3,
+        "gamma": 0.5626911525488045,
+        "reg_alpha": 0.0012882889755772612,
+        "reg_lambda": 0.06382864421213431
+      },
+      {
+        "n_estimators": 131,
+        "max_depth": 7,
+        "learning_rate": 0.011974165124461547,
+        "subsample": 0.9996812193207756,
+        "colsample_bytree": 0.7698169495007721,
+        "min_child_weight": 1,
+        "gamma": 2.8055698656642623,
+        "reg_alpha": 4.157826334678597e-05,
+        "reg_lambda": 0.02676227571454761
+      },
+      {
+        "n_estimators": 247,
+        "max_depth": 7,
+        "learning_rate": 0.04774081828595746,
+        "subsample": 0.9572337673511261,
+        "colsample_bytree": 0.6517936666788399,
+        "min_child_weight": 1,
+        "gamma": 0.33980095835492474,
+        "reg_alpha": 0.046855885632204095,
+        "reg_lambda": 0.06755295564873992
+      },
+      {
+        "n_estimators": 362,
+        "max_depth": 7,
+        "learning_rate": 0.0206874131562798,
+        "subsample": 0.535019319746997,
+        "colsample_bytree": 0.6017633506828866,
+        "min_child_weight": 3,
+        "gamma": 2.852837539599049,
+        "reg_alpha": 0.00016503375163466255,
+        "reg_lambda": 0.013236200203389297
+      }
+    ],
+    "SVM": [
+      {
+        "C": 2.1865590062332365,
+        "gamma": "scale"
+      },
+      {
+        "C": 31.81333776754451,
+        "gamma": "scale"
+      },
+      {
+        "C": 1.3762987874584538,
+        "gamma": "scale"
+      },
+      {
+        "C": 38.09712548748142,
+        "gamma": "scale"
+      },
+      {
+        "C": 0.05415244119402541,
+        "gamma": "auto"
+      }
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 """
-Differential analysis for sop_omics_pipeline_v2 outputs (MTBL_sop and LIPD_sop).
+Differential analysis for sop_omics_pipeline outputs (MTBL_sop and LIPD_sop).
 
 Runs the same cross-sectional + longitudinal pipeline as identify_differential_analytes_proteomics.py
 but pointed at the new SOP v4 output paths.
@@ -62,7 +62,7 @@ def run_dataset(dataset: str, wkdir: str) -> None:
     tissue, _ = dataset.split("_", 1)     # "MTBL" or "LIPD"
     has_placenta = (tissue == "MTBL")     # LIPD has no placenta in current run
 
-    cleaned_root = os.path.join(wkdir, "data", "cleaned", "sop_omics_pipeline_v2")
+    cleaned_root = os.path.join(wkdir, "data", "cleaned", "sop_omics_pipeline")
 
     plasma_dir   = os.path.join(cleaned_root, f"{tissue}_plasma")
     placenta_dir = os.path.join(cleaned_root, f"{tissue}_placenta")

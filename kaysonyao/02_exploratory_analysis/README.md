@@ -235,7 +235,7 @@ python 02_exploratory_analysis/prepare_enrichr_input_proteomics.py \
 Score distributions and group comparisons for EPDS, PSS, PUQE-24, and diet surveys.
 
 - Kruskal-Wallis H: overall test across all 4 groups
-- Mann-Whitney U: pairwise Control vs FGR / HDP / sPTB at each visit
+- Two-sample KS test: pairwise Control vs FGR / HDP / sPTB at each visit
 - BH FDR: corrected per survey × visit
 
 **Inputs:** `data/survey/cleaned/{epds,pss,puqe24,diet}_cleaned.csv`

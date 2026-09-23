@@ -31,7 +31,7 @@ _METADATA_COLS    = {"SampleID","SubjectID","Group","Timepoint","Batch",
                      "MetadataCanonicalID","Age","BMI","Gestational_Age"}
 
 def load_feature_metadata(wkdir: str) -> pd.DataFrame:
-    path = os.path.join(wkdir, "data", "cleaned", "sop_omics_pipeline_v2",
+    path = os.path.join(wkdir, "data", "cleaned", "sop_omics_pipeline",
                         "MTBL_plasma", "MTBL_plasma_feature_metadata.csv")
     df = pd.read_csv(path, index_col=0)
     logger.info("Feature metadata: %d features (%d named)", len(df), df["is_named"].sum())

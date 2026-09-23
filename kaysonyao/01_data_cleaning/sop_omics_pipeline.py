@@ -32,10 +32,22 @@ clean replacement entrypoint that follows the SOP ordering:
 
 Notes
 -----
-- When the original raw workbook is available, injection order is parsed
-  from the raw-file headers (`F#` for metabolomics, file sequence for the
-  current lipidomics export). Datasets without a raw workbook still fall
-  back to within-batch row order, and that fallback is recorded in the log.
+- Injection order is parsed from the raw-file headers of the original
+  workbook (`F#` for metabolomics, file sequence for lipidomics). All four
+  datasets now supply a raw workbook, so the within-batch row-order fallback
+  should no longer trigger; if it does, that is recorded in the log and
+  indicates a header-row or sheet-name mismatch in the config.
+- Header rows differ between exports. Plasma metabolomics puts sample labels
+  on row 2 and raw-file names on row 3; the placenta metabolomics export and
+  both lipidomics exports carry an extra leading blank row, shifting these to
+  rows 3 and 4. Placenta lipid sheets are also named "POS/NEG Lipids" rather
+  than the plasma "Plasma POS/NEG Lipids".
+- Raw-file cells are passed through `_normalise_raw_file_text` because the
+  placenta lipidomics export appends a trailing apostrophe to every file name.
+- The placenta metabolomics export appends summary footer rows that survive
+  `MTBL_extraction.py` as `Unnamed: <n>` feature columns.
+  `_drop_export_footer_columns` removes them on read; the upstream extraction
+  CSVs under ../kaylaxu/data/ still contain them.
 """
 
 from __future__ import annotations
@@ -74,6 +86,24 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 LOGGER = logging.getLogger("sop_omics_pipeline")
+
+# Set from --blind-combat. When True the ComBat design matrix omits
+# Group/Subgroup/GestAgeDelivery so the corrected matrix carries no outcome
+# information and can be reproduced on a patient whose outcome is unknown.
+BLIND_COMBAT = False
+
+# Set from --restrict-split. When a set of SubjectIDs, every preprocessing step
+# is fitted on those participants only, so held-out participants never
+# influence normalization, filtering, imputation or batch-correction parameters.
+RESTRICT_SUBJECTS = None
+
+# Set from --fit-split. Row ids (index labels) whose data may be used to
+# ESTIMATE parameters. All rows are still processed and written out; held-out
+# rows are transformed using constants derived without them.
+FIT_ROW_IDS = None
+
+# Set from --fit-split: SubjectIDs whose data may estimate parameters.
+FIT_SUBJECTS = None
 
 PROTON_MASS = 1.007276
 VALID_TIMEPOINTS = set("ABCDE")
@@ -226,6 +256,17 @@ def _metadata_alias_candidates(sample_id: str) -> list[str]:
     return [c for c in candidates if c != sample_id]
 
 
+def _normalise_raw_file_text(value: str) -> str:
+    """Strip trailing quote characters from a raw-file cell.
+
+    The placenta lipidomics export writes raw-file names with a trailing
+    apostrophe (e.g. ``032425_Sadovsky_Lipid_Pos_06'``). Left in place that
+    character defeats the ``...([0-9]+)$`` injection-order patterns, silently
+    dropping the dataset back to column-rank order.
+    """
+    return str(value or "").strip().rstrip("'\"`‘’")
+
+
 def _extract_injection_order_value(*values: str) -> float:
     patterns = [
         # F-notation: (F3) or F3
@@ -241,7 +282,7 @@ def _extract_injection_order_value(*values: str) -> float:
         r"(?:raw|pool|set[0-9]+|_pos_|_neg_|\bpos\b|\bneg\b).*?([0-9]+)(?:\.raw)?$",
     ]
     for value in values:
-        text = str(value or "")
+        text = _normalise_raw_file_text(value)
         for pattern in patterns:
             match = re.search(pattern, text, flags=re.IGNORECASE)
             if match:
@@ -421,7 +462,7 @@ def _load_raw_acquisition_map(
     saw_file_sequence = False
     for rank, col_idx in enumerate(sorted(set(sample_cells) & set(file_cells)), start=1):
         sample_label = str(sample_cells.get(col_idx, "") or "").strip()
-        raw_file = str(file_cells.get(col_idx, "") or "").strip()
+        raw_file = _normalise_raw_file_text(file_cells.get(col_idx, ""))
         if not raw_file:
             continue
         batch = _extract_batch_label_from_text(raw_file, sample_label)
@@ -499,7 +540,32 @@ def _load_metadata(meta_path: Path, config: DatasetConfig) -> pd.DataFrame:
     return meta
 
 
+def _drop_export_footer_columns(exp: pd.DataFrame) -> pd.DataFrame:
+    """Drop phantom feature columns produced by export footer rows.
+
+    The May-2026 placenta metabolomics export appends summary/count rows below
+    the last compound. `MTBL_extraction.py` only drops fully-empty rows, so
+    those footers survive as compounds with no Export Order and land in the
+    expression matrix as `Unnamed: <n>` columns (2 per polarity for
+    MTBL_placenta). Left in place they are carried through normalization and
+    ComBat as if they were real features and inflate the BH FDR denominator.
+
+    This filters them on read rather than at the source, so the shared
+    extraction CSVs under ../kaylaxu/data/ still contain them.
+    """
+    junk = [c for c in exp.columns if str(c).startswith("Unnamed:")]
+    if junk:
+        LOGGER.warning(
+            "Dropping %d export-footer column(s) from expression matrix: %s",
+            len(junk),
+            ", ".join(map(str, junk)),
+        )
+        exp = exp.drop(columns=junk)
+    return exp
+
+
 def _standardize_expression(exp: pd.DataFrame) -> pd.DataFrame:
+    exp = _drop_export_footer_columns(exp)
     return exp.apply(lambda col: col.map(_safe_float))
 
 
@@ -736,6 +802,26 @@ def _load_polarity_run(
         in {_normalise_name(x) for x in istd_names}
     ]
     raw_istd = exp[raw_istd_ids].copy()
+    if RESTRICT_SUBJECTS is not None:
+        exp, sample_info, raw_istd = _restrict_to_subjects(
+            exp, sample_info, raw_istd, RESTRICT_SUBJECTS, polarity.upper()
+        )
+
+    if FIT_SUBJECTS is not None:
+        # Rows whose data may estimate parameters: development participants
+        # plus all QC/pool samples (which carry no participant outcome).
+        global FIT_ROW_IDS
+        is_bio = sample_info["sample_type"] == "biological"
+        subj = sample_info["sample_name"].map(_subject_id_from_sample)
+        FIT_ROW_IDS = set(sample_info.index[(~is_bio) | subj.isin(FIT_SUBJECTS)])
+        LOGGER.info(
+            "%s: fit split = %d/%d rows (%d biological from %d dev participants, "
+            "%d QC/pool); remaining %d rows will be transformed, not fitted.",
+            polarity.upper(), len(FIT_ROW_IDS), len(sample_info),
+            int((is_bio & subj.isin(FIT_SUBJECTS)).sum()), len(FIT_SUBJECTS),
+            int((~is_bio).sum()), len(sample_info) - len(FIT_ROW_IDS),
+        )
+
     return PolarityRun(
         polarity=polarity.upper(),
         expression=exp,
@@ -744,6 +830,54 @@ def _load_polarity_run(
         raw_istd=raw_istd,
         injection_order_source=order_source,
     )
+
+
+def _subject_id_from_sample(sample_name: str) -> str:
+    """DP3-0005A -> DP3-0005, DP3-0140EA -> DP3-0140.
+
+    Mirrors the visit-suffix convention used when the final matrix is built:
+    a trailing A-E, optionally preceded by an 'E' for the postnatal series.
+    """
+    return re.sub(r"E?[A-E]$", "", str(sample_name).strip())
+
+
+def _restrict_to_subjects(
+    exp: pd.DataFrame,
+    sample_info: pd.DataFrame,
+    raw_istd: pd.DataFrame,
+    subjects: set[str],
+    polarity: str,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Keep only biological samples from `subjects`; retain all QC/pool samples.
+
+    Used to fit the entire pipeline - normalization, missingness and RSD/IQR
+    filters, half-minimum imputation and ComBat - on the development split
+    alone. Every one of those steps otherwise estimates its parameters from the
+    full cohort, which means held-out participants influence the values the
+    model is later trained on. Aim F.2 requires the test set to be "locked away
+    and used only once", so it must not shape preprocessing either.
+
+    QC pools are deliberately kept: they carry no participant outcome and are
+    required by the RSD filter and the normalization steps.
+    """
+    is_bio = sample_info["sample_type"] == "biological"
+    subj = sample_info["sample_name"].map(_subject_id_from_sample)
+    keep = (~is_bio) | subj.isin(subjects)
+
+    n_before = int(is_bio.sum())
+    sample_info = sample_info.loc[keep].copy()
+    exp = exp.loc[exp.index.isin(sample_info.index)].copy()
+    if raw_istd is not None and not raw_istd.empty:
+        raw_istd = raw_istd.loc[raw_istd.index.isin(sample_info.index)].copy()
+    n_after = int((sample_info["sample_type"] == "biological").sum())
+
+    LOGGER.info(
+        "%s: restricted to %d development participants - biological samples %d -> %d "
+        "(%d QC/pool samples retained).",
+        polarity, len(subjects), n_before, n_after,
+        int((sample_info["sample_type"] != "biological").sum()),
+    )
+    return exp, sample_info, raw_istd
 
 
 def _tic(df: pd.DataFrame) -> pd.Series:
@@ -1432,14 +1566,46 @@ def _batch_confounding_checks(
 def _combat_design_matrix(
     sample_info: pd.DataFrame,
     sample_metadata: pd.DataFrame,
+    blind: bool = False,
 ) -> tuple[pd.DataFrame | None, list[str]]:
+    """Build the ComBat covariate design matrix.
+
+    Two modes, because the right answer differs by downstream use:
+
+    blind=False (default, "label-aware")
+        Includes Subgroup/Group dummies and GestAgeDelivery. This is standard,
+        recommended ComBat usage - naming the biological variables of interest
+        stops batch correction from flattening them - and it is correct for
+        differential analysis and figures.
+
+    blind=True ("modelling-safe")
+        Drops Subgroup, Group and GestAgeDelivery, keeping only SampleGestAge.
+        Required for any predictive model. Label-aware correction adjusts every
+        feature using every participant's diagnosis, including the held-out
+        test set, so the outcome ends up encoded in the predictors. It is also
+        not reproducible outside the cohort: adjusting a new patient's sample
+        the same way would require the diagnosis you are trying to predict,
+        which rules out external validation and any prospective use.
+
+        GestAgeDelivery is the most damaging of the three - preterm birth is
+        defined by it, so including it writes the sPTB outcome directly into
+        every feature.
+
+        SampleGestAge is retained: when a sample was drawn is a genuine
+        nuisance covariate, known at collection time, and not an outcome.
+    """
     meta = sample_metadata.reindex(sample_info["sample_name"].values).copy()
     meta.index = sample_info.index
 
     frames: list[pd.DataFrame] = []
     used: list[str] = []
 
-    if "Subgroup" in meta.columns and meta["Subgroup"].dropna().nunique() > 1:
+    if blind:
+        LOGGER.info(
+            "ComBat design: BLIND mode - excluding Group/Subgroup/GestAgeDelivery "
+            "(outcome-bearing); retaining SampleGestAge."
+        )
+    elif "Subgroup" in meta.columns and meta["Subgroup"].dropna().nunique() > 1:
         dummies = pd.get_dummies(
             meta["Subgroup"].fillna("Unknown").astype(str),
             prefix="Subgroup",
@@ -1460,7 +1626,11 @@ def _combat_design_matrix(
             frames.append(dummies)
             used.append("Group")
 
-    for covariate in ["SampleGestAge", "GestAgeDelivery"]:
+    # GestAgeDelivery is outcome-bearing (preterm birth is defined by it) and is
+    # excluded in blind mode. SampleGestAge is a collection-time nuisance
+    # covariate and is kept in both modes.
+    numeric_covariates = ["SampleGestAge"] if blind else ["SampleGestAge", "GestAgeDelivery"]
+    for covariate in numeric_covariates:
         if covariate not in meta.columns:
             continue
         numeric = pd.to_numeric(meta[covariate], errors="coerce")
@@ -1496,16 +1666,45 @@ def _combat_r_ref_batch(
     ref_batch: str,
     covariates: pd.DataFrame | None,
 ) -> pd.DataFrame:
+    """SOP Step 13: reference-batch ComBat via R sva.
+
+    Delegates to `combat_fit_transform.R`, which splits sva's estimator into
+    combat_fit() / combat_apply(). That split is what lets parameters be
+    estimated on the development split and *applied* to held-out participants -
+    `sva::ComBat()` itself returns only a corrected matrix and discards
+    gamma*/delta*, so it cannot correct samples it did not see.
+
+    Validated against sva::ComBat to max |diff| = 3.6e-15 (validate_combat.R).
+
+    When FIT_ROW_IDS is set, those rows estimate the parameters and every row
+    is transformed. Otherwise all rows both fit and transform, which reproduces
+    plain ComBat().
+    """
+    helper = Path(__file__).resolve().parent / "combat_fit_transform.R"
+    if not helper.exists():
+        raise RuntimeError(f"{helper} not found; cannot run SOP Step 13 in R.")
+
     with tempfile.TemporaryDirectory(prefix="dp3-combat-") as tmpdir:
         tmpdir_path = Path(tmpdir)
         matrix_path = tmpdir_path / "matrix.csv"
-        batch_path = tmpdir_path / "batch.csv"
+        meta_path = tmpdir_path / "meta.csv"
         covariate_path = tmpdir_path / "covariates.csv"
         output_path = tmpdir_path / "corrected.csv"
-        script_path = tmpdir_path / "combat_ref_batch.R"
+        script_path = tmpdir_path / "run_combat.R"
 
         df_log2_imputed.to_csv(matrix_path)
-        pd.DataFrame({"batch": batch_labels.astype(str)}).to_csv(batch_path)
+
+        if FIT_ROW_IDS is None:
+            fit_flag = pd.Series(True, index=df_log2_imputed.index)
+        else:
+            fit_flag = pd.Series(df_log2_imputed.index.isin(FIT_ROW_IDS),
+                                 index=df_log2_imputed.index)
+        pd.DataFrame({
+            "SampleID": df_log2_imputed.index.astype(str),
+            "Batch": batch_labels.reindex(df_log2_imputed.index).astype(str).values,
+            "split": np.where(fit_flag.values, "dev", "test"),
+        }).to_csv(meta_path, index=False)
+
         if covariates is not None and not covariates.empty:
             covariates.reindex(df_log2_imputed.index).to_csv(covariate_path)
         else:
@@ -1513,38 +1712,31 @@ def _combat_r_ref_batch(
 
         script_path.write_text(
             textwrap.dedent(
-                """
+                f"""
+                source({str(helper)!r})
                 args <- commandArgs(trailingOnly = TRUE)
-                matrix_path <- args[1]
-                batch_path <- args[2]
-                ref_batch <- args[3]
-                covariate_path <- args[4]
-                output_path <- args[5]
+                mat  <- read.csv(args[1], row.names = 1, check.names = FALSE)
+                meta <- read.csv(args[2], stringsAsFactors = FALSE)
+                covp <- args[3]; outp <- args[4]; refb <- args[5]
 
-                suppressPackageStartupMessages(library(sva))
+                dat <- t(as.matrix(mat))          # -> features x samples
+                meta <- meta[match(colnames(dat), meta$SampleID), ]
+                stopifnot(!any(is.na(meta$SampleID)))
 
-                mat <- read.csv(matrix_path, row.names = 1, check.names = FALSE)
-                batch_df <- read.csv(batch_path, row.names = 1, check.names = FALSE)
-                batch <- factor(batch_df$batch)
                 mod <- NULL
+                if (file.info(covp)$size > 0) {{
+                  md <- read.csv(covp, row.names = 1, check.names = FALSE)
+                  if (ncol(md) > 0) mod <- as.matrix(md)
+                }}
 
-                if (file.info(covariate_path)$size > 0) {
-                  mod_df <- read.csv(covariate_path, row.names = 1, check.names = FALSE)
-                  if (ncol(mod_df) > 0) {
-                    mod <- as.matrix(mod_df)
-                  }
-                }
-
-                dat <- t(as.matrix(mat))
-                corrected <- ComBat(
-                  dat = dat,
-                  batch = batch,
-                  mod = mod,
-                  par.prior = TRUE,
-                  prior.plots = FALSE,
-                  ref.batch = ref_batch
-                )
-                write.csv(t(corrected), output_path, quote = FALSE)
+                dev <- meta$split == "dev"
+                cat(sprintf("R ComBat: fitting on %d of %d samples (ref.batch=%s)\n",
+                            sum(dev), ncol(dat), refb))
+                fit <- combat_fit(dat[, dev, drop = FALSE], meta$Batch[dev],
+                                  mod = if (is.null(mod)) NULL else mod[dev, , drop = FALSE],
+                                  ref.batch = refb)
+                out <- combat_apply(fit, dat, meta$Batch, mod = mod)
+                write.csv(t(out), outp, quote = FALSE)
                 """
             )
         )
@@ -1553,10 +1745,10 @@ def _combat_r_ref_batch(
                 "Rscript",
                 str(script_path),
                 str(matrix_path),
-                str(batch_path),
-                str(ref_batch),
+                str(meta_path),
                 str(covariate_path),
                 str(output_path),
+                str(ref_batch),
             ],
             check=True,
             capture_output=True,
@@ -1574,14 +1766,100 @@ def _combat_pycombat(
     batch_labels: pd.Series,
     covariates: pd.DataFrame | None,
 ) -> pd.DataFrame:
-    model = Combat()
+    """ComBat batch correction.
+
+    When FIT_ROW_IDS is set, parameters are estimated on those rows only
+    (the development split plus QC pools) and then *applied* to every row.
+    Test participants are corrected using constants derived without them, so
+    no test information reaches the parameters - the same construction as
+    `StandardScaler().fit(train).transform(test)`.
+
+    Every batch present in the data must also appear in the fit rows,
+    otherwise ComBat has no gamma/delta for it. That is asserted rather than
+    assumed, so a future test-only batch fails loudly.
+    """
     X = covariates.to_numpy(dtype=float) if covariates is not None and not covariates.empty else None
-    corrected = model.fit_transform(
-        df_log2_imputed.to_numpy(dtype=float),
-        batch_labels.astype(str).to_numpy(),
-        X=X,
+    batches = batch_labels.astype(str)
+
+    if FIT_ROW_IDS is None:
+        model = Combat()
+        corrected = model.fit_transform(
+            df_log2_imputed.to_numpy(dtype=float), batches.to_numpy(), X=X
+        )
+        return pd.DataFrame(corrected, index=df_log2_imputed.index, columns=df_log2_imputed.columns)
+
+    fit_mask = df_log2_imputed.index.isin(FIT_ROW_IDS)
+    if not fit_mask.any():
+        raise RuntimeError("FIT_ROW_IDS matched no rows - cannot fit ComBat.")
+
+    unseen = set(batches[~fit_mask]) - set(batches[fit_mask])
+    if unseen:
+        raise RuntimeError(
+            f"Batch(es) {sorted(unseen)} appear only outside the fit split; ComBat has no "
+            "parameters for them. Every batch must be represented in the fit split."
+        )
+
+    model = Combat()
+    model.fit(
+        df_log2_imputed.loc[fit_mask].to_numpy(dtype=float),
+        batches[fit_mask].to_numpy(),
+        X=X[fit_mask] if X is not None else None,
+    )
+    corrected = model.transform(
+        df_log2_imputed.to_numpy(dtype=float), batches.to_numpy(), X=X
+    )
+    LOGGER.info(
+        "ComBat: fitted on %d/%d rows (fit split), applied to all %d.",
+        int(fit_mask.sum()), len(fit_mask), len(fit_mask),
     )
     return pd.DataFrame(corrected, index=df_log2_imputed.index, columns=df_log2_imputed.columns)
+
+
+def _refresh_fit_rows(sample_info: pd.DataFrame, polarity: str, stage: str) -> None:
+    """Recompute FIT_ROW_IDS against the CURRENT sample_info.
+
+    Must be called immediately before every step that estimates parameters.
+    Earlier steps drop and re-key rows, so a set captured at load time silently
+    stops matching - one observed case resolved to 12 of 138 rows, which would
+    have fitted ComBat on a twelfth of the intended split without erroring.
+    Resolution is by sample_name, which is stable, rather than by row id.
+    """
+    if FIT_SUBJECTS is None:
+        return
+    global FIT_ROW_IDS
+    is_bio = sample_info["sample_type"] == "biological"
+    subj = sample_info["sample_name"].map(_subject_id_from_sample)
+    FIT_ROW_IDS = set(sample_info.index[(~is_bio) | subj.isin(FIT_SUBJECTS)])
+    n_held = len(sample_info) - len(FIT_ROW_IDS)
+    LOGGER.info(
+        "%s: fit rows refreshed before %s - %d fit / %d held-out of %d.",
+        polarity, stage, len(FIT_ROW_IDS), n_held, len(sample_info),
+    )
+    if len(FIT_ROW_IDS) < 0.4 * len(sample_info):
+        LOGGER.warning(
+            "%s: fit split is only %.0f%% of rows at %s - check the split resolved correctly.",
+            polarity, 100 * len(FIT_ROW_IDS) / len(sample_info), stage,
+        )
+
+
+def _half_minimum_impute_fitted(df: pd.DataFrame) -> pd.DataFrame:
+    """Half-minimum imputation with floors taken from the fit split only.
+
+    The floor is (column minimum - 1) on the log2 scale. Computing it across
+    all rows would let held-out samples set the value substituted into the
+    training data.
+    """
+    if FIT_ROW_IDS is None:
+        return _half_minimum_impute(df)
+
+    fit_mask = df.index.isin(FIT_ROW_IDS)
+    source = df.loc[fit_mask] if fit_mask.any() else df
+    out = df.copy()
+    for col in out.columns:
+        s = source[col]
+        if s.notna().any():
+            out[col] = out[col].fillna(float(s.min(skipna=True)) - 1.0)
+    return out
 
 
 def _reference_location_scale_correction(
@@ -1644,8 +1922,24 @@ def _apply_batch_correction(
         artifacts.method_log.append(detail)
         return corrected, "sva_combat_ref_batch"
     except Exception as exc:
+        # Make this impossible to miss. This fallback ran silently for months:
+        # every log said "pycombat_standard" while SOP Step 13 mandates
+        # ref.batch anchoring, and nobody noticed because the run still
+        # succeeded. pycombat cannot do ref.batch at all, and outside
+        # --fit-split it also cannot separate fit from transform.
+        LOGGER.error(
+            "=" * 78 + "\n"
+            "SOP STEP 13 NOT SATISFIED: R sva ref.batch ComBat failed, falling back\n"
+            "to pycombat WITHOUT reference-batch anchoring.\n"
+            "  reason: %s\n"
+            "  consequence: bridge samples do not anchor the correction, and the\n"
+            "  output is NOT SOP-compliant. Fix R/sva rather than accepting this.\n"
+            + "=" * 78,
+            exc,
+        )
         artifacts.qc_warnings.append(
-            f"R ref.batch ComBat failed ({exc}); trying Python pycombat without ref.batch."
+            f"SOP Step 13 VIOLATION - R ref.batch ComBat failed ({exc}); "
+            "fell back to pycombat without ref.batch."
         )
 
     try:
@@ -2439,6 +2733,64 @@ def _merge_polarities(
         [subject_ids.rename("SubjectID"), merged[present_meta_cols], merged[analyte_cols]],
         axis=1,
     )
+
+    # ---- Step 8 re-applied POST-merge -------------------------------------
+    # Step 8 runs per polarity, before POS and NEG are joined, so it cannot see
+    # a sample that survives in one mode and was dropped in the other. Joining
+    # the two blocks turns that asymmetry into a row that is complete on one
+    # side and entirely empty on the other - e.g. a LIPD_plasma sample missing
+    # all 960 POS columns (72% of its values) while every NEG column is intact.
+    #
+    # Left in place these rows are filled by half-minimum imputation, which
+    # asserts "below detection" for an entire panel that was in fact measured
+    # and then rejected by the Step 16 ISTD MAD QC. Applying the SOP's own
+    # sample_missing_threshold after the merge drops those rows while still
+    # imputing samples with scattered gaps, which is what half-minimum
+    # imputation is for.
+    frac_missing = final_matrix[analyte_cols].isna().mean(axis=1)
+    drop_mask = frac_missing > thresholds.sample_missing_threshold
+    if drop_mask.any():
+        dropped = final_matrix.loc[drop_mask, ["SubjectID"]].copy()
+        dropped["missing_fraction"] = frac_missing[drop_mask].round(4)
+        dropped["reason"] = (
+            f"post-merge missingness > {thresholds.sample_missing_threshold:.0%} "
+            "(one ionization mode absent after POS/NEG join)"
+        )
+        for sid, row in dropped.iterrows():
+            sname = str(sid)   # final_matrix is indexed by SampleID at this point
+            reason_str = f"missingness={row['missing_fraction']:.3f} after POS/NEG merge"
+            artifacts.sample_filter_log.append(
+                {
+                    "step": 30,
+                    "row_id": str(sid),
+                    "sample_name": sname,
+                    "polarity": "merged",
+                    "reason": reason_str,
+                }
+            )
+            _record_drop(
+                artifacts, "sample", sname,
+                step=30, step_name="Step 30 — Post-Merge Sample Missingness",
+                polarity="merged", reason=reason_str,
+                metric_value=float(row["missing_fraction"]),
+                metric_threshold=thresholds.sample_missing_threshold,
+                timepoint=(re.search(r"([A-E])$", sname).group(1)
+                           if re.search(r"([A-E])$", sname) else ""),
+            )
+        LOGGER.warning(
+            "Post-merge sample filter: dropped %d of %d samples with >%.0f%% missing "
+            "(one polarity absent). Retained %d.",
+            int(drop_mask.sum()), len(final_matrix),
+            100 * thresholds.sample_missing_threshold,
+            int((~drop_mask).sum()),
+        )
+        artifacts.method_log.append(
+            f"Post-merge Step 8 re-check: dropped {int(drop_mask.sum())} sample(s) "
+            f"missing >{thresholds.sample_missing_threshold:.0%} of analytes after the "
+            "POS/NEG join."
+        )
+        final_matrix = final_matrix.loc[~drop_mask].copy()
+
     return final_matrix, feature_meta
 
 
@@ -2781,7 +3133,8 @@ def _process_polarity(
 
     # ── Steps 9–10: Log2 transform + half-minimum imputation ─────────────────
     log2_df = np.log2(filtered + 1.0)
-    imputed = _half_minimum_impute(log2_df)
+    _refresh_fit_rows(sample_info, run.polarity, "half-minimum imputation (Step 10)")
+    imputed = _half_minimum_impute_fitted(log2_df)
 
     # ── Step 11: Pre-correction PCA ───────────────────────────────────────────
     batch_labels = sample_info["batch"]
@@ -2804,7 +3157,15 @@ def _process_polarity(
     confounding_rows = _batch_confounding_checks(sample_info, sample_metadata, artifacts)
 
     # ── Step 13: ComBat batch correction ──────────────────────────────────────
-    combat_covariates, protected_covariates = _combat_design_matrix(sample_info, sample_metadata)
+    # Refresh the fit-row set against the CURRENT sample_info. Earlier steps
+    # drop and re-key rows, so a set captured at load time no longer matches;
+    # resolving by sample_name (stable) rather than row id avoids silently
+    # fitting on a fraction of the intended split.
+    _refresh_fit_rows(sample_info, run.polarity, "ComBat (Step 13)")
+
+    combat_covariates, protected_covariates = _combat_design_matrix(
+        sample_info, sample_metadata, blind=BLIND_COMBAT
+    )
     bridge_count = int(sample_info.loc[sample_info["is_bridge"], "sample_name"].nunique())
     artifacts.bridge_counts[run.polarity] = bridge_count
 
@@ -3053,6 +3414,13 @@ def _build_configs(repo_root: Path, kayla_root: Path, output_root: Path) -> dict
             output_dir=output_root / "MTBL_placenta",
             positive_istd_names=("D3-Alanine-ISTD", "D3-Creatinine-ISTD"),
             negative_istd_names=("D4-Taurine-ISTD", "D3-Lactate-ISTD"),
+            raw_workbook=repo_root / "data" / "metabolomics_raw" / "050725_Sadovsky DP3 Placenta Polar Untargeted_ALL copy.xlsx",
+            raw_sheet_pos="POS Compounds",
+            raw_sheet_neg="NEG Compounds",
+            # Placenta export carries one extra leading blank row vs plasma,
+            # so sample labels sit on row 3 and raw-file names on row 4.
+            raw_sample_row=3,
+            raw_file_row=4,
         ),
         "LIPD_plasma": DatasetConfig(
             dataset_id="LIPD_plasma",
@@ -3080,6 +3448,12 @@ def _build_configs(repo_root: Path, kayla_root: Path, output_root: Path) -> dict
             output_dir=output_root / "LIPD_placenta",
             positive_istd_names=("18:1_LPC-d7", "18:1_SM-d9"),
             negative_istd_names=("15:0-18:1(d7)-PC", "18:1-18:1(d9)-PE"),
+            raw_workbook=repo_root / "data" / "lipids" / "060525_Sadovsky Placenta Lipids Untargeted_ALL.xlsx",
+            # Placenta lipid sheets are named without the "Plasma " prefix.
+            raw_sheet_pos="POS Lipids",
+            raw_sheet_neg="NEG Lipids",
+            raw_sample_row=3,
+            raw_file_row=4,
         ),
     }
 
@@ -3103,6 +3477,32 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Root directory for SOP-native outputs.",
     )
     parser.add_argument(
+        "--fit-split",
+        choices=["dev"],
+        default=None,
+        help="Process ALL participants but estimate ComBat and imputation "
+             "parameters on the development split only, then apply them to "
+             "everyone. Use for producing the held-out test matrix.",
+    )
+    parser.add_argument(
+        "--restrict-split",
+        choices=["dev", "test"],
+        default=None,
+        help="Fit the whole pipeline on one side of data/cleaned/locked_split.csv "
+             "only. Use 'dev' for anything feeding model training.",
+    )
+    parser.add_argument(
+        "--locked-split",
+        default=None,
+        help="Path to locked_split.csv (default: <repo>/data/cleaned/locked_split.csv).",
+    )
+    parser.add_argument(
+        "--blind-combat",
+        action="store_true",
+        help="Exclude Group/Subgroup/GestAgeDelivery from the ComBat design. "
+             "Required for any output used to train predictive models.",
+    )
+    parser.add_argument(
         "--datasets",
         nargs="+",
         default=["MTBL_plasma", "MTBL_placenta", "LIPD_plasma", "LIPD_placenta"],
@@ -3116,6 +3516,46 @@ def main() -> None:
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    global BLIND_COMBAT
+    BLIND_COMBAT = bool(args.blind_combat)
+    if BLIND_COMBAT:
+        LOGGER.info("BLIND ComBat mode: outputs are modelling-safe.")
+
+    global FIT_SUBJECTS
+    if args.fit_split:
+        sp = Path(
+            args.locked_split
+            or (Path(__file__).resolve().parents[1] / "data" / "cleaned" / "locked_split.csv")
+        )
+        if not sp.exists():
+            raise SystemExit(f"--fit-split given but {sp} not found.")
+        sdf = pd.read_csv(sp)
+        FIT_SUBJECTS = set(sdf.loc[sdf["split"] == args.fit_split, "SubjectID"].astype(str))
+        LOGGER.info(
+            "FIT-SPLIT mode: parameters estimated on %d '%s' participants; "
+            "all participants processed and written.",
+            len(FIT_SUBJECTS), args.fit_split,
+        )
+
+    global RESTRICT_SUBJECTS
+    if args.restrict_split:
+        split_path = Path(
+            args.locked_split
+            or (Path(__file__).resolve().parents[1] / "data" / "cleaned" / "locked_split.csv")
+        )
+        if not split_path.exists():
+            raise SystemExit(
+                f"--restrict-split given but {split_path} not found. "
+                "Run 01_data_cleaning/make_locked_split.py first."
+            )
+        split_df = pd.read_csv(split_path)
+        RESTRICT_SUBJECTS = set(
+            split_df.loc[split_df["split"] == args.restrict_split, "SubjectID"].astype(str)
+        )
+        LOGGER.info(
+            "Restricting pipeline fit to %d '%s' participants from %s.",
+            len(RESTRICT_SUBJECTS), args.restrict_split, split_path,
+        )
     repo_root = Path(__file__).resolve().parents[1]
     kayla_root = Path(args.kayla_root).resolve()
     output_root = Path(args.output_root).resolve()

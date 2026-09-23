@@ -1,0 +1,103 @@
+{
+  "n_dev": 61,
+  "n_participants": 61,
+  "class_dist": {
+    "control": 36,
+    "complication": 25
+  },
+  "n_features_in": 1902,
+  "n_features_selected_union": 1814,
+  "best_model_val": "LogisticRegression (elastic-net)",
+  "best_oof_pr_auc": 0.6458201947003887,
+  "note": "Development set only; the locked 30% test set has not been read.",
+  "metrics": {
+    "LogisticRegression (elastic-net)": {
+      "pr_auc_mean": 0.7121541950113379,
+      "pr_auc_oof": 0.6458201947003887,
+      "pr_auc_ci95": [
+        0.47266391179960965,
+        0.8474744253145626
+      ],
+      "roc_auc_mean": 0.7613227513227512,
+      "roc_auc_oof": 0.7544444444444445,
+      "roc_auc_ci95": [
+        0.6222925685425685,
+        0.88446726417493
+      ],
+      "accuracy_mean": 0.7217948717948718,
+      "f1_mean": 0.6655555555555555,
+      "precision_mean": 0.6799999999999999,
+      "recall_mean": 0.7142857142857142,
+      "specificity_mean": 0.7695238095238095,
+      "brier_mean": 0.20744535845312498,
+      "n_features_mean": 696.8,
+      "prevalence": 0.4098360655737705
+    },
+    "RandomForest": {
+      "pr_auc_mean": 0.6461325711325709,
+      "pr_auc_oof": 0.586233533491913,
+      "pr_auc_ci95": [
+        0.41189127423633454,
+        0.7711251992773901
+      ],
+      "roc_auc_mean": 0.6680952380952382,
+      "roc_auc_oof": 0.6466666666666667,
+      "roc_auc_ci95": [
+        0.4904723502304147,
+        0.7882521242198661
+      ],
+      "accuracy_mean": 0.6064102564102564,
+      "f1_mean": 0.5067932067932068,
+      "precision_mean": 0.6061904761904762,
+      "recall_mean": 0.5809523809523809,
+      "specificity_mean": 0.6533333333333332,
+      "brier_mean": 0.2272861076954325,
+      "n_features_mean": 120.4,
+      "prevalence": 0.4098360655737705
+    },
+    "XGBoost": {
+      "pr_auc_mean": 0.6411255411255411,
+      "pr_auc_oof": 0.5743900924762227,
+      "pr_auc_ci95": [
+        0.40120755758458093,
+        0.7587958571747194
+      ],
+      "roc_auc_mean": 0.6512698412698412,
+      "roc_auc_oof": 0.64,
+      "roc_auc_ci95": [
+        0.48394162210338676,
+        0.7889379084967321
+      ],
+      "accuracy_mean": 0.6089743589743589,
+      "f1_mean": 0.4714285714285714,
+      "precision_mean": 0.47714285714285715,
+      "recall_mean": 0.519047619047619,
+      "specificity_mean": 0.7247619047619048,
+      "brier_mean": 0.24412310818332444,
+      "n_features_mean": 120.4,
+      "prevalence": 0.4098360655737705
+    },
+    "SVM": {
+      "pr_auc_mean": 0.4656034706034705,
+      "pr_auc_oof": 0.4025818862100798,
+      "pr_auc_ci95": [
+        0.27463666054784475,
+        0.6123043277538673
+      ],
+      "roc_auc_mean": 0.4344444444444444,
+      "roc_auc_oof": 0.45444444444444443,
+      "roc_auc_ci95": [
+        0.3178708402855024,
+        0.5991503267973857
+      ],
+      "accuracy_mean": 0.49102564102564106,
+      "f1_mean": 0.2657142857142857,
+      "precision_mean": 0.23454545454545456,
+      "recall_mean": 0.4,
+      "specificity_mean": 0.6984126984126984,
+      "brier_mean": 0.2713466393984886,
+      "n_features_mean": 120.4,
+      "prevalence": 0.4098360655737705
+    }
+  }
+}

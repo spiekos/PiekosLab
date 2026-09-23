@@ -1,0 +1,165 @@
+{
+  "LogisticRegression (elastic-net)": {
+    "pr_auc_mean": 0.7529641665524018,
+    "pr_auc_ci95": [
+      0.6502122374723593,
+      0.8557160956324443
+    ],
+    "pr_auc_folds": [
+      0.747271029623971,
+      0.758982683982684,
+      0.6009523809523809,
+      0.728095238095238,
+      0.9295195001077354
+    ],
+    "roc_auc_mean": 0.7078221778221778,
+    "roc_auc_ci95": [
+      0.6633679668055722,
+      0.7522763888387834
+    ],
+    "brier_mean": 0.2398864298087516,
+    "n_features_mean": 230.8,
+    "n_features_folds": [
+      643,
+      62,
+      23,
+      62,
+      364
+    ],
+    "best_params_per_fold": [
+      {
+        "clf__C": 1.0,
+        "clf__l1_ratio": 0.1
+      },
+      {
+        "clf__C": 0.1,
+        "clf__l1_ratio": 0.5
+      },
+      {
+        "clf__C": 0.1,
+        "clf__l1_ratio": 1.0
+      },
+      {
+        "clf__C": 0.1,
+        "clf__l1_ratio": 0.5
+      },
+      {
+        "clf__C": 1.0,
+        "clf__l1_ratio": 0.7
+      }
+    ],
+    "prevalence": 0.5617977528089888
+  },
+  "RandomForest": {
+    "pr_auc_mean": 0.9984848484848484,
+    "pr_auc_ci95": [
+      0.9955151515151515,
+      1.0014545454545454
+    ],
+    "pr_auc_folds": [
+      0.9924242424242424,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "roc_auc_mean": 0.9974025974025974,
+    "roc_auc_ci95": [
+      0.9923116883116884,
+      1.0024935064935065
+    ],
+    "brier_mean": 0.0815029835145522,
+    "n_features_mean": 62.0,
+    "n_features_folds": [
+      67,
+      62,
+      56,
+      62,
+      63
+    ],
+    "best_params_per_fold": [
+      {
+        "clf__max_depth": 3,
+        "clf__min_samples_leaf": 1,
+        "clf__n_estimators": 300
+      },
+      {
+        "clf__max_depth": 3,
+        "clf__min_samples_leaf": 1,
+        "clf__n_estimators": 300
+      },
+      {
+        "clf__max_depth": 3,
+        "clf__min_samples_leaf": 1,
+        "clf__n_estimators": 300
+      },
+      {
+        "clf__max_depth": 3,
+        "clf__min_samples_leaf": 1,
+        "clf__n_estimators": 300
+      },
+      {
+        "clf__max_depth": 3,
+        "clf__min_samples_leaf": 3,
+        "clf__n_estimators": 300
+      }
+    ],
+    "prevalence": 0.5617977528089888
+  },
+  "XGBoost": {
+    "pr_auc_mean": 0.9601206117115207,
+    "pr_auc_ci95": [
+      0.9125154057860969,
+      1.0077258176369446
+    ],
+    "pr_auc_folds": [
+      0.9327708907254362,
+      1.0,
+      0.8769230769230769,
+      0.990909090909091,
+      1.0
+    ],
+    "roc_auc_mean": 0.9495079920079921,
+    "roc_auc_ci95": [
+      0.8936933523583664,
+      1.0053226316576178
+    ],
+    "brier_mean": 0.0728500998963626,
+    "n_features_mean": 62.0,
+    "n_features_folds": [
+      67,
+      62,
+      56,
+      62,
+      63
+    ],
+    "best_params_per_fold": [
+      {
+        "clf__learning_rate": 0.05,
+        "clf__max_depth": 4,
+        "clf__n_estimators": 300
+      },
+      {
+        "clf__learning_rate": 0.05,
+        "clf__max_depth": 2,
+        "clf__n_estimators": 300
+      },
+      {
+        "clf__learning_rate": 0.05,
+        "clf__max_depth": 2,
+        "clf__n_estimators": 300
+      },
+      {
+        "clf__learning_rate": 0.05,
+        "clf__max_depth": 2,
+        "clf__n_estimators": 300
+      },
+      {
+        "clf__learning_rate": 0.1,
+        "clf__max_depth": 2,
+        "clf__n_estimators": 300
+      }
+    ],
+    "prevalence": 0.5617977528089888
+  }
+}
