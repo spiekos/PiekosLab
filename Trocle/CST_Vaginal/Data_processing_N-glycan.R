@@ -234,13 +234,13 @@ matrix_spec_clr <- apply_clr(matrix_spec_imputed)
 
 integrate_metadata <- function(clr_df, metadata) {
   clr_prepared <- clr_df |> 
-    mz_label = paste0(
+    mutate(mz_label = paste0(
       "g", round(mz, 4), "_",
       glycan_name |>
         str_squish() |>
         str_replace_all("[^A-Za-z0-9]+", "_") |>
         str_remove("_$")
-    ) |> 
+    )) |> 
     select(-mz, -glycan_name)
   
   transposed_df <- clr_prepared |> 
