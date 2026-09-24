@@ -185,22 +185,28 @@ spec_step3 <- run_missingness_filter(matrix_spec_na, metadata_final_spec, "SPEC"
 ## Step 4: Missing Value Imputation (1/2 Minimum)
 
 impute_half_min <- function(filtered_matrix) {
+  filtered_matrix <- ungroup(filtered_matrix)   # apply_clr returns all zeros if grouped
   sample_cols <- setdiff(colnames(filtered_matrix), c("mz", "glycan_name"))
   
-  imputed_df <- filtered_matrix |> 
-    rowwise() |> 
-    mutate(across(all_of(sample_cols), ~ {
-      if(is.na(.)) {
-        obs_vals <- c_across(all_of(sample_cols))
-        return(min(obs_vals, na.rm = TRUE) / 2)
-      } else { . }
-    })) |> 
-    ungroup()
+  M <- as.matrix(filtered_matrix[sample_cols])
+  if (!is.numeric(M)) stop("Non-numeric values in sample columns")
+  
+  # Half-minimum per glycan, computed ONCE from observed values only.
+  # Must not be computed inside a rowwise/across loop: imputed values would
+  # re-enter the minimum and cascade (min/2, then min/4, then min/8, ...).
+  half_min <- apply(M, 1, function(r) min(r, na.rm = TRUE) / 2)
+  if (any(!is.finite(half_min))) stop("Glycan row with no observed values")
+  
+  idx <- which(is.na(M), arr.ind = TRUE)
+  M[idx] <- half_min[idx[, "row"]]
   
   # Ensure no zeros / NAs remain
-  if (any(imputed_df[sample_cols] <= 0) | any(is.na(imputed_df[sample_cols]))) {
+  if (any(M <= 0) || any(is.na(M))) {
     stop("Non-positive or NA values")
   }
+  
+  imputed_df <- filtered_matrix
+  imputed_df[sample_cols] <- as.data.frame(M)
   
   return(imputed_df)
 }
