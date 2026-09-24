@@ -30,7 +30,7 @@ metadata_crib <- tibble(
   Stats_Label    = as.character(raw_df[4, ])
 ) |> 
   filter(Column_Index > 3) |>
-  filter(!Stats_Label %in% c("Medium", "SD")) |>
+  filter(!Stats_Label %in% c("Median", "SD"))|>
   filter(!is.na(Sample_ID), Birth_Outcome != "NA", Birth_Outcome != "")
 
 # Clean abundance matrix
