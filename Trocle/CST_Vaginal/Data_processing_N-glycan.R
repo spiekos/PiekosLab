@@ -87,7 +87,7 @@ abundance_matrix_spec <- raw_df_spec |>
   filter(!is.na(mz)) |> 
   mutate(
     mz = round(as.numeric(mz), 4),
-    across(-c(mz, glycan_name), ~ round(as.numeric(.), 2))
+    across(-c(mz, glycan_name), as.numeric)
   )
 
 # Set clean names and format final objects
