@@ -39,11 +39,11 @@ abundance_matrix_crib <- raw_df |>
   rename(mz = ...1, glycan_name = ...3) |> 
   slice(-(1:4)) |> 
   filter(!(glycan_name %in% rows_to_discard)) |> 
-  # Keyword filter to remove Internal Standard (1271)
   filter(!str_detect(glycan_name, "1271|IS|13C6")) |> 
+  mutate(mz = as.numeric(mz)) |> 
   filter(!is.na(mz)) |> 
   mutate(
-    mz = round(as.numeric(mz), 4),
+    mz = round(mz, 4),
     across(-c(mz, glycan_name), as.numeric)
   )
 
@@ -82,11 +82,11 @@ abundance_matrix_spec <- raw_df_spec |>
   rename(mz = ...2, glycan_name = ...4) |> 
   slice(-(1:6)) |> 
   filter(!(glycan_name %in% rows_to_discard)) |> 
-  # Keyword filter to remove Internal Standard (1271)
   filter(!str_detect(glycan_name, "1271|IS|13C6")) |> 
+  mutate(mz = as.numeric(mz)) |> 
   filter(!is.na(mz)) |> 
   mutate(
-    mz = round(as.numeric(mz), 4),
+    mz = round(mz, 4),
     across(-c(mz, glycan_name), as.numeric)
   )
 
