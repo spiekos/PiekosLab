@@ -181,7 +181,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--datasets", nargs="+", default=["MTBL_plasma", "LIPD_plasma"],
-        help="Dataset folder names under --source-root.",
+        help="Datasets to bin. With --source-root: folder names under it. "
+             "Without: keys of DATASETS (e.g. proteomics_plasma).",
     )
     parser.add_argument(
         "--source-root", default=None,
@@ -202,7 +203,10 @@ def main() -> None:
     logger.info("Window scheme '%s': %s", args.scheme,
                 ", ".join(f"{n} [{lo}-{hi})" for n, lo, hi, _ in ECHO_WINDOWS))
 
-    datasets = dict(DATASETS)
+    # Only bin what was asked for. Previously the no --source-root branch binned
+    # every entry in DATASETS regardless of --datasets, which silently included
+    # the label-aware MTBL/LIPD outputs whenever proteomics was requested.
+    datasets = {k: v for k, v in DATASETS.items() if k in args.datasets}
     if args.source_root:
         datasets = {
             name: os.path.join(args.source_root, name, f"{name}_cleaned_with_metadata.csv")

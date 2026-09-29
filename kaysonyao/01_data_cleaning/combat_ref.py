@@ -92,7 +92,40 @@ class ComBatRef:
 
     # ---------------------------------------------------------------- fit
     def fit(self, Y, batch, X=None):
-        """Estimate parameters. Y is (n_samples, n_features)."""
+        """Estimate parameters. Y is (n_samples, n_features).
+
+        Features with zero variance within any batch of more than one sample
+        are excluded from estimation and passed through unadjusted, exactly as
+        sva::ComBat does ("Found N genes with uniform expression within a
+        single batch ... these will not be adjusted for batch").
+
+        Without this rule a feature that is constant in the reference batch
+        gets a pooled SD of ~1e-16. Standardising by it produces values around
+        1e15, which wreck the empirical-Bayes priors shared by *every* feature
+        in the other batches: delta* reaches ~1e27 and those batches collapse to
+        a single value per feature. That happened on placenta proteomics, where
+        some proteins are absent from the reference batch and median-filled.
+        """
+        Y = np.asarray(Y, dtype=float)
+        b = np.asarray([str(x) for x in batch])
+        keep = np.ones(Y.shape[1], dtype=bool)
+        for level in dict.fromkeys(b):
+            m = b == level
+            if m.sum() > 1:
+                # "All values identical" tested as max == min, which is exact.
+                # np.var(...) == 0 is NOT: numpy's mean of identical floats can
+                # differ in the last bit (thirty 0.1s give var 8e-34), so most
+                # constant columns slip through. R's var() compensates, which is
+                # why sva's `var(x) == 0` works there and a literal port does not.
+                keep &= ~(np.ptp(Y[m], axis=0) == 0)
+        self.keep_ = keep
+        self.n_zero_var_ = int((~keep).sum())
+        self._fit_core(Y[:, keep], b, X)
+        self.n_features_in_ = Y.shape[1]
+        return self
+
+    def _fit_core(self, Y, batch, X=None):
+        """Estimation on the retained features (the original, validated fit)."""
         Y = np.asarray(Y, dtype=float)
         batch = np.asarray([str(b) for b in batch])
         n_samp, n_feat = Y.shape
@@ -169,6 +202,15 @@ class ComBatRef:
 
     # ----------------------------------------------------------- transform
     def transform(self, Y, batch, X=None):
+        """Apply fitted parameters. Zero-variance features pass through unchanged."""
+        Y = np.asarray(Y, dtype=float)
+        if Y.shape[1] != self.n_features_in_:
+            raise ValueError(f"Y has {Y.shape[1]} features; fitted on {self.n_features_in_}.")
+        out = Y.copy()
+        out[:, self.keep_] = self._transform_core(Y[:, self.keep_], batch, X)
+        return out
+
+    def _transform_core(self, Y, batch, X=None):
         """Apply fitted parameters. Batches must have been seen during fit."""
         Y = np.asarray(Y, dtype=float)
         batch = np.asarray([str(b) for b in batch])

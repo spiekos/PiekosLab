@@ -9,7 +9,9 @@ during fitting.
 
 Datasets
 --------
-Plasma  : windowed by gestational age (W1/W2/W3 depending on scheme)
+Plasma  : windowed by gestational age (scheme set by the binning step, e.g.
+          T1-T5). Metabolomics and lipidomics by default; pass --datasets to
+          include proteomics_plasma.
 Placenta: a single unwindowed dataset. Placenta is collected once at delivery
           and carries no SampleGestAge, so it cannot be binned; this matches
           the previous pipeline, which ran placenta with timepoint="all".
@@ -66,6 +68,18 @@ METADATA_COLS = {
     "GestAgeDelivery", "SampleGestAge", "MetadataCanonicalID",
     "Timepoint", "Tissue",
 }
+
+
+# Explicit mapping. The previous rule ("MTBL" -> Metabolomics, anything else ->
+# Lipidomics) would have silently filed proteomics results as lipidomics.
+ASSAYS = {"MTBL": "Metabolomics", "LIPD": "Lipidomics", "proteomics": "Proteomics"}
+
+
+def assay_name(ds: str) -> str:
+    for prefix, name in ASSAYS.items():
+        if ds.startswith(prefix):
+            return name
+    raise ValueError(f"Unknown assay for dataset {ds!r}; add it to ASSAYS.")
 
 
 def analyte_columns(df: pd.DataFrame) -> list[str]:
@@ -236,6 +250,9 @@ def main() -> None:
     ap.add_argument("--inner-splits", type=int, default=3)
     ap.add_argument("--models", nargs="+", default=MODEL_NAMES)
     ap.add_argument("--skip-placenta", action="store_true")
+    ap.add_argument("--datasets", nargs="+", default=["MTBL_plasma", "LIPD_plasma"],
+                    help="Plasma datasets to model, each a folder under --windows-root "
+                         "(e.g. MTBL_plasma LIPD_plasma proteomics_plasma).")
     args = ap.parse_args()
 
     root = os.path.abspath(args.repo_root)
@@ -243,7 +260,7 @@ def main() -> None:
     out_root = os.path.join(root, args.out)
 
     jobs = []
-    for ds in ("MTBL_plasma", "LIPD_plasma"):
+    for ds in args.datasets:
         for w in args.windows:
             jobs.append((ds, w, os.path.join(root, args.windows_root, ds, f"{ds}_echo_{w}.csv")))
     if not args.skip_placenta:
@@ -273,7 +290,7 @@ def main() -> None:
         best = _write_artifacts(out_dir, meta, X, y, res, locked)
         logger.info("  best by OOF PR-AUC: %s", best)
 
-        assay = "Metabolomics" if ds.startswith("MTBL") else "Lipidomics"
+        assay = assay_name(ds)
         tissue = "placenta" if "placenta" in ds else "plasma"
         for model, m in res.items():
             rows.append({
@@ -284,7 +301,12 @@ def main() -> None:
                 "pr_auc": round(m["pr_auc_mean"], 3),
                 "pr_auc_oof": round(m["pr_auc_oof"], 3),
                 "pr_lo": round(m["pr_auc_ci95"][0], 3), "pr_hi": round(m["pr_auc_ci95"][1], 3),
-                "roc_auc": round(m["roc_auc_mean"], 3),
+                # Pooled out-of-fold ROC-AUC, the same quantity the bootstrap CI
+                # (roc_lo/roc_hi) and pr_auc_oof are computed on. This column used
+                # to hold the mean over the 5 outer folds, which did not match its
+                # own CI; the fold mean is kept separately for reference.
+                "roc_auc": round(m["roc_auc_oof"], 3),
+                "roc_auc_foldmean": round(m["roc_auc_mean"], 3),
                 "roc_lo": round(m["roc_auc_ci95"][0], 3), "roc_hi": round(m["roc_auc_ci95"][1], 3),
                 "accuracy": round(m["accuracy_mean"], 3), "f1": round(m["f1_mean"], 3),
                 "precision": round(m["precision_mean"], 3),
@@ -296,9 +318,11 @@ def main() -> None:
 
     if rows:
         d = pd.DataFrame(rows)
-        for assay, tag in (("Metabolomics", "metabolomics"), ("Lipidomics", "lipidomics")):
-            d[d.assay == assay].to_csv(
-                os.path.join(out_root, f"model_metrics_{tag}.csv"), index=False)
+        for assay, tag in (("Metabolomics", "metabolomics"), ("Lipidomics", "lipidomics"),
+                           ("Proteomics", "proteomics")):
+            sub = d[d.assay == assay]
+            if not sub.empty:  # no empty per-assay files for assays not run
+                sub.to_csv(os.path.join(out_root, f"model_metrics_{tag}.csv"), index=False)
         logger.info("Summary -> %s", os.path.join(out_root, "model_metrics_all.csv"))
     logger.info("Base models complete.")
 

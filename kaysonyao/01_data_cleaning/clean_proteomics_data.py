@@ -19,7 +19,9 @@ Workflow:
 6) Remove Olink internal control samples from downstream analysis matrices.
 7) Reshape to a wide matrix (rows = SampleID, columns = Assay, values = NPX; aggregate duplicates by median).
 8) ComBat normalization (wide matrix):
-   - Apply ComBat batch correction using metadata Batch labels.
+   - Apply reference-batch ComBat (combat_ref.ComBatRef) using metadata Batch
+     labels; batch 1 (first chronologically) is the reference and passes
+     through unchanged. No covariates, so the correction is outcome-blind.
    - Preserve original missingness pattern after correction.
 9) Missingness filter on the ComBat-normalized wide matrix (pre-imputation):
    - Keep assays with missing fraction < 20%.
@@ -186,8 +188,15 @@ def process_all_files(
     metadata_aligned = metadata.reindex(X_final.index)
 
     if meta_type == "proteomics":
-        subject_ids = X_final.index.to_series().str.replace(
-            r"\s*[A-Z]+$", "", regex=True
+        # Drop whitespace, then ONLY the final visit letter (A-E). The previous
+        # rule stripped every trailing capital, turning late-enrolment IDs such
+        # as DP3-0233EA into DP3-0233 instead of DP3-0233E - an ID that exists
+        # nowhere in the master table or the locked split, so those 19
+        # participants were silently dropped from all modelling.
+        subject_ids = (
+            X_final.index.to_series()
+            .str.replace(r"\s+", "", regex=True)
+            .str.replace(r"[A-E]$", "", regex=True)
         )
         metadata_aligned.insert(0, "SubjectID", subject_ids.values)
 

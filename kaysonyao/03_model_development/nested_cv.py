@@ -95,6 +95,30 @@ MODEL_NAMES = [EN_LOGREG, "RandomForest", "XGBoost", "SVM"]
 _SKL_GE_18 = tuple(int(x) for x in sklearn_version.split(".")[:2]) >= (1, 8)
 
 
+# ---------------------------------------------------------------------------
+# RandomForest runs single-threaded (n_jobs=1).
+#
+# sklearn >= 1.8 wraps every parallel task in warnings.catch_warnings() +
+# warnings.resetwarnings() to propagate warning filters to workers. RF's
+# n_jobs=-1 uses joblib's *threading* backend, and catch_warnings is not
+# thread-safe before Python 3.14: concurrent workers can leave the process-wide
+# warnings.filters list empty. Once empty it stays empty, and every later task
+# emits "`sklearn.utils.parallel.delayed` should be used with
+# `sklearn.utils.parallel.Parallel`..." - thousands per run.
+#
+# Reproduced on sklearn 1.8.0 / Python 3.12: filters went 11 -> 0 at fit #9,
+# then 390 warnings from 120 fits. With n_jobs=1: 0 warnings, filters intact.
+#
+# Suppressing the message does not work: the ignore-filter lives in the same
+# list the race erases. Removing the threads removes the cause.
+#
+# Cost: none measurable at our data size (84 x 1399: 0.20 s per fit either
+# way). Predictions are bit-identical to n_jobs=-1 at a fixed random_state.
+# XGBoost keeps n_jobs=-1: it threads natively in C++, not through joblib.
+# ---------------------------------------------------------------------------
+RF_N_JOBS = 1
+
+
 def enet_kwargs(**kw) -> dict:
     """Return kwargs that give a genuine elastic net on this sklearn version."""
     if not _SKL_GE_18:
@@ -226,7 +250,9 @@ def build_model(name: str, params: dict, y_train, random_state: int = RANDOM_STA
                 min_samples_split=p.get("min_samples_split", 2),
                 min_samples_leaf=p.get("min_samples_leaf", 1),
                 max_features=p.get("max_features", "sqrt"),
-                class_weight="balanced", random_state=random_state, n_jobs=-1,
+                class_weight="balanced", random_state=random_state,
+                # Single-threaded on purpose - see RF_N_JOBS.
+                n_jobs=RF_N_JOBS,
             )),
         ])
 

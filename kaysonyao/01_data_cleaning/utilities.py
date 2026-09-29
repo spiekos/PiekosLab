@@ -12,7 +12,6 @@ import re
 
 import numpy as np
 import pandas as pd
-from pycombat import Combat
 from scipy.stats import fisher_exact
 from statsmodels.stats.multitest import multipletests
 
@@ -515,10 +514,43 @@ def missingness_filter_and_group_check(
 # -----------------------------
 # Normalization (wide)
 # -----------------------------
-def combat_normalize_wide(X: pd.DataFrame, batch_labels: pd.Series) -> pd.DataFrame:
+def _load_combat_ref():
+    """Import ComBatRef from combat_ref.py in this directory.
+
+    Loaded by path so it works however this module is reached - including via
+    03_model_development/utilities.py, which loads this file by spec without
+    putting 01_data_cleaning on sys.path.
     """
-    Apply ComBat batch normalization using Python pycombat.
-    Preserves original missingness pattern after correction.
+    import importlib.util
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "combat_ref.py")
+    spec = importlib.util.spec_from_file_location("combat_ref", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.ComBatRef
+
+
+def combat_normalize_wide(
+    X: pd.DataFrame, batch_labels: pd.Series, ref_batch=None
+) -> pd.DataFrame:
+    """
+    Reference-batch ComBat (SOP Step 13), preserving the original missingness.
+
+    Uses ComBatRef (combat_ref.py), a parametric empirical-Bayes ComBat that
+    reproduces sva::ComBat(ref.batch=...) to max |diff| 4.97e-14. The reference
+    batch passes through unchanged; every other batch is mapped onto its
+    location and scale.
+
+    ref_batch defaults to the lowest batch label - the first batch
+    chronologically, matching the SOP and the metabolomics/lipidomics runs
+    (batch 1). No covariates are passed, so the correction is outcome-blind.
+
+    Replaces pycombat, which has no reference-batch mode at all.
+
+    Features with zero variance within any batch are passed through
+    unadjusted (sva's rule); see ComBatRef.fit for why this matters.
+
+    Missing values are filled with the feature median for estimation only and
+    restored to NaN afterwards, as before.
     """
     b = batch_labels.reindex(X.index)
     if b.isna().any():
@@ -527,15 +559,35 @@ def combat_normalize_wide(X: pd.DataFrame, batch_labels: pd.Series) -> pd.DataFr
     if b.nunique() < 2:
         return X.copy()
 
+    if ref_batch is None:
+        labels = list(pd.unique(b))
+        try:
+            ref_batch = sorted(labels, key=float)[0]
+        except (TypeError, ValueError):
+            ref_batch = sorted(labels, key=str)[0]
+    if ref_batch not in set(pd.unique(b)):
+        raise ValueError(f"ref_batch={ref_batch!r} not among batch labels {sorted(pd.unique(b))}")
+    logger.info(
+        "ComBat: reference batch %s (%d of %d samples); batch sizes %s",
+        ref_batch, int((b == ref_batch).sum()), len(b),
+        b.value_counts().sort_index().to_dict(),
+    )
+
     missing_mask = X.isna()
 
     X_filled = X.copy()
     med = X_filled.median(axis=0, skipna=True)
     X_filled = X_filled.fillna(med).fillna(0.0)
 
-    model = Combat()
-    # pycombat can error with pandas slicing internals; pass ndarray explicitly.
-    corrected = model.fit_transform(X_filled.to_numpy(dtype=float), b.values)
+    ComBatRef = _load_combat_ref()
+    model = ComBatRef(ref_batch=ref_batch).fit(X_filled.to_numpy(dtype=float), b.values)
+    if model.n_zero_var_:
+        logger.info(
+            "ComBat: %d feature(s) have zero variance within a batch (typically absent "
+            "from that batch and median-filled); passed through unadjusted, as sva does.",
+            model.n_zero_var_,
+        )
+    corrected = model.transform(X_filled.to_numpy(dtype=float), b.values)
     Xc = pd.DataFrame(corrected, index=X.index, columns=X.columns)
 
     Xc = Xc.mask(missing_mask)

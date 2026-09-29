@@ -56,6 +56,15 @@ TIMEPOINTS = ["A", "B", "C", "D", "E"]
 N_CV_FOLDS = 10
 RANDOM_STATE = 42
 
+# Threaded sklearn estimators run single-threaded. With sklearn >= 1.8 and
+# Python < 3.14, joblib's threading backend races on warnings.catch_warnings()
+# and can empty the process-wide warnings.filters list, after which every task
+# emits "`sklearn.utils.parallel.delayed` should be used with ... Parallel".
+# Affects RandomForest, LogisticRegressionCV(solver="saga") and
+# MultiTaskElasticNetCV here. Full rationale and measurements: nested_cv.RF_N_JOBS.
+# XGBoost keeps n_jobs=-1 - it threads in C++, not through joblib.
+SKLEARN_N_JOBS = 1
+
 # Elastic-net mixing grid. 0.0 = pure ridge, 1.0 = pure lasso; the intermediate
 # values are the elastic net proper. Tuned in the inner CV loop per Aim 3A.
 # NOTE: this grid only takes effect when penalty="elasticnet" is passed
@@ -177,7 +186,7 @@ def make_elasticnet_selector(
                 random_state=random_state,
                 max_iter=max_iter,
                 tol=tol,
-                n_jobs=-1,
+                n_jobs=SKLEARN_N_JOBS,
             ),
             threshold=1e-10,
         )),
@@ -226,7 +235,7 @@ def elasticnet_feature_selection_binary(
         random_state=random_state,
         max_iter=20000,
         tol=1e-4,
-        n_jobs=-1,
+        n_jobs=SKLEARN_N_JOBS,
     )
     enet.fit(X_scaled, y_train)
 
@@ -266,7 +275,7 @@ def lasso_feature_selection_multilabel(
         cv=cv,
         random_state=random_state,
         max_iter=10000,
-        n_jobs=-1,
+        n_jobs=SKLEARN_N_JOBS,
     )
     enet.fit(X_scaled, Y_train.values)
 
@@ -289,7 +298,7 @@ def get_base_models(random_state: int = RANDOM_STATE) -> dict:
         ),
         "RandomForest": RandomForestClassifier(
             n_estimators=300, class_weight="balanced",
-            random_state=random_state, n_jobs=-1,
+            random_state=random_state, n_jobs=SKLEARN_N_JOBS,
         ),
         "XGBoost": XGBClassifier(
             n_estimators=300, eval_metric="logloss",
@@ -326,7 +335,7 @@ def _build_model_from_trial(trial, model_name: str, random_state: int, y_train=N
             min_samples_split=trial.suggest_int("min_samples_split", 2, 20),
             min_samples_leaf=trial.suggest_int("min_samples_leaf", 1, 10),
             max_features=trial.suggest_categorical("max_features", ["sqrt", "log2"]),
-            class_weight="balanced", random_state=random_state, n_jobs=-1,
+            class_weight="balanced", random_state=random_state, n_jobs=SKLEARN_N_JOBS,
         )
     elif model_name == "XGBoost":
         spw = (
@@ -448,7 +457,7 @@ def build_tuned_model_binary(
             min_samples_split=params["min_samples_split"],
             min_samples_leaf=params["min_samples_leaf"],
             max_features=params["max_features"],
-            class_weight="balanced", random_state=random_state, n_jobs=-1,
+            class_weight="balanced", random_state=random_state, n_jobs=SKLEARN_N_JOBS,
         )
     elif model_name == "XGBoost":
         spw = (

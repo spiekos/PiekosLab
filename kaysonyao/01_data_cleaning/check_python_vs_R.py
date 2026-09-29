@@ -64,6 +64,22 @@ def main() -> None:
         col = d.mean(axis=0)
         print(f"\n  features with mean |diff| > 0.1: {(col > 0.1).sum()} / {len(col)}")
 
+    # TEST 5 case from validate_combat.R: features constant within a batch.
+    zin, zout = "validate_combat_zerovar_input.csv", "validate_combat_zerovar_sva_output.csv"
+    if os.path.exists(zin) and os.path.exists(zout):
+        dz = pd.read_csv(zin, index_col=0)
+        rz = pd.read_csv(zout, index_col=0)
+        Yz = dz.T.to_numpy(dtype=float)
+        model = ComBatRef(ref_batch=ref).fit(Yz, batch)
+        mz = model.transform(Yz, batch)
+        dd = np.abs(mz - rz.T.to_numpy(dtype=float))
+        print("\n=== constant-within-a-batch features (sva zero-variance rule) ===")
+        print(f"  features excluded by combat_ref.py: {model.n_zero_var_} (expect 2)")
+        print(f"  max |diff| vs sva::ComBat = {dd.max():.3e}")
+        print(f"  VERDICT: {'MATCHES' if dd.max() < 1e-8 else 'DIVERGES'}")
+    else:
+        print("\n(zero-variance case not found - rerun `Rscript validate_combat.R` to create it)")
+
 
 if __name__ == "__main__":
     main()

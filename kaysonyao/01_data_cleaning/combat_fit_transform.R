@@ -43,12 +43,8 @@ suppressPackageStartupMessages({
   list(gamma.star = g.old, delta.star = d.old)
 }
 
-#' Fit ComBat on the training split.
-#' @param dat      features x samples matrix (log2 scale, complete)
-#' @param batch    character vector of batch labels, length = ncol(dat)
-#' @param mod      optional model matrix of covariates to preserve (samples x k)
-#' @param ref.batch label of the reference batch
-combat_fit <- function(dat, batch, mod = NULL, ref.batch = NULL) {
+# Internal: the original, validated estimator. Call combat_fit() instead.
+.combat_fit_core <- function(dat, batch, mod = NULL, ref.batch = NULL) {
   dat <- as.matrix(dat)
   batch <- as.character(batch)
   batches_lvl <- unique(batch)
@@ -112,8 +108,8 @@ combat_fit <- function(dat, batch, mod = NULL, ref.batch = NULL) {
        features = rownames(dat))
 }
 
-#' Apply fitted ComBat parameters to new samples.
-combat_apply <- function(fit, dat, batch, mod = NULL) {
+# Internal: the original, validated transform. Call combat_apply() instead.
+.combat_apply_core <- function(fit, dat, batch, mod = NULL) {
   dat <- as.matrix(dat); batch <- as.character(batch)
   unseen <- setdiff(unique(batch), fit$batches_lvl)
   if (length(unseen)) {
@@ -151,6 +147,57 @@ combat_apply <- function(fit, dat, batch, mod = NULL) {
     ridx <- which(batch == fit$ref.batch)
     if (length(ridx)) out[, ridx] <- dat[, ridx]
   }
+  out
+}
+
+#' Fit ComBat on the training split.
+#'
+#' Features with zero variance within any batch of more than one sample are
+#' excluded from estimation and returned unadjusted by combat_apply(), exactly
+#' as sva::ComBat does ("Found N genes with uniform expression within a single
+#' batch ... these will not be adjusted for batch"). "Uniform" is tested as
+#' max == min, which is exact everywhere; sva's var(x) == 0 gives the same
+#' answer only when R's compensated variance returns exactly zero.
+#'
+#' Without it, a feature that is constant in the reference batch gets a pooled
+#' variance of ~0; standardising by it produces enormous values that corrupt
+#' the empirical-Bayes priors shared by every feature, and the non-reference
+#' batches collapse to one value per feature. That happened to LIPD_placenta.
+#' @param dat      features x samples matrix (log2 scale, complete)
+#' @param batch    character vector of batch labels, length = ncol(dat)
+#' @param mod      optional model matrix of covariates to preserve (samples x k)
+#' @param ref.batch label of the reference batch
+combat_fit <- function(dat, batch, mod = NULL, ref.batch = NULL) {
+  dat <- as.matrix(dat); batch <- as.character(batch)
+  zero.rows.lst <- lapply(unique(batch), function(batch_level) {
+    if (sum(batch == batch_level) > 1) {
+      which(apply(dat[, batch == batch_level, drop = FALSE], 1,
+                  function(x) max(x) == min(x)))
+    } else integer(0)
+  })
+  zero.rows <- Reduce(union, zero.rows.lst)
+  keep.rows <- setdiff(seq_len(nrow(dat)), zero.rows)
+  if (length(zero.rows) > 0) {
+    cat(sprintf(paste0("Found %d features with uniform expression within a single batch; ",
+                       "these will not be adjusted for batch.\n"), length(zero.rows)))
+  }
+  fit <- .combat_fit_core(dat[keep.rows, , drop = FALSE], batch, mod = mod,
+                          ref.batch = ref.batch)
+  fit$keep.rows  <- keep.rows
+  fit$n.features <- nrow(dat)
+  fit
+}
+
+#' Apply fitted ComBat parameters to new samples. Features excluded at fit time
+#' (zero variance within a batch) pass through unchanged.
+combat_apply <- function(fit, dat, batch, mod = NULL) {
+  dat <- as.matrix(dat)
+  keep <- if (is.null(fit$keep.rows)) seq_len(nrow(dat)) else fit$keep.rows
+  if (!is.null(fit$n.features) && nrow(dat) != fit$n.features) {
+    stop(sprintf("dat has %d features; fitted on %d.", nrow(dat), fit$n.features))
+  }
+  out <- dat
+  out[keep, ] <- .combat_apply_core(fit, dat[keep, , drop = FALSE], batch, mod = mod)
   out
 }
 

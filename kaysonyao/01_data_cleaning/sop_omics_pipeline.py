@@ -102,6 +102,13 @@ RESTRICT_SUBJECTS = None
 # rows are transformed using constants derived without them.
 FIT_ROW_IDS = None
 
+# Raw instrument sample name (whitespace removed) -> canonical master-table
+# SampleID. Filled by _load_metadata for each dataset. Needed because a few
+# exports name late-enrolment samples without their "E" (DP3-0163A for the
+# master table's DP3-0163EA); resolving through this map is what gives them the
+# right SubjectID (DP3-0163E) instead of one that exists in no split.
+SAMPLE_CANONICAL: dict[str, str] = {}
+
 # Set from --fit-split: SubjectIDs whose data may estimate parameters.
 FIT_SUBJECTS = None
 
@@ -537,6 +544,11 @@ def _load_metadata(meta_path: Path, config: DatasetConfig) -> pd.DataFrame:
     if alias_rows:
         meta = pd.concat([meta, pd.DataFrame(alias_rows)], axis=0)
         meta = meta[~meta.index.duplicated(keep="first")].copy()
+    SAMPLE_CANONICAL.clear()
+    SAMPLE_CANONICAL.update({
+        re.sub(r"\s+", "", str(name)): re.sub(r"\s+", "", str(canon))
+        for name, canon in meta["MetadataCanonicalID"].items()
+    })
     return meta
 
 
@@ -833,12 +845,23 @@ def _load_polarity_run(
 
 
 def _subject_id_from_sample(sample_name: str) -> str:
-    """DP3-0005A -> DP3-0005, DP3-0140EA -> DP3-0140.
+    """Participant ID for a sample, matching data/cleaned/locked_split.csv.
 
-    Mirrors the visit-suffix convention used when the final matrix is built:
-    a trailing A-E, optionally preceded by an 'E' for the postnatal series.
+        DP3-0005A  -> DP3-0005
+        DP3-0140EA -> DP3-0140E   (late-enrolment series keeps its E)
+        DP3-0163A  -> DP3-0163E   (export alias, resolved via SAMPLE_CANONICAL)
+
+    Whitespace is removed, the name is resolved to its canonical master-table
+    ID, then only the final visit letter (A-E) is stripped. This is the single
+    rule for both the fit/restrict row selection and the final SubjectID
+    column. Previously the two used different rules: row selection stripped
+    "E?[A-E]" (DP3-0140EA -> DP3-0140, in no split), so every late-enrolment
+    development participant was left out of the ComBat and imputation fit, and
+    export aliases got a SubjectID in no split, dropping them from modelling.
     """
-    return re.sub(r"E?[A-E]$", "", str(sample_name).strip())
+    name = re.sub(r"\s+", "", str(sample_name))
+    name = SAMPLE_CANONICAL.get(name, name)
+    return re.sub(r"[A-E]$", "", name)
 
 
 def _restrict_to_subjects(
@@ -2719,7 +2742,7 @@ def _merge_polarities(
             f"{config.dataset_id}: averaged samples lacking metadata were dropped: {missing_samples}."
         )
     merged = merged[merged["Group"].notna()].copy()
-    subject_ids = merged.index.to_series().str.replace(r"[A-E]$", "", regex=True)
+    subject_ids = merged.index.to_series().map(_subject_id_from_sample)
     ordered_meta_cols = [
         "Group",
         "Subgroup",
