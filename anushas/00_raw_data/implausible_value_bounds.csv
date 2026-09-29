@@ -1,0 +1,17 @@
+Measurement,Category,Source column(s),Unit,Keep min,Keep max,Treat as missing if,Rationale,Basis
+Steps (daily),Activity,activities_summary_steps,count,100,45000,<100 or >45000,"Floor is 100, not 0: a worn person always logs incidental steps, so 0-99 = non-wear/error. Upper is the pregnancy-cohort standard.",AoU pregnancy Fitbit study (AJOG MFM 2025)
+Total distance,Activity,activities_summary_totaldistances,km,0.05,60,<0.05 or >60,"Inspire 3 has NO onboard GPS: distance = steps x stride, so it is bounded by the step cap. 60 km ~= 45,000 steps at a long running stride. Confirm km vs miles.",Derived from step cap + device (no GPS)
+Very active minutes,Activity,activities_summary_veryactiveminutes,min,0,600,>600,0 is a REAL value in pregnancy (MVPA is low and declining; typical <30 min/day). Upper is a loose gross-error cap.,Judgment; AoU intensity distributions
+Fairly active minutes,Activity,activities_summary_fairlyactiveminutes,min,0,600,>600,0 plausible. Loose gross-error upper cap.,Judgment
+Lightly active minutes,Activity,activities_summary_lightlyactiveminutes,min,0,1440,>1440,"Very low LPA on a worn day is unusual but is caught by the wear-time day filter, not a hard floor here.",Judgment
+Sedentary minutes,Activity,activities_summary_sedentaryminutes,min,0,1440,>1440,Cannot exceed the day. ~1440 combined with steps<100 and no HR = non-wear -> drop the DAY (see Day-validity).,Judgment
+Calories out (total EE),Activity,activities_summary_caloriesout,kcal,1000,6000,<1000 or >6000,"Total EE must be >= BMR. AoU median BMR ~1,474 kcal, median total EE ~2,100 kcal; <1000 => non-wear/error.",AoU activity study (BMR/EE medians)
+Activity calories,Activity,activities_summary_activitycalories,kcal,0,5000,>5000,0 plausible on a sedentary day; upper is a gross-error cap.,Judgment
+Resting heart rate,Physiological,heart_rate_resting_heart_rate,bpm,35,120,<35 or >120,Athletic lows reach ~35. Pregnancy shifts RHR UP (+10-20 bpm); sustained resting >120 or <35 = error/pathology.,Physiology; pregnancy RHR shift
+Total minutes asleep,Sleep,sleep_summary_total_minutes_asleep,min,0,1440,<=0 or >1440,Hard bound = 0-24 h. Do NOT null short nights at value level; instead apply the PERSON-level rule (see Day-validity): exclude if >30% of days <240 min (4 h).,AoU pregnancy Fitbit study (0-24 h; <4 h rule)
+Total time in bed,Sleep,sleep_summary_total_time_in_bed,min,0,1440,<=0 or >1440,0-24 h. Must be >= total minutes asleep (see Consistency).,AoU pregnancy study bound
+Sleep stage: deep,Sleep,sleep_summary_stages_deep,min,0,300,>300,Stage-classified nights only. Stage-sum check does the real validation.,Physiology + stage-sum check
+Sleep stage: light,Sleep,sleep_summary_stages_light,min,0,700,>700,Stage-classified nights only.,Physiology + stage-sum check
+Sleep stage: REM,Sleep,sleep_summary_stages_rem,min,0,360,>360,Stage-classified nights only.,Physiology + stage-sum check
+Sleep stage: wake,Sleep,sleep_summary_stages_wake,min,0,360,>360,Wake within the sleep period (WASO).,Physiology + stage-sum check
+Total sleep records,Sleep (QC),sleep_summary_total_sleep_records,count,1,10,<1 or >10,"Data-quality/nap indicator, not an exposure. >1 flags naps/fragmentation to reconcile.",Judgment

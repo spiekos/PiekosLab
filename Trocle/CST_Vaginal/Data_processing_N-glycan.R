@@ -30,8 +30,9 @@ metadata_crib <- tibble(
   Stats_Label    = as.character(raw_df[4, ])
 ) |> 
   filter(Column_Index > 3) |>
-  filter(!Stats_Label %in% c("Medium", "SD")) |>
+  filter(!Stats_Label %in% c("Median", "SD"))|>
   filter(!is.na(Sample_ID), Birth_Outcome != "NA", Birth_Outcome != "")
+stopifnot(!any(metadata_crib$Stats_Label %in% c("Medium", "Mean", "Avg", "STDEV")))
 
 # Clean abundance matrix
 abundance_matrix_crib <- raw_df |> 
@@ -39,11 +40,11 @@ abundance_matrix_crib <- raw_df |>
   rename(mz = ...1, glycan_name = ...3) |> 
   slice(-(1:4)) |> 
   filter(!(glycan_name %in% rows_to_discard)) |> 
-  # Keyword filter to remove Internal Standard (1271)
   filter(!str_detect(glycan_name, "1271|IS|13C6")) |> 
+  mutate(mz = as.numeric(mz)) |> 
   filter(!is.na(mz)) |> 
   mutate(
-    mz = round(as.numeric(mz), 4),
+    mz = round(mz, 4),
     across(-c(mz, glycan_name), as.numeric)
   )
 
@@ -82,12 +83,12 @@ abundance_matrix_spec <- raw_df_spec |>
   rename(mz = ...2, glycan_name = ...4) |> 
   slice(-(1:6)) |> 
   filter(!(glycan_name %in% rows_to_discard)) |> 
-  # Keyword filter to remove Internal Standard (1271)
   filter(!str_detect(glycan_name, "1271|IS|13C6")) |> 
+  mutate(mz = as.numeric(mz)) |> 
   filter(!is.na(mz)) |> 
   mutate(
-    mz = round(as.numeric(mz), 4),
-    across(-c(mz, glycan_name), ~ round(as.numeric(.), 2))
+    mz = round(mz, 4),
+    across(-c(mz, glycan_name), as.numeric)
   )
 
 # Set clean names and format final objects
@@ -185,22 +186,28 @@ spec_step3 <- run_missingness_filter(matrix_spec_na, metadata_final_spec, "SPEC"
 ## Step 4: Missing Value Imputation (1/2 Minimum)
 
 impute_half_min <- function(filtered_matrix) {
+  filtered_matrix <- ungroup(filtered_matrix)   # apply_clr returns all zeros if grouped
   sample_cols <- setdiff(colnames(filtered_matrix), c("mz", "glycan_name"))
   
-  imputed_df <- filtered_matrix |> 
-    rowwise() |> 
-    mutate(across(all_of(sample_cols), ~ {
-      if(is.na(.)) {
-        obs_vals <- c_across(all_of(sample_cols))
-        return(min(obs_vals, na.rm = TRUE) / 2)
-      } else { . }
-    })) |> 
-    ungroup()
+  M <- as.matrix(filtered_matrix[sample_cols])
+  if (!is.numeric(M)) stop("Non-numeric values in sample columns")
+  
+  # Half-minimum per glycan, computed ONCE from observed values only.
+  # Must not be computed inside a rowwise/across loop: imputed values would
+  # re-enter the minimum and cascade (min/2, then min/4, then min/8, ...).
+  half_min <- apply(M, 1, function(r) min(r, na.rm = TRUE) / 2)
+  if (any(!is.finite(half_min))) stop("Glycan row with no observed values")
+  
+  idx <- which(is.na(M), arr.ind = TRUE)
+  M[idx] <- half_min[idx[, "row"]]
   
   # Ensure no zeros / NAs remain
-  if (any(imputed_df[sample_cols] <= 0) | any(is.na(imputed_df[sample_cols]))) {
+  if (any(M <= 0) || any(is.na(M))) {
     stop("Non-positive or NA values")
   }
+  
+  imputed_df <- filtered_matrix
+  imputed_df[sample_cols] <- as.data.frame(M)
   
   return(imputed_df)
 }
@@ -228,7 +235,13 @@ matrix_spec_clr <- apply_clr(matrix_spec_imputed)
 
 integrate_metadata <- function(clr_df, metadata) {
   clr_prepared <- clr_df |> 
-    mutate(mz_label = paste0(round(mz, 4), "_", glycan_name)) |> 
+    mutate(mz_label = paste0(
+      "g", round(mz, 4), "_",
+      glycan_name |>
+        str_squish() |>
+        str_replace_all("[^A-Za-z0-9]+", "_") |>
+        str_remove("_$")
+    )) |> 
     select(-mz, -glycan_name)
   
   transposed_df <- clr_prepared |> 

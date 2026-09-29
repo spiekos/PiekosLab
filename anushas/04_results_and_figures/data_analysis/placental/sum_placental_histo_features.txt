@@ -1,0 +1,16 @@
+This file contains the sum of the values in each column corresponding to a placental histopathology feature.
+
+Note that the following columns were dropped from the dataset because these features were not present in any patient:
+retroplacental hemorrhage, vascular thrombosis, villous stromal vascular karyorrhexis, vascular intramural fibrin deposition,
+stem vessel obliteration/fibromuscular sclerosis, vascular ectasia, fetal inflammatory response stage/grade/location, diffuse villous edema,
+and placental hypoplasia.
+
+
+gestational_age_at_delivery: 2097.0
+distal_villous_hypoplasia_focal/diffuse: 4
+accelerated_villous_maturation: 17
+increased_syncytial_knots: 15
+delayed_villous_maturation: 2
+increased_perivillous_fibrin_deposition: 2
+chorangiosis: 4
+spontaneous_preterm_birth: 11
