@@ -15,8 +15,8 @@ kaysonyao/
 ├── docs/                    this README, in-fold preprocessing plan, working notes, reorg manifest
 ├── 01_data_cleaning/        preprocessing (SOP pipeline, proteomics, survey, binning, split)
 │   └── combat_validation/   R/Python cross-check of combat_ref.py against sva::ComBat
-├── 02_exploratory_analysis/ differential analysis, heatmaps, enrichment input, survey plots
-├── 03_model_development/    nested-CV base models, held-out evaluation, older A-E tools
+├── 02_exploratory_analysis/ survey and water-quality analysis
+├── 03_model_development/    nested-CV base models, held-out evaluation
 ├── 04_results_and_figures/  all generated results and figures
 ├── data/                    see data/README.md
 ├── _legacy/                 git-ignored: last version of superseded scripts and docs
@@ -47,8 +47,8 @@ python 03_model_development/run_base_models.py --windows T1 T2 T3 T4 T5 \
 `data/processed/locked_split.csv` is the fixed 70/30 participant split; `make_locked_split.py`
 refuses to overwrite it. The 30% test set is read only by `run_holdout_evaluation.py`, once.
 
-Survey: `clean_survey_data.py` -> `02_exploratory_analysis/survey_distribution_analysis.py`,
-`water_quality_analysis.py` -> `03_model_development/run_survey_models.py`.
+Survey: `clean_survey_data.py` -> `02_exploratory_analysis/survey_distribution_analysis.py` and
+`water_quality_analysis.py`.
 
 ## Running the SOP pipeline from this folder
 

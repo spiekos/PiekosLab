@@ -3391,6 +3391,7 @@ def _trajectory_plots(
     if not selected:
         artifacts.qc_warnings.append(
             artifacts.qc_warnings.append(warn_msg)
+            )
         return
     traj_dir = output_dir / "trajectory_plots"
     _ensure_dir(traj_dir)

@@ -9,9 +9,8 @@ Run from the project root. Paths below are defaults; see `data/README.md` for th
 | `clean_proteomics_data.py` | Olink proteomics QC, panel normalisation, reference-batch ComBat, missingness, imputation | `data/raw/original/proteomics/npx/` | `data/processed/proteomics/` |
 | `bin_echo_windows.py` | Re-bin plasma into gestational windows, one sample per participant per window (midpoint rule) | `data/processed/...` | `data/processed/windows/` |
 | `make_locked_split.py` | The one participant-level 70/30 dev/test split (refuses to overwrite) | master table | `data/processed/locked_split.csv` |
-| `format_proteomics.py` | Older A-E visit-letter slicing of proteomics plasma (used by the older A-E tools) | `data/processed/proteomics/` | `data/processed/proteomics/normalized_sliced_by_suffix/` |
 | `clean_survey_data.py` | EPDS, PSS, PUQE-24, diet, water | `data/raw/original/survey/` | `data/processed/survey/` |
-| `utilities.py` | Shared helpers (metadata loading, Olink QC, `combat_normalize_wide` via ComBatRef) | imported | - |
+| `utilities.py` | Helpers for `clean_proteomics_data.py` (metadata loading, Olink QC, ComBat via ComBatRef, missingness, imputation) | imported | - |
 | `extraction/MTBL_extraction.py` | Kayla's metabolomics extraction (plasma, placenta). `python 01_data_cleaning/extraction/MTBL_extraction.py "<workbook>.xlsx" <out_dir>` | `data/raw/original/MTBL/<tissue>/` | `data/raw/extracted/MTBL/<tissue>/` |
 | `extraction/MTBL_extraction_urine.py` | Urine version (different sheet layout; batch pools BatchNPoolN, CumulativePool excluded). Same arguments | `data/raw/original/MTBL/urine/` | `data/raw/extracted/MTBL/urine/` |
 | `extraction/LIPD_extraction.py` | Lipid workbook -> `{pos,neg}_{batch,compounds,expression}.csv` (Kayla's extraction, lipid part, adapted to this layout). `python 01_data_cleaning/extraction/LIPD_extraction.py <plasma\|placenta> "<workbook>.xlsx"` | `data/raw/original/LIPD/<tissue>/` | `data/raw/extracted/LIPD/<tissue>/` |

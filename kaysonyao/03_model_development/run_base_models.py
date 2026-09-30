@@ -19,8 +19,8 @@ Placenta: a single unwindowed dataset. Placenta is collected once at delivery
 Development set only. The locked 30% test set is never read here - it is opened
 once, at final evaluation (F.5).
 
-Artifacts written per dataset/window, restoring the previous pipeline's outputs
-so `feature_interpretation.py` and `run_permutation_test.py` can consume them:
+Artifacts written per dataset/window (same file names as the previous
+pipeline's outputs):
 
     sample_splits.csv          SampleID, split, Group, label
     selected_features.csv      union of features surviving selection

@@ -27,11 +27,13 @@ Models
 ------
     LogisticRegression (elastic-net)  performs its own
                                       dimensionality reduction while fitting
-    RandomForest, XGBoost, SVM        comparators, each preceded by an explicit
+    RandomForest, XGBoost             comparators, each preceded by an explicit
                                       elastic-net selector step
 
+(SVM was dropped from the model list on 2026-09-30.)
+
 Class imbalance is handled by `class_weight="balanced"` for the logistic
-regression, random forest and SVM, and by `scale_pos_weight` for XGBoost, which
+regression and random forest, and by `scale_pos_weight` for XGBoost, which
 has no `class_weight` parameter.
 
 Reported
@@ -67,7 +69,6 @@ from sklearn.metrics import (
 from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import RobustScaler
-from sklearn.svm import SVC
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ N_BOOT = 1000
 # outcomes, which would be the wrong model for a binary endpoint.
 EN_LOGREG = "LogisticRegression (elastic-net)"
 
-MODEL_NAMES = [EN_LOGREG, "RandomForest", "XGBoost", "SVM"]
+MODEL_NAMES = [EN_LOGREG, "RandomForest", "XGBoost"]
 
 # ---------------------------------------------------------------------------
 # sklearn deprecated `penalty` in 1.8 (removal in 1.10): elastic net is now
@@ -273,18 +274,6 @@ def build_model(name: str, params: dict, y_train, random_state: int = RANDOM_STA
                 scale_pos_weight=scale_pos_weight(y_train),
                 eval_metric="logloss", random_state=random_state,
                 tree_method="hist", n_jobs=-1, verbosity=0,
-            )),
-        ])
-
-    if name == "SVM":
-        return Pipeline(_prep_steps() + [
-            ("select", _selector(random_state)),
-            ("clf", SVC(
-                kernel="rbf",
-                C=p.get("C", 1.0),
-                gamma=p.get("gamma", "scale"),
-                class_weight="balanced", probability=True,
-                random_state=random_state,
             )),
         ])
 

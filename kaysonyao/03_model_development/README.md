@@ -33,19 +33,11 @@ Per dataset/window it writes `summary.json` (headline metrics; `roc_auc_oof` is 
 value), `cv_results.csv`, `oof_predictions.csv`, `tuned_hyperparams.json`, `selected_features.csv`,
 fitted models and PR/ROC/importance plots; `<out>/model_metrics_all.csv` and `model_metrics_<assay>.csv` summarise all runs.
 
-## Older tools (A-E visit letters, 70/15/15 split era)
+## Retired
 
-Kept because they still run on proteomics (`format_proteomics.py` output) or survey data;
-not part of the current pipeline. Superseded scripts (`run_sop_models.py`, `run_sop_nodiff.py`,
-`run_echo_base_models.py`) are in `_legacy/scripts/`.
-
-| Script | Purpose |
-|---|---|
-| `binary_classifier.py`, `multilabel_classifier.py` | Control vs complication / HDP+FGR+sPTB per tissue and visit letter (proteomics default) |
-| `run_survey_models.py` | Binary + multilabel models on survey data (`data/processed/survey/model_ready/`) |
-| `run_permutation_test.py` | Permutation test on a saved binary model's PR-AUC |
-| `feature_interpretation.py` | SHAP, LIME and Gini importance for saved binary models |
-| `superset_differential_analysis.py`, `superset_enrichment_analysis.py` | Differential analysis / Enrichr on the LASSO feature superset |
-| `metabolomics_enrichment_analysis.py`, `run_pathway_analysis.py` | KEGG / HMDB pathway analysis of metabolomics differential results |
-
-Each script documents its flags in `--help`.
+SVM was removed from the model list on 2026-09-30. The A-E-era tools (`binary_classifier.py`,
+`multilabel_classifier.py`, `run_survey_models.py`, `run_permutation_test.py`,
+`feature_interpretation.py`, the superset / enrichment / pathway scripts and this folder's
+`utilities.py`) were retired the same day and are in `_legacy/scripts/a_e_tools/`. Earlier
+superseded scripts (`run_sop_models.py`, `run_sop_nodiff.py`, `run_echo_base_models.py`) are in
+`_legacy/scripts/`.

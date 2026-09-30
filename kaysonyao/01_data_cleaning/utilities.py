@@ -1,9 +1,9 @@
 """
 Shared utilities for the DP3 omics preprocessing pipeline.
 
-Imported by:
-    - clean_proteomics_data.py
-    - proteomics_diagnostics.py
+Imported by clean_proteomics_data.py (Olink proteomics cleaning). Helpers that
+only the retired A-E analysis tools used were removed on 2026-09-30; the full
+previous version is in _legacy/scripts/a_e_tools/01_data_cleaning/.
 """
 
 import logging
@@ -23,13 +23,6 @@ CONTROL_SAMPLE_PREFIXES = ("CONTROL", "NEG", "PLATE")
 # Canonical group label corrections — applied to the Group column at metadata load time
 # so every downstream output CSV carries consistent labels.
 _GROUP_LABEL_MAP = {"sptb": "sPTB"}
-
-# Columns produced by metadata loaders — used downstream to separate metadata
-# from analyte/feature columns when both share the same DataFrame.
-METADATA_COLS = [
-    "SubjectID", "Group", "Subgroup", "Batch", "GestAgeDelivery", "SampleGestAge",
-    "MetadataCanonicalID",
-]
 
 
 # -----------------------------
@@ -246,36 +239,6 @@ def _load_lipids_metadata(metadata_path: str) -> pd.DataFrame:
         len(meta_df), n_suffixed,
     )
     return meta_df
-
-
-# -----------------------------
-# Shared analyte/group helpers
-# (re-exported for use by 02_exploratory_analysis and 03_model_development)
-# -----------------------------
-def load_data(path: str) -> pd.DataFrame:
-    """Load a cleaned wide-format CSV (index=SampleID, columns=metadata+analytes)."""
-    return pd.read_csv(path, index_col=0)
-
-
-def get_analyte_columns(df: pd.DataFrame) -> list:
-    """Return analyte column names by excluding known metadata columns."""
-    return [c for c in df.columns if c not in METADATA_COLS]
-
-
-def normalise_group_labels(
-    df: pd.DataFrame,
-    group_col: str = "Group",
-) -> pd.DataFrame:
-    """Standardise group label capitalisation using _GROUP_LABEL_MAP (returns df for chaining)."""
-    if group_col in df.columns:
-        before = df[group_col].value_counts()
-        df = df.copy()
-        df[group_col] = df[group_col].replace(_GROUP_LABEL_MAP)
-        for old, canonical in _GROUP_LABEL_MAP.items():
-            n = before.get(old, 0)
-            if n > 0:
-                logger.info("Group label fix: '%s' → '%s' (%d sample(s))", old, canonical, n)
-    return df
 
 
 # -----------------------------

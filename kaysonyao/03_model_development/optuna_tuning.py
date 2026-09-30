@@ -59,12 +59,6 @@ def suggest_params(trial, model: str) -> dict:
             "reg_lambda": trial.suggest_float("reg_lambda", 1e-5, 1.0, log=True),
         }
 
-    if model == "SVM":
-        return {
-            "C": trial.suggest_float("C", 1e-2, 100.0, log=True),
-            "gamma": trial.suggest_categorical("gamma", ["scale", "auto"]),
-        }
-
     raise ValueError(f"Unknown model: {model}")
 
 

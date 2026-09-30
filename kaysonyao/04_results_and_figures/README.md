@@ -19,6 +19,4 @@ Where scripts write:
 | `trajectory_plots/<MTBL\|LIPD>/<tissue>/` | `01_data_cleaning/sop_omics_pipeline.py` |
 | `models_*/<DS>/<window>/`, `models_*/model_metrics_*.csv` | `03_model_development/run_base_models.py` (`--out`) |
 | `holdout_*/` | `03_model_development/run_holdout_evaluation.py` (`--out`) |
-| `differential_analysis/`, `heatmaps/`, `enrichment/` | `02_exploratory_analysis/` A-E scripts |
-| `models/binary/`, `models/multilabel/` | older `03_model_development/` A-E tools, survey models |
 | `survey/` | survey scripts in `02_exploratory_analysis/` |
