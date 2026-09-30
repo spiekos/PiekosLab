@@ -12,7 +12,7 @@ The governing SOP is the file at the project root:
 ```
 kaysonyao/
 ├── DP3_..._SOP_v7 JK Edits 08122026.docx   current SOP (only file kept at the root)
-├── docs/                    this README, working notes, reorganisation manifest
+├── docs/                    this README, in-fold preprocessing plan, working notes, reorg manifest
 ├── 01_data_cleaning/        preprocessing (SOP pipeline, proteomics, survey, binning, split)
 │   └── combat_validation/   R/Python cross-check of combat_ref.py against sva::ComBat
 ├── 02_exploratory_analysis/ differential analysis, heatmaps, enrichment input, survey plots
@@ -61,7 +61,7 @@ All inputs are in place for all five datasets (modification lists and urine extr
 - Parametric ComBat over-compression in metabolomics/lipidomics: mean-only vs non-parametric.
 - SOP v7 gaps in the code: Hex2Cer/Hex3Cer/CerPE not mapped, no per-class ISTD log,
   Step 16 neutral-lipid-only failures excluded instead of flagged for review.
-- In-fold refactor for imputation and Steps 5, 7, 16, 17, 18.
+- In-fold preprocessing: see docs/infold_preprocessing_plan.md.
 
 ## Environment
 
