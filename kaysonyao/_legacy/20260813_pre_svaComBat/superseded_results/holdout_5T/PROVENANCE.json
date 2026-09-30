@@ -1,5 +1,0 @@
-{
-  "windows_root": "data/cleaned/windows_dp3_5t_ft_20260812",
-  "n_trials": 40,
-  "note": "Test set evaluated once. Preprocessing fitted on dev only (--blind-combat --fit-split dev)."
-}

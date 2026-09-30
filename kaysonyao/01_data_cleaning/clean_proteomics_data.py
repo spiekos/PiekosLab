@@ -233,10 +233,10 @@ if __name__ == "__main__":
     def _run_default_mode() -> None:
         """Backward-compatible run mode (current behavior)."""
         wkdir = os.getcwd()
-        data_dir = os.path.join(wkdir, "data", "proteomics")
-        output_dir = os.path.join(wkdir, "data", "cleaned", "proteomics", "normalized_full_results")
+        data_dir = os.path.join(wkdir, "data", "raw", "original", "proteomics", "npx")
+        output_dir = os.path.join(wkdir, "data", "processed", "proteomics")
         os.makedirs(output_dir, exist_ok=True)
-        metadata_path = os.path.join(wkdir, "data", "dp3 master table v2.xlsx")
+        metadata_path = os.path.join(wkdir, "data", "raw", "original", "dp3 master table v2.xlsx")
 
         plasma_files, placenta_files = collect_olink_files(data_dir)
         logger.info(
@@ -314,13 +314,13 @@ if __name__ == "__main__":
 
         wkdir = os.getcwd()
         metadata_path = args.metadata_path or os.path.join(
-            wkdir, "data", "dp3 master table v2.xlsx"
+            wkdir, "data", "raw", "original", "dp3 master table v2.xlsx"
         )
 
         if args.mode == "auto":
-            data_dir = args.data_dir or os.path.join(wkdir, "data", "proteomics")
+            data_dir = args.data_dir or os.path.join(wkdir, "data", "raw", "original", "proteomics", "npx")
             output_dir = args.output_dir or os.path.join(
-                wkdir, "data", "cleaned", "proteomics", "normalized_full_results"
+                wkdir, "data", "processed", "proteomics"
             )
             os.makedirs(output_dir, exist_ok=True)
 

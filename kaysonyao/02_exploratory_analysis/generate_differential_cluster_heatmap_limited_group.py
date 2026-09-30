@@ -189,10 +189,10 @@ def _run_default_mode_for_omics(omics_type: str) -> None:
         has_placenta = True
 
     cleaned_dir_plasma = os.path.join(
-        wkdir, "data", "cleaned", data_subdir, "normalized_sliced_by_suffix"
+        wkdir, "data", "processed", data_subdir, "normalized_sliced_by_suffix"
     )
     cleaned_dir_placenta = os.path.join(
-        wkdir, "data", "cleaned", data_subdir, "normalized_full_results"
+        wkdir, "data", "processed", data_subdir
     )
     if omics_type != "proteomics":
         diff_dir = os.path.join(
@@ -280,10 +280,10 @@ if __name__ == "__main__":
     def _run_default_mode() -> None:
         wkdir               = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         cleaned_dir_placenta = os.path.join(
-            wkdir, "data", "cleaned", "proteomics", "normalized_full_results"
+            wkdir, "data", "processed", "proteomics"
         )
         cleaned_dir_plasma  = os.path.join(
-            wkdir, "data", "cleaned", "proteomics", "normalized_sliced_by_suffix"
+            wkdir, "data", "processed", "proteomics", "normalized_sliced_by_suffix"
         )
         diff_dir    = os.path.join(wkdir, "04_results_and_figures", "differential_analysis")
         heatmap_dir = os.path.join(wkdir, "04_results_and_figures", "heatmaps")

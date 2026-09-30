@@ -16,22 +16,22 @@ dropped.
 
 Input
 -----
-  data/survey/epds_raw.csv
-  data/survey/pss_raw.csv
-  data/survey/puqe24_raw.csv
-  data/survey/diet_raw.csv
-  data/survey/water.csv
-  data/dp3 master table v2.xlsx  (sheet: 'clinical data')
+  data/raw/original/survey/epds_raw.csv
+  data/raw/original/survey/pss_raw.csv
+  data/raw/original/survey/puqe24_raw.csv
+  data/raw/original/survey/diet_raw.csv
+  data/raw/original/survey/water.csv
+  data/raw/original/dp3 master table v2.xlsx  (sheet: 'clinical data')
     Authoritative source for SubjectID → Group / Subgroup for all
     enrolled subjects (n=437 rows; ~364 with valid analysis groups).
 
 Output
 ------
-  data/survey/cleaned/epds_cleaned.csv
-  data/survey/cleaned/pss_cleaned.csv
-  data/survey/cleaned/puqe24_cleaned.csv
-  data/survey/cleaned/diet_cleaned.csv
-  data/survey/cleaned/water_cleaned.csv
+  data/processed/survey/epds_cleaned.csv
+  data/processed/survey/pss_cleaned.csv
+  data/processed/survey/puqe24_cleaned.csv
+  data/processed/survey/diet_cleaned.csv
+  data/processed/survey/water_cleaned.csv
 
 Cleaning steps
 --------------
@@ -73,9 +73,9 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 HERE       = os.path.dirname(os.path.abspath(__file__))
 ROOT       = os.path.dirname(HERE)
-SURVEY_RAW = os.path.join(ROOT, "data", "survey")
-SURVEY_OUT = os.path.join(ROOT, "data", "cleaned", "survey")
-MASTER_XLSX = os.path.join(ROOT, "data", "dp3 master table v2.xlsx")
+SURVEY_RAW = os.path.join(ROOT, "data", "raw", "original", "survey")
+SURVEY_OUT = os.path.join(ROOT, "data", "processed", "survey")
+MASTER_XLSX = os.path.join(ROOT, "data", "raw", "original", "dp3 master table v2.xlsx")
 
 # Groups retained for analysis — others (SAB, LTFU, Withdraw, excluded) dropped
 VALID_GROUPS = {"Control", "FGR", "HDP", "sPTB"}

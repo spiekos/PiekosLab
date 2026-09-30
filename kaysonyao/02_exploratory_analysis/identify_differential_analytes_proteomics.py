@@ -203,10 +203,10 @@ if __name__ == "__main__":
 
         prefix = file_prefix   # used for file-name patterns
         cleaned_dir_placenta = os.path.join(
-            wkdir, "data", "cleaned", data_subdir, "normalized_full_results"
+            wkdir, "data", "processed", data_subdir
         )
         cleaned_dir_plasma = os.path.join(
-            wkdir, "data", "cleaned", data_subdir, "normalized_sliced_by_suffix"
+            wkdir, "data", "processed", data_subdir, "normalized_sliced_by_suffix"
         )
         output_dir = os.path.join(
             wkdir, "04_results_and_figures", "differential_analysis",

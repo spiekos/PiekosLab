@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SURVEY_DIR = os.path.join(ROOT, "data", "cleaned", "survey")
-MODEL_READY_ROOT = os.path.join(ROOT, "data", "cleaned", "survey", "model_ready")
+SURVEY_DIR = os.path.join(ROOT, "data", "processed", "survey")
+MODEL_READY_ROOT = os.path.join(ROOT, "data", "processed", "survey", "model_ready")
 OUT_BINARY_ROOT = os.path.join(ROOT, "04_results_and_figures", "models", "binary", "survey")
 OUT_MULTI_ROOT = os.path.join(ROOT, "04_results_and_figures", "models", "multilabel", "survey")
 

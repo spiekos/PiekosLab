@@ -1,5 +1,10 @@
 # 02 Exploratory Analysis
 
+> Status (2026-09-29): these scripts predate the switch to gestational windows (T1-T5).
+> The differential/heatmap/enrichment scripts read A-E visit-letter files: proteomics from
+> `format_proteomics.py` output, metabolomics/lipidomics from the old pipeline's `*_suffix_{A-E}.csv`.
+> Their previous results were moved to `_to_delete/` as outdated. The survey scripts are current.
+
 Differential analysis and visualization pipeline for DP3 multi-omics and survey data.
 All scripts are run from the **project root** (the directory containing the `data/` folder).
 
@@ -11,7 +16,7 @@ All scripts are run from the **project root** (the directory containing the `dat
 |---|---|
 | `utilities.py` | Shared library — statistical functions and plotting for all differential analysis scripts |
 | `identify_differential_analytes_proteomics.py` | Differential analysis for cleaned Olink proteomics outputs |
-| `run_sop_differential.py` | Differential analysis for SOP v4 metabolomics + lipidomics outputs (MTBL_sop / LIPD_sop) |
+| `run_sop_differential.py` | Differential analysis for `sop_omics_pipeline.py` metabolomics + lipidomics outputs (MTBL_sop / LIPD_sop) |
 | `generate_differential_cluster_heatmap_limited_group.py` | Z-score heatmaps from differential results |
 | `prepare_enrichr_input_proteomics.py` | Directional gene lists + Enrichr API enrichment for proteomics |
 | `survey_distribution_analysis.py` | Score distributions + group comparisons for EPDS, PSS, PUQE-24, diet |
@@ -71,7 +76,7 @@ python 02_exploratory_analysis/identify_differential_analytes_proteomics.py
 # Cross-sectional on a single CSV
 python 02_exploratory_analysis/identify_differential_analytes_proteomics.py \
     --mode cross_sectional \
-    --input data/cleaned/proteomics/normalized_sliced_by_suffix/proteomics_plasma_formatted_suffix_C.csv \
+    --input data/processed/proteomics/normalized_sliced_by_suffix/proteomics_plasma_formatted_suffix_C.csv \
     --output-dir 04_results_and_figures/differential_analysis/plasma/cross_sectional/C
 ```
 
@@ -92,7 +97,7 @@ python 02_exploratory_analysis/identify_differential_analytes_proteomics.py \
 
 ### `run_sop_differential.py`
 
-Runs cross-sectional and longitudinal differential analysis on SOP v4 pipeline outputs.
+Runs cross-sectional and longitudinal differential analysis on `sop_omics_pipeline.py` outputs.
 Supports `MTBL_sop` (metabolomics) and `LIPD_sop` (lipidomics).
 
 For `MTBL_sop`: runs placenta cross-sectional **and** all plasma timepoints (A–E) cross-sectional
@@ -106,7 +111,9 @@ Also produces:
 - **MetaboAnalyst exports** — formatted CSVs with m/z + RT from feature metadata for upload to MetaboAnalyst
 
 **Inputs:** Expects cleaned CSVs from `sop_omics_pipeline.py` under
-`data/cleaned/sop_omics_pipeline_v2/<TISSUE>/`.
+`data/processed/<MTBL|LIPD>/<tissue>/`. It looks for
+`<DS>_suffix_{A-E}.csv` (old pipeline); `sop_omics_pipeline.py` now writes `<DS>_T1..T5.csv`,
+so update the file pattern in `run_sop_differential.py` before using it on new outputs.
 
 **Usage:**
 
@@ -238,7 +245,7 @@ Score distributions and group comparisons for EPDS, PSS, PUQE-24, and diet surve
 - Two-sample KS test: pairwise Control vs FGR / HDP / sPTB at each visit
 - BH FDR: corrected per survey × visit
 
-**Inputs:** `data/survey/cleaned/{epds,pss,puqe24,diet}_cleaned.csv`
+**Inputs:** `data/processed/survey/{epds,pss,puqe24,diet}_cleaned.csv`
 
 **Outputs:** `04_results_and_figures/survey/<survey>/`
 - `{survey}_{visit}_distribution.png` — violin + strip plots
@@ -256,7 +263,7 @@ python 02_exploratory_analysis/survey_distribution_analysis.py
 Compares THM exposure metrics (average concentrations and exceedance rates) between Control
 and each complication group. Kruskal-Wallis + pairwise Mann-Whitney with BH FDR.
 
-**Input:** `data/survey/cleaned/water_cleaned.csv`
+**Input:** `data/processed/survey/water_cleaned.csv`
 
 **Outputs:** `04_results_and_figures/survey/water/`
 

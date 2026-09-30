@@ -5,7 +5,7 @@ rates) between Control and each complication group (FGR, HDP, sPTB).
 
 Input
 -----
-  data/cleaned/survey/water_cleaned.csv
+  data/processed/survey/water_cleaned.csv
     Must contain columns produced by clean_survey_data.py:
       SubjectID, Group, Subgroup,
       TTHM_avg, Br.THM_avg, CHCl3_avg, CHBr3_avg, BDCM_avg, CDBM_avg,
@@ -56,7 +56,7 @@ warnings.filterwarnings("ignore")
 # ---------------------------------------------------------------------------
 HERE      = os.path.dirname(os.path.abspath(__file__))
 ROOT      = os.path.dirname(HERE)
-WATER_CSV = os.path.join(ROOT, "data", "cleaned", "survey", "water_cleaned.csv")
+WATER_CSV = os.path.join(ROOT, "data", "processed", "survey", "water_cleaned.csv")
 OUT_DIR   = os.path.join(ROOT, "04_results_and_figures", "survey", "water")
 os.makedirs(OUT_DIR, exist_ok=True)
 

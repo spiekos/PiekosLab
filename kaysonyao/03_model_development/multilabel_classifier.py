@@ -393,7 +393,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--plasma-dir",
         default=os.path.join(
-            wkdir, "data", "cleaned", "proteomics", "normalized_sliced_by_suffix"
+            wkdir, "data", "processed", "proteomics", "normalized_sliced_by_suffix"
         ),
         help="Directory with per-timepoint plasma CSVs.",
     )
@@ -401,7 +401,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--placenta-csv",
         default=os.path.join(
             wkdir,
-            "data", "cleaned", "proteomics", "normalized_full_results",
+            "data", "processed", "proteomics",
             "proteomics_placenta_cleaned_with_metadata.csv",
         ),
         help="Path to placenta cleaned CSV.",

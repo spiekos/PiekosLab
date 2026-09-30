@@ -41,7 +41,11 @@ logger = logging.getLogger(__name__)
 COMPLICATIONS = ["HDP", "FGR", "sPTB"]
 METADATA_COLS = {
     "SampleID", "SubjectID", "Batch", "Group", "Subgroup",
-    "GestAgeDelivery", "SampleGestAge", "MetadataCanonicalID", "Timepoint", "Tissue",
+    "GestAgeDelivery", "SampleGestAge", "MetadataCanonicalID",
+    "Timepoint", "Tissue",
+    # Added by sop_omics_pipeline.py (1-5 or "Delivery"). Must never be a feature:
+    # it is ~constant within a window except for delivery samples, which it flags.
+    "SampleTimepoint",
 }
 
 
@@ -120,7 +124,7 @@ def main():
         raise SystemExit(f"{out_root} exists. The held-out set survives one look; pass --force "
                          "only if you intend to overwrite a previous evaluation.")
     os.makedirs(out_root, exist_ok=True)
-    locked = pd.read_csv(os.path.join(root, "data", "cleaned", "locked_split.csv"))
+    locked = pd.read_csv(os.path.join(root, "data", "processed", "locked_split.csv"))
 
     jobs = []
     for ds in ("MTBL_plasma", "LIPD_plasma"):
@@ -128,7 +132,7 @@ def main():
             jobs.append((ds, w, os.path.join(root, args.windows_root, ds, f"{ds}_echo_{w}.csv")))
     if args.placenta_root:
         for ds in ("MTBL_placenta", "LIPD_placenta"):
-            jobs.append((ds, "all", os.path.join(root, args.placenta_root, ds,
+            jobs.append((ds, "all", os.path.join(root, args.placenta_root, *ds.split("_", 1),
                                                  f"{ds}_cleaned_with_metadata.csv")))
 
     rows = []
@@ -156,7 +160,7 @@ def main():
         logger.info("  best on dev (OOF PR-AUC): %s = %.3f", best, res[best]["pr_auc_oof"])
 
         assay = "Metabolomics" if ds.startswith("MTBL") else "Lipidomics"
-        tissue = "placenta" if "placenta" in ds else "plasma"
+        tissue = ds.split("_", 1)[1]  # plasma / placenta / urine
         for model, m in res.items():
             params = m["best_params_per_fold"][
                 int(np.argmax([f["pr_auc"] for f in m["per_fold"]]))]

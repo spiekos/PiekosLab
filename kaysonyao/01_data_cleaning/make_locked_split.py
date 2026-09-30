@@ -26,7 +26,7 @@ on 4 levels leaves cells too small to split stably.
 
 Output
 ------
-`data/cleaned/locked_split.csv` with columns:
+`data/processed/locked_split.csv` with columns:
     SubjectID, split ("dev"|"test"), Group, any_complication
 """
 
@@ -52,7 +52,7 @@ RANDOM_STATE = 42
 
 # Subject roster is taken from the master table so the split covers every
 # participant, not only those with a given assay.
-ROSTER = "data/dp3 master table v2.xlsx"
+ROSTER = "data/raw/original/dp3 master table v2.xlsx"
 ROSTER_SHEET = "variables of interest"
 
 
@@ -92,7 +92,7 @@ def main() -> None:
     args = parser.parse_args()
 
     root = os.path.abspath(args.repo_root)
-    out_path = os.path.join(root, "data", "cleaned", "locked_split.csv")
+    out_path = os.path.join(root, "data", "processed", "locked_split.csv")
 
     if os.path.exists(out_path) and not args.force:
         logger.error(

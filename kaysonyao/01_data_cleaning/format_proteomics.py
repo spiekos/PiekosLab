@@ -187,15 +187,14 @@ def main() -> None:
     input_csv = args.input_csv or os.path.join(
         wkdir,
         "data",
-        "cleaned",
+        "processed",
         "proteomics",
-        "normalized_full_results",
         "proteomics_plasma_cleaned_with_metadata.csv",
     )
     output_dir = args.output_dir or os.path.join(
         wkdir,
         "data",
-        "cleaned",
+        "processed",
         "proteomics",
         "normalized_sliced_by_suffix",
     )

@@ -204,8 +204,8 @@ marimo/_lsp/
 __marimo__/
 
 # Data files Extensions
-.xlsx
-.csv
+*.xlsx
+*.csv
 .DS_Store
 data/
 processed_data/
@@ -221,3 +221,8 @@ note.text
 note.md
 heatmap_guide.docx
 *.docx
+
+# Local-only folders (added 2026-09-29)
+_legacy/
+_to_delete/
+~$*

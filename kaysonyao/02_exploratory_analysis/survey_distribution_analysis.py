@@ -14,7 +14,7 @@ Statistical approach
 
 Input
 -----
-  data/cleaned/survey/{epds,pss,puqe24,diet}_cleaned.csv
+  data/processed/survey/{epds,pss,puqe24,diet}_cleaned.csv
 
 Output
 ------
@@ -49,7 +49,7 @@ warnings.filterwarnings("ignore")
 # ---------------------------------------------------------------------------
 HERE       = os.path.dirname(os.path.abspath(__file__))
 ROOT       = os.path.dirname(HERE)
-SURVEY_DIR = os.path.join(ROOT, "data", "cleaned", "survey")
+SURVEY_DIR = os.path.join(ROOT, "data", "processed", "survey")
 OUT_ROOT   = os.path.join(ROOT, "04_results_and_figures", "survey")
 
 PNG_DPI    = 300

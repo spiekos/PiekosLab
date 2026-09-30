@@ -1,4 +1,4 @@
-"""Re-bin plasma samples into gestational windows.
+"""Re-bin plasma and urine samples into gestational windows.
 
 Background
 ----------
@@ -30,8 +30,8 @@ earlier draw, which is the more clinically useful direction for an early-risk
 model. Re-binning is what creates this choice: under visit-letter slicing each
 participant already had exactly one sample per letter.
 
-Placenta datasets are excluded - placenta is collected once at delivery and
-carries no SampleGestAge.
+Plasma and urine (both longitudinal, with SampleGestAge) can be binned; placenta
+is excluded - it is collected once at delivery and carries no SampleGestAge.
 
 Outputs
 -------
@@ -93,9 +93,10 @@ SUBJ_COL = "SubjectID"
 SAMPLE_COL = "SampleID"
 
 DATASETS = {
-    "MTBL_plasma": "data/cleaned/sop_omics_pipeline/MTBL_plasma/MTBL_plasma_cleaned_with_metadata.csv",
-    "LIPD_plasma": "data/cleaned/sop_omics_pipeline/LIPD_plasma/LIPD_plasma_cleaned_with_metadata.csv",
-    "proteomics_plasma": "data/cleaned/proteomics/normalized_full_results/proteomics_plasma_cleaned_with_metadata.csv",
+    "MTBL_plasma": "data/processed/MTBL/plasma/MTBL_plasma_cleaned_with_metadata.csv",
+    "LIPD_plasma": "data/processed/LIPD/plasma/LIPD_plasma_cleaned_with_metadata.csv",
+    "MTBL_urine": "data/processed/MTBL/urine/MTBL_urine_cleaned_with_metadata.csv",
+    "proteomics_plasma": "data/processed/proteomics/proteomics_plasma_cleaned_with_metadata.csv",
 }
 
 
@@ -172,7 +173,7 @@ def bin_dataset(name: str, path: str, out_root: str) -> pd.DataFrame:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Re-bin plasma samples into ECHO gestational windows.")
+    parser = argparse.ArgumentParser(description="Re-bin plasma and urine samples into gestational windows.")
     parser.add_argument("--repo-root", default=os.getcwd())
     parser.add_argument(
         "--scheme", choices=sorted(WINDOW_SCHEMES), default="echo2",
@@ -182,17 +183,18 @@ def main() -> None:
     parser.add_argument(
         "--datasets", nargs="+", default=["MTBL_plasma", "LIPD_plasma"],
         help="Datasets to bin. With --source-root: folder names under it. "
-             "Without: keys of DATASETS (e.g. proteomics_plasma).",
+             "Without: keys of DATASETS (MTBL_plasma, LIPD_plasma, MTBL_urine, proteomics_plasma).",
     )
     parser.add_argument(
         "--source-root", default=None,
-        help="Pipeline output dir to bin (e.g. data/cleaned/sop_omics_pipeline_devfit). "
-             "Default: the label-aware sop_omics_pipeline output.",
+        help="sop_omics_pipeline.py --output-root to bin (e.g. data/processed_devfit); files "
+             "are read from <root>/<MTBL|LIPD>/<tissue>/<dataset>_cleaned_with_metadata.csv. "
+             "Default: the paths in DATASETS (data/processed/...).",
     )
     parser.add_argument(
         "--output-root",
         default=None,
-        help="Default: <repo-root>/data/cleaned/echo_windows",
+        help="Default: <repo-root>/data/processed/windows",
     )
     args = parser.parse_args()
 
@@ -209,11 +211,12 @@ def main() -> None:
     datasets = {k: v for k, v in DATASETS.items() if k in args.datasets}
     if args.source_root:
         datasets = {
-            name: os.path.join(args.source_root, name, f"{name}_cleaned_with_metadata.csv")
+            name: os.path.join(args.source_root, *name.split("_", 1),
+                               f"{name}_cleaned_with_metadata.csv")
             for name in args.datasets
         }
 
-    out_root = args.output_root or os.path.join(root, "data", "cleaned", "echo_windows")
+    out_root = args.output_root or os.path.join(root, "data", "processed", "windows")
     os.makedirs(out_root, exist_ok=True)
 
     logs = []

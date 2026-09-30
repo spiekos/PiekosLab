@@ -1,240 +1,51 @@
 # 03 Model Development
 
-Machine learning classification pipeline for DP3 multi-omics and survey data. Predicts pregnancy
-complications (binary: Control vs. Complication; multilabel: HDP, FGR, sPTB simultaneously) from
-plasma and placenta profiles.
+Run from the project root.
 
-## Scripts
+## Current pipeline (Aim 3A base models, gestational windows)
 
-| Script | Description |
+| Script | Purpose |
 |---|---|
-| `utilities.py` | Shared helpers: data loading, 70/15/15 split, LASSO feature selection, CV runners, evaluation metrics, plotting, superset feature collection |
-| `binary_classifier.py` | Binary classifiers (Control vs. pooled Complication) per tissue and timepoint; proteomics default |
-| `multilabel_classifier.py` | Joint multi-label classifier (HDP + FGR + sPTB) per tissue and timepoint; proteomics default |
-| `run_sop_models.py` | Binary classification on SOP v4 outputs (MTBL_sop / LIPD_sop) with differential pre-filtering |
-| `run_sop_nodiff.py` | Same as `run_sop_models.py` but skips differential pre-filtering (ablation) |
-| `run_survey_models.py` | Binary + multilabel classification on survey/environmental data (EPDS, PSS, PUQE-24, water) |
-| `run_permutation_test.py` | Permutation test (n=1000) on saved binary model PR-AUC |
-| `feature_interpretation.py` | SHAP, LIME, and Gini importance for trained binary models |
-| `superset_differential_analysis.py` | Differential analysis restricted to the LASSO superset |
-| `superset_enrichment_analysis.py` | Enrichr enrichment (GO:BP/MF/CC, KEGG, Reactome) on LASSO-selected proteomics features |
-| `metabolomics_enrichment_analysis.py` | KEGG REST API pathway enrichment on significant metabolomics analytes |
-| `run_pathway_analysis.py` | HMDB/KEGG pathway analysis for metabolomics via MetaboAnalyst-style name matching |
-
-`utilities.py` imports the shared data helpers (`load_data`, `get_analyte_columns`,
-`normalise_group_labels`, `METADATA_COLS`) from `01_data_cleaning/utilities.py` via `importlib`.
-
----
-
-## Pipeline overview
-
-```
-Cleaned CSV
-    │
-    ├─ 70 / 15 / 15 stratified split
-    │
-    ├─ Pearson correlation matrix (training features, pre-LASSO)
-    │
-    ├─ LASSO feature selection
-    │       binary:     L1 LogisticRegressionCV (saga solver)
-    │       multilabel: MultiTaskLassoCV
-    │
-    ├─ Pearson correlation matrix (post-LASSO features)
-    │
-    ├─ Optuna TPE hyperparameter tuning (n_trials=50 per model)
-    │       Trains on X_train, scores PR-AUC on X_val
-    │
-    ├─ 10-fold cross-validation on train set (tuned hyperparameters)
-    │       LogisticRegression | RandomForest | XGBoost | SVM
-    │
-    ├─ Best model (val PR-AUC) retrained on train+val
-    │
-    └─ Final evaluation on held-out test set
-```
-
----
-
-## Usage
-
-Run all scripts from the **project root**:
+| `run_base_models.py` | Base models per dataset x window (plus placenta), development participants only |
+| `nested_cv.py` | Nested CV: 5 outer x 3 inner `StratifiedGroupKFold` by SubjectID; imputation, scaling and elastic-net selection inside the Pipeline; pooled out-of-fold PR/ROC with 1000x bootstrap CI |
+| `optuna_tuning.py` | Optuna TPE search (40 trials) inside each outer fold, scored on inner folds only |
+| `run_holdout_evaluation.py` | One-look evaluation on the locked 30% test set; refuses to overwrite a previous result |
+| `utilities.py` | Shared helpers (sklearn estimators use `n_jobs=1`, see comments) |
 
 ```bash
-# ── Proteomics ──────────────────────────────────────────────────────────────
+# Windows produced by 01_data_cleaning/bin_echo_windows.py --scheme dp3_5t
+python 03_model_development/run_base_models.py --windows T1 T2 T3 T4 T5 \
+    --datasets MTBL_plasma LIPD_plasma MTBL_urine proteomics_plasma \
+    --out 04_results_and_figures/models_dp3_5t
 
-# Binary classifiers — all tissues, all timepoints
-python 03_model_development/binary_classifier.py
-
-# Multi-label — all tissues, all timepoints
-python 03_model_development/multilabel_classifier.py
-
-# Plasma only, timepoints A and B
-python 03_model_development/binary_classifier.py --timepoints A B --skip-placenta
-
-# Superset enrichment (proteomics LASSO features → Enrichr)
-python 03_model_development/superset_enrichment_analysis.py
-
-# ── SOP v4 (metabolomics / lipidomics) ──────────────────────────────────────
-
-# Binary classifiers with differential pre-filtering
-python 03_model_development/run_sop_models.py --dataset MTBL_sop
-python 03_model_development/run_sop_models.py --dataset LIPD_sop
-
-# Binary classifiers without pre-filtering (ablation)
-python 03_model_development/run_sop_nodiff.py
-
-# Permutation test on saved SOP model results
-python 03_model_development/run_permutation_test.py --dataset MTBL_sop
-
-# ── Survey / Environmental ───────────────────────────────────────────────────
-
-python 03_model_development/run_survey_models.py
-
-# ── Enrichment ───────────────────────────────────────────────────────────────
-
-# KEGG enrichment on metabolomics differential analytes
-python 03_model_development/metabolomics_enrichment_analysis.py
-
-# HMDB/KEGG pathway analysis (MetaboAnalyst-style)
-python 03_model_development/run_pathway_analysis.py
+# Final held-out evaluation (needs --fit-split dev preprocessing; run once)
+python 03_model_development/run_holdout_evaluation.py \
+    --windows-root data/processed/windows_devfit --placenta-root data/processed_devfit \
+    --windows T1 T2 T3 T4 T5 --out 04_results_and_figures/holdout_dp3_5t
 ```
 
----
+`run_base_models.py` defaults: `--windows-root data/processed/windows`,
+`--placenta-root data/processed` (reads `<root>/<MTBL|LIPD>/placenta/<DS>_cleaned_with_metadata.csv`),
+`--windows W1_early W2_mid W3_third` (pass `--windows` explicitly), `--skip-placenta` to omit placenta.
+Split: `data/processed/locked_split.csv`.
 
-## Input data
+Per dataset/window it writes `summary.json` (headline metrics; `roc_auc_oof` is the pooled
+value), `cv_results.csv`, `oof_predictions.csv`, `tuned_hyperparams.json`, `selected_features.csv`,
+fitted models and PR/ROC/importance plots; `<out>/model_metrics_all.csv` and `model_metrics_<assay>.csv` summarise all runs.
 
-| Omics | Tissue | Path | Notes |
-|---|---|---|---|
-| Proteomics | Plasma | `data/cleaned/proteomics/normalized_sliced_by_suffix/proteomics_plasma_formatted_suffix_{A-E}.csv` | One CSV per timepoint |
-| Proteomics | Placenta | `data/cleaned/proteomics/normalized_full_results/proteomics_placenta_cleaned_with_metadata.csv` | Single CSV |
-| MTBL_sop | Plasma | `data/cleaned/sop_omics_pipeline_v2/MTBL_plasma/MTBL_plasma_suffix_{A-E}.csv` | One CSV per timepoint |
-| MTBL_sop | Placenta | `data/cleaned/sop_omics_pipeline_v2/MTBL_placenta/MTBL_placenta_cleaned_with_metadata.csv` | Single CSV |
-| LIPD_sop | Plasma | `data/cleaned/sop_omics_pipeline_v2/LIPD_plasma/LIPD_plasma_suffix_{A-E}.csv` | One CSV per timepoint |
+## Older tools (A-E visit letters, 70/15/15 split era)
 
-All inputs are wide-format CSV with `index_col=0` (SampleID), metadata columns (`Group`,
-`Subgroup`, etc.), and one column per analyte. All values are in log2 scale.
+Kept because they still run on proteomics (`format_proteomics.py` output) or survey data;
+not part of the current pipeline. Superseded scripts (`run_sop_models.py`, `run_sop_nodiff.py`,
+`run_echo_base_models.py`) are in `_legacy/scripts/`.
 
----
+| Script | Purpose |
+|---|---|
+| `binary_classifier.py`, `multilabel_classifier.py` | Control vs complication / HDP+FGR+sPTB per tissue and visit letter (proteomics default) |
+| `run_survey_models.py` | Binary + multilabel models on survey data (`data/processed/survey/model_ready/`) |
+| `run_permutation_test.py` | Permutation test on a saved binary model's PR-AUC |
+| `feature_interpretation.py` | SHAP, LIME and Gini importance for saved binary models |
+| `superset_differential_analysis.py`, `superset_enrichment_analysis.py` | Differential analysis / Enrichr on the LASSO feature superset |
+| `metabolomics_enrichment_analysis.py`, `run_pathway_analysis.py` | KEGG / HMDB pathway analysis of metabolomics differential results |
 
-## Output structure
-
-```
-04_results_and_figures/models/
-│
-├── binary/
-│   ├── plasma/                         (proteomics)
-│   │   └── <timepoint A-E>/
-│   │       └── <outcome HDP|FGR|sPTB>/
-│   │           ├── sample_splits.csv
-│   │           ├── correlation_matrix_pretrain.png
-│   │           ├── correlation_matrix_postlasso.png
-│   │           ├── lasso_selected_features.csv
-│   │           ├── tuned_hyperparams.json
-│   │           ├── cv_results.csv
-│   │           ├── test_results.csv
-│   │           ├── summary.json
-│   │           ├── <BestModel>_pr_curve.png
-│   │           ├── <BestModel>_roc_curve.png
-│   │           └── <Model>_feature_importance.png
-│   ├── placenta/                        (proteomics)
-│   ├── all_results_summary.csv
-│   ├── superset_enrichment/             ← superset_enrichment_analysis.py
-│   │   ├── superset_features.csv
-│   │   └── <database>_enrichment.csv
-│   └── metabolomics/                   ← metabolomics_enrichment_analysis.py enrichment outputs
-│
-├── multilabel/
-│   ├── plasma/ placenta/               (proteomics)
-│   └── all_results_summary.csv
-│
-├── sop_models/                         ← run_sop_models.py
-│   ├── MTBL_sop/
-│   │   ├── plasma/<timepoint>/<outcome>/
-│   │   └── placenta/all/<outcome>/
-│   └── LIPD_sop/
-│       └── plasma/<timepoint>/<outcome>/
-│
-├── sop_nodiff/                         ← run_sop_nodiff.py
-│
-└── survey/                             ← run_survey_models.py
-    └── binary/ multilabel/
-```
-
----
-
-## Evaluation metrics
-
-Primary: **PR-AUC** (average precision), per the R21 grant specification.
-
-Also reported: ROC-AUC, Accuracy, Precision, Recall, F1.
-
-Class imbalance is handled via `class_weight='balanced'` (sklearn) and `scale_pos_weight` (XGBoost).
-
-Scaling: **RobustScaler** (median / IQR) is applied inside every CV fold, tuning trial, and final
-evaluation — never fit on val or test data.
-
----
-
-## CLI flags
-
-### `binary_classifier.py` / `multilabel_classifier.py`
-
-| Flag | Default | Description |
-|---|---|---|
-| `--plasma-dir` | `data/cleaned/proteomics/normalized_sliced_by_suffix/` | Per-timepoint plasma CSVs |
-| `--placenta-csv` | `data/cleaned/proteomics/normalized_full_results/proteomics_placenta_cleaned_with_metadata.csv` | Placenta CSV |
-| `--output-dir` | `04_results_and_figures/models/binary/` | Root output directory |
-| `--file-prefix` | `proteomics` | Filename prefix for plasma CSVs |
-| `--timepoints` | `A B C D E` | Plasma timepoints |
-| `--complications` | `HDP FGR sPTB` | Labels pooled as Complication |
-| `--n-trials` | `50` | Optuna trials per model |
-| `--skip-plasma` | False | Skip plasma |
-| `--skip-placenta` | False | Skip placenta |
-
-### `run_sop_models.py` / `run_sop_nodiff.py`
-
-| Flag | Default | Description |
-|---|---|---|
-| `--dataset` | both | `MTBL_sop` or `LIPD_sop` |
-| `--n-trials` | `50` | Optuna trials per model |
-| `--skip-plasma` | False | Skip plasma |
-| `--skip-placenta` | False | Skip placenta |
-
-### `run_survey_models.py`
-
-| Flag | Default | Description |
-|---|---|---|
-| `--surveys` | `epds pss puqe24 water` | Survey datasets to include |
-| `--n-trials` | `10` | Optuna trials per model |
-
-### `run_permutation_test.py`
-
-| Flag | Default | Description |
-|---|---|---|
-| `--dataset` | `MTBL_sop` | Dataset to test |
-| `--n-perm` | `1000` | Number of permutations |
-
-### `feature_interpretation.py`
-
-| Flag | Default | Description |
-|---|---|---|
-| `--dataset` | `proteomics` | Dataset name (determines input paths) |
-| `--timepoints` | `A B C D E` | Plasma timepoints |
-| `--skip-placenta` | False | Skip placenta |
-| `--n-lime-samples` | `500` | LIME neighbourhood sample size |
-
-### `superset_enrichment_analysis.py`
-
-| Flag | Default | Description |
-|---|---|---|
-| `--binary-results-dir` | `04_results_and_figures/models/binary/` | Binary model results root |
-| `--output-dir` | `04_results_and_figures/models/binary/superset_enrichment/` | Enrichment output directory |
-| `--superset-timepoints` | `A B C D` | Timepoints in the superset |
-| `--fdr-threshold` | `0.05` | Adjusted p-value threshold |
-
-### `metabolomics_enrichment_analysis.py`
-
-| Flag | Default | Description |
-|---|---|---|
-| `--diff-results-dir` | `04_results_and_figures/differential_analysis/metabolomics` | Metabolomics differential results |
-| `--output-dir` | `04_results_and_figures/models/binary/metabolomics/enrichment/` | Enrichment output directory |
-| `--top-n` | `15` | Maximum pathways per dot-plot |
+Each script documents its flags in `--help`.

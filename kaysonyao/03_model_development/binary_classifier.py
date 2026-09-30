@@ -389,13 +389,13 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--plasma-dir",
         default=os.path.join(
-            wkdir, "data", "cleaned", "proteomics", "normalized_sliced_by_suffix"
+            wkdir, "data", "processed", "proteomics", "normalized_sliced_by_suffix"
         ),
     )
     p.add_argument(
         "--placenta-csv",
         default=os.path.join(
-            wkdir, "data", "cleaned", "proteomics", "normalized_full_results",
+            wkdir, "data", "processed", "proteomics",
             "proteomics_placenta_cleaned_with_metadata.csv",
         ),
     )

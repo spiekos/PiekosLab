@@ -9,9 +9,9 @@ during fitting.
 
 Datasets
 --------
-Plasma  : windowed by gestational age (scheme set by the binning step, e.g.
-          T1-T5). Metabolomics and lipidomics by default; pass --datasets to
-          include proteomics_plasma.
+Plasma/urine: windowed by gestational age (scheme set by the binning step,
+          e.g. T1-T5). Metabolomics and lipidomics plasma by default; pass
+          --datasets to add MTBL_urine and/or proteomics_plasma.
 Placenta: a single unwindowed dataset. Placenta is collected once at delivery
           and carries no SampleGestAge, so it cannot be binned; this matches
           the previous pipeline, which ran placenta with timepoint="all".
@@ -67,6 +67,9 @@ METADATA_COLS = {
     "SampleID", "SubjectID", "Batch", "Group", "Subgroup",
     "GestAgeDelivery", "SampleGestAge", "MetadataCanonicalID",
     "Timepoint", "Tissue",
+    # Added by sop_omics_pipeline.py (1-5 or "Delivery"). Must never be a feature:
+    # it is ~constant within a window except for delivery samples, which it flags.
+    "SampleTimepoint",
 }
 
 
@@ -241,8 +244,11 @@ def Pipeline_prefix(pipe):
 def main() -> None:
     ap = argparse.ArgumentParser(description="Aim 3A base models.")
     ap.add_argument("--repo-root", default=os.getcwd())
-    ap.add_argument("--windows-root", default="data/cleaned/windows3_devfit")
-    ap.add_argument("--placenta-root", default="data/cleaned/sop_omics_pipeline_devfit")
+    ap.add_argument("--windows-root", default="data/processed/windows",
+                    help="bin_echo_windows.py output: <root>/<dataset>/<dataset>_echo_<window>.csv")
+    ap.add_argument("--placenta-root", default="data/processed",
+                    help="sop_omics_pipeline.py --output-root; placenta is read from "
+                         "<root>/<MTBL|LIPD>/placenta/<dataset>_cleaned_with_metadata.csv")
     ap.add_argument("--windows", nargs="+", default=["W1_early", "W2_mid", "W3_third"])
     ap.add_argument("--out", default="04_results_and_figures/models_v3")
     ap.add_argument("--n-trials", type=int, default=40)
@@ -252,11 +258,11 @@ def main() -> None:
     ap.add_argument("--skip-placenta", action="store_true")
     ap.add_argument("--datasets", nargs="+", default=["MTBL_plasma", "LIPD_plasma"],
                     help="Plasma datasets to model, each a folder under --windows-root "
-                         "(e.g. MTBL_plasma LIPD_plasma proteomics_plasma).")
+                         "(e.g. MTBL_plasma LIPD_plasma MTBL_urine proteomics_plasma).")
     args = ap.parse_args()
 
     root = os.path.abspath(args.repo_root)
-    locked = pd.read_csv(os.path.join(root, "data", "cleaned", "locked_split.csv"))
+    locked = pd.read_csv(os.path.join(root, "data", "processed", "locked_split.csv"))
     out_root = os.path.join(root, args.out)
 
     jobs = []
@@ -266,7 +272,7 @@ def main() -> None:
     if not args.skip_placenta:
         for ds in ("MTBL_placenta", "LIPD_placenta"):
             jobs.append((ds, "all", os.path.join(
-                root, args.placenta_root, ds, f"{ds}_cleaned_with_metadata.csv")))
+                root, args.placenta_root, *ds.split("_", 1), f"{ds}_cleaned_with_metadata.csv")))
 
     rows = []
     for ds, window, path in jobs:
@@ -291,7 +297,7 @@ def main() -> None:
         logger.info("  best by OOF PR-AUC: %s", best)
 
         assay = assay_name(ds)
-        tissue = "placenta" if "placenta" in ds else "plasma"
+        tissue = ds.split("_", 1)[1]  # plasma / placenta / urine
         for model, m in res.items():
             rows.append({
                 "assay": assay, "tissue": tissue, "window": window, "model": model,

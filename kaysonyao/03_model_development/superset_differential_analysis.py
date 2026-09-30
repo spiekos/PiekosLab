@@ -208,7 +208,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Directory of per-suffix plasma CSVs "
             "(proteomics_plasma_formatted_suffix_<TP>.csv). "
-            "Defaults to data/cleaned/proteomics/normalized_sliced_by_suffix/."
+            "Defaults to data/processed/proteomics/normalized_sliced_by_suffix/."
         ),
     )
     p.add_argument(
@@ -216,7 +216,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "Path to placenta cleaned CSV. "
-            "Defaults to data/cleaned/proteomics/normalized_full_results/"
+            "Defaults to data/processed/proteomics/"
             "proteomics_placenta_cleaned_with_metadata.csv."
         ),
     )
@@ -252,11 +252,11 @@ def main() -> None:
         wkdir, "04_results_and_figures", "models", "binary"
     )
     plasma_dir = args.plasma_dir or os.path.join(
-        wkdir, "data", "cleaned", "proteomics", "normalized_sliced_by_suffix"
+        wkdir, "data", "processed", "proteomics", "normalized_sliced_by_suffix"
     )
     placenta_csv = args.placenta_csv or os.path.join(
         wkdir,
-        "data", "cleaned", "proteomics", "normalized_full_results",
+        "data", "processed", "proteomics",
         "proteomics_placenta_cleaned_with_metadata.csv",
     )
     output_dir = args.output_dir or os.path.join(
