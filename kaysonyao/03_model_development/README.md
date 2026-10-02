@@ -10,7 +10,6 @@ Run from the project root.
 | `nested_cv.py` | Nested CV: 5 outer x 3 inner `StratifiedGroupKFold` by SubjectID; imputation, scaling and elastic-net selection inside the Pipeline; pooled out-of-fold PR/ROC with 1000x bootstrap CI |
 | `optuna_tuning.py` | Optuna TPE search (40 trials) inside each outer fold, scored on inner folds only |
 | `run_holdout_evaluation.py` | One-look evaluation on the locked 30% test set; refuses to overwrite a previous result |
-| `utilities.py` | Shared helpers (sklearn estimators use `n_jobs=1`, see comments) |
 
 ```bash
 # Windows produced by 01_data_cleaning/bin_echo_windows.py --scheme dp3_5t
